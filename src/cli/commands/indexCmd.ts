@@ -50,6 +50,7 @@ export function registerIndexCommand(program: Command): void {
             `indexed ${stats.filesIndexed}, skipped ${stats.filesSkipped}, failed ${stats.filesFailed}`,
             `wrote ${stats.symbols} symbols, ${stats.imports} imports in ${stats.durationMs}ms`,
             `resolved ${stats.edges} edges (${stats.weakEdges} weak)`,
+            `embedded ${stats.embeddings} new symbols`,
             `totals: files=${final.files} symbols=${final.symbols} imports=${final.imports} edges=${final.edges}`,
           ].join('\n') + '\n',
         );

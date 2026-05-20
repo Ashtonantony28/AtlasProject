@@ -16,8 +16,8 @@ complete.
 | 1     | Foundation             | done   |
 | 2     | Ingestion & parsing    | done   |
 | 3     | Graph                  | done   |
-| 4     | Embeddings & search    | in progress |
-| 5     | Synthesis              | -      |
+| 4     | Embeddings & search    | done   |
+| 5     | Synthesis              | in progress |
 | 6     | Q&A                    | -      |
 | 7     | Drift                  | -      |
 | 8     | Dashboard              | -      |

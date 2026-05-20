@@ -14,11 +14,14 @@ import { walkRepo, type WalkOptions } from './walker.js';
 import { sha256, countLoc } from './hash.js';
 import { parseSource } from '../parse/parser.js';
 import { resolveGraph } from '../graph/resolver.js';
+import { embedAllSymbols, LocalHashEmbedder, deleteEmbeddingsForFile } from '../vector/index.js';
 import type { LanguageId } from './language.js';
 
 export interface IndexOptions extends WalkOptions {
   // Reparse even if content hash is unchanged.
   force?: boolean;
+  // Skip embedding generation (useful for fast incremental runs).
+  skipEmbeddings?: boolean;
   // Per-file callback for progress reporting.
   onFile?: (file: { path: string; status: 'parsed' | 'skipped' | 'failed'; reason?: string }) => void;
 }
@@ -32,6 +35,7 @@ export interface IndexStats {
   imports: number;
   edges: number;
   weakEdges: number;
+  embeddings: number;
   durationMs: number;
 }
 
@@ -51,6 +55,7 @@ export async function indexRepo(
     imports: 0,
     edges: 0,
     weakEdges: 0,
+    embeddings: 0,
     durationMs: 0,
   };
 
@@ -92,7 +97,8 @@ export async function indexRepo(
       loc: countLoc(content),
     });
 
-    // Reparse: clear stale symbols/imports for this file.
+    // Reparse: clear stale symbols/imports/embeddings for this file.
+    deleteEmbeddingsForFile(db, fileId);
     deleteSymbolsForFile(db, fileId);
     deleteImportsForFile(db, fileId);
 
@@ -140,6 +146,13 @@ export async function indexRepo(
   const resolveStats = resolveGraph(db, { root });
   stats.edges = resolveStats.edges;
   stats.weakEdges = resolveStats.weakEdges;
+
+  // Generate embeddings for any new/changed symbols. Local-only, no API spend.
+  if (!opts.skipEmbeddings) {
+    const embedder = new LocalHashEmbedder();
+    const embStats = await embedAllSymbols(db, embedder, root);
+    stats.embeddings = embStats.generated;
+  }
 
   stats.durationMs = Date.now() - t0;
   finishRun(db, runId, { ...stats, totals: counts(db) });
