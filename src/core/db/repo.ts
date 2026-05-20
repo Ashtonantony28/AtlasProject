@@ -1,0 +1,241 @@
+// Typed query helpers around the SQLite index. Thin wrappers over prepared
+// statements; keep query logic centralized so subsystems don't drift on schema.
+
+import type { DB } from './database.js';
+import type {
+  FileRow,
+  SymbolRow,
+  EdgeRow,
+  ImportRow,
+  DocRow,
+  RunRow,
+  SymbolKind,
+  EdgeKind,
+} from './types.js';
+
+export interface UpsertFileInput {
+  path: string;
+  language: string;
+  content_hash: string;
+  loc: number;
+}
+
+export function upsertFile(db: DB, input: UpsertFileInput): number {
+  const now = new Date().toISOString();
+  const existing = db
+    .prepare('SELECT id, content_hash FROM files WHERE path = ?')
+    .get(input.path) as { id: number; content_hash: string } | undefined;
+
+  if (existing) {
+    db.prepare(
+      `UPDATE files
+       SET language = ?, content_hash = ?, loc = ?, indexed_at = ?
+       WHERE id = ?`,
+    ).run(input.language, input.content_hash, input.loc, now, existing.id);
+    return existing.id;
+  }
+
+  const info = db
+    .prepare(
+      `INSERT INTO files (path, language, content_hash, loc, indexed_at)
+       VALUES (?, ?, ?, ?, ?)`,
+    )
+    .run(input.path, input.language, input.content_hash, input.loc, now);
+  return Number(info.lastInsertRowid);
+}
+
+export function getFileByPath(db: DB, path: string): FileRow | undefined {
+  return db.prepare('SELECT * FROM files WHERE path = ?').get(path) as FileRow | undefined;
+}
+
+export function getAllFiles(db: DB): FileRow[] {
+  return db.prepare('SELECT * FROM files ORDER BY path').all() as FileRow[];
+}
+
+export function deleteSymbolsForFile(db: DB, fileId: number): void {
+  db.prepare('DELETE FROM symbols WHERE file_id = ?').run(fileId);
+}
+
+export function deleteImportsForFile(db: DB, fileId: number): void {
+  db.prepare('DELETE FROM imports WHERE file_id = ?').run(fileId);
+}
+
+export interface InsertSymbolInput {
+  file_id: number;
+  kind: SymbolKind;
+  name: string;
+  signature: string | null;
+  start_line: number;
+  end_line: number;
+  docstring: string | null;
+  qualified_name: string | null;
+}
+
+export function insertSymbol(db: DB, input: InsertSymbolInput): number {
+  const info = db
+    .prepare(
+      `INSERT INTO symbols (file_id, kind, name, signature, start_line, end_line, docstring, qualified_name)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      input.file_id,
+      input.kind,
+      input.name,
+      input.signature,
+      input.start_line,
+      input.end_line,
+      input.docstring,
+      input.qualified_name,
+    );
+  return Number(info.lastInsertRowid);
+}
+
+export function getSymbolsForFile(db: DB, fileId: number): SymbolRow[] {
+  return db
+    .prepare('SELECT * FROM symbols WHERE file_id = ? ORDER BY start_line')
+    .all(fileId) as SymbolRow[];
+}
+
+export function getAllSymbols(db: DB): SymbolRow[] {
+  return db.prepare('SELECT * FROM symbols ORDER BY id').all() as SymbolRow[];
+}
+
+export function findSymbolByName(db: DB, name: string): SymbolRow[] {
+  return db.prepare('SELECT * FROM symbols WHERE name = ?').all(name) as SymbolRow[];
+}
+
+export function findSymbolsByKind(db: DB, kind: SymbolKind): SymbolRow[] {
+  return db.prepare('SELECT * FROM symbols WHERE kind = ?').all(kind) as SymbolRow[];
+}
+
+export interface InsertEdgeInput {
+  src_symbol: number | null;
+  dst_symbol: number | null;
+  kind: EdgeKind;
+  weak: boolean;
+  meta?: string | null;
+}
+
+export function insertEdge(db: DB, input: InsertEdgeInput): number {
+  const info = db
+    .prepare(
+      `INSERT INTO edges (src_symbol, dst_symbol, kind, weak, meta)
+       VALUES (?, ?, ?, ?, ?)`,
+    )
+    .run(input.src_symbol, input.dst_symbol, input.kind, input.weak ? 1 : 0, input.meta ?? null);
+  return Number(info.lastInsertRowid);
+}
+
+export function getAllEdges(db: DB): EdgeRow[] {
+  return db.prepare('SELECT * FROM edges ORDER BY id').all() as EdgeRow[];
+}
+
+export function clearEdges(db: DB): void {
+  db.exec('DELETE FROM edges');
+}
+
+export interface InsertImportInput {
+  file_id: number;
+  module: string;
+  imported: string | null;
+  alias: string | null;
+  start_line: number;
+}
+
+export function insertImport(db: DB, input: InsertImportInput): number {
+  const info = db
+    .prepare(
+      `INSERT INTO imports (file_id, module, imported, alias, start_line)
+       VALUES (?, ?, ?, ?, ?)`,
+    )
+    .run(input.file_id, input.module, input.imported, input.alias, input.start_line);
+  return Number(info.lastInsertRowid);
+}
+
+export function getImportsForFile(db: DB, fileId: number): ImportRow[] {
+  return db
+    .prepare('SELECT * FROM imports WHERE file_id = ? ORDER BY start_line')
+    .all(fileId) as ImportRow[];
+}
+
+export function getAllImports(db: DB): ImportRow[] {
+  return db.prepare('SELECT * FROM imports ORDER BY id').all() as ImportRow[];
+}
+
+export interface UpsertDocInput {
+  target_kind: string;
+  target_id: number;
+  content: string;
+  source_hash: string;
+}
+
+export function upsertDoc(db: DB, input: UpsertDocInput): number {
+  const now = new Date().toISOString();
+  const existing = db
+    .prepare('SELECT id FROM docs WHERE target_kind = ? AND target_id = ?')
+    .get(input.target_kind, input.target_id) as { id: number } | undefined;
+
+  if (existing) {
+    db.prepare(
+      'UPDATE docs SET content = ?, source_hash = ?, generated_at = ? WHERE id = ?',
+    ).run(input.content, input.source_hash, now, existing.id);
+    return existing.id;
+  }
+
+  const info = db
+    .prepare(
+      `INSERT INTO docs (target_kind, target_id, content, source_hash, generated_at)
+       VALUES (?, ?, ?, ?, ?)`,
+    )
+    .run(input.target_kind, input.target_id, input.content, input.source_hash, now);
+  return Number(info.lastInsertRowid);
+}
+
+export function getDoc(db: DB, targetKind: string, targetId: number): DocRow | undefined {
+  return db
+    .prepare('SELECT * FROM docs WHERE target_kind = ? AND target_id = ?')
+    .get(targetKind, targetId) as DocRow | undefined;
+}
+
+export function getAllDocs(db: DB): DocRow[] {
+  return db.prepare('SELECT * FROM docs ORDER BY id').all() as DocRow[];
+}
+
+export function startRun(db: DB, commitSha: string | null): number {
+  const info = db
+    .prepare('INSERT INTO runs (commit_sha, started_at) VALUES (?, ?)')
+    .run(commitSha, new Date().toISOString());
+  return Number(info.lastInsertRowid);
+}
+
+export function finishRun(db: DB, runId: number, stats: Record<string, unknown>): void {
+  db.prepare('UPDATE runs SET finished_at = ?, stats_json = ? WHERE id = ?').run(
+    new Date().toISOString(),
+    JSON.stringify(stats),
+    runId,
+  );
+}
+
+export function getLastRun(db: DB): RunRow | undefined {
+  return db
+    .prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 1')
+    .get() as RunRow | undefined;
+}
+
+export function counts(db: DB): {
+  files: number;
+  symbols: number;
+  edges: number;
+  docs: number;
+  imports: number;
+} {
+  const q = (sql: string) =>
+    (db.prepare(sql).get() as { c: number } | undefined)?.c ?? 0;
+  return {
+    files: q('SELECT COUNT(*) AS c FROM files'),
+    symbols: q('SELECT COUNT(*) AS c FROM symbols'),
+    edges: q('SELECT COUNT(*) AS c FROM edges'),
+    docs: q('SELECT COUNT(*) AS c FROM docs'),
+    imports: q('SELECT COUNT(*) AS c FROM imports'),
+  };
+}

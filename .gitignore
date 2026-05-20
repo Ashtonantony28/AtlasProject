@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Test artifacts
+coverage/
+.vitest/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Atlas runtime artifacts
+.atlas/
+*.atlas.db
+*.atlas.db-shm
+*.atlas.db-wal
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*

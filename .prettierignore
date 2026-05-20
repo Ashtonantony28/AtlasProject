@@ -1,0 +1,5 @@
+node_modules
+dist
+coverage
+*.atlas.db*
+fixtures/sample/.atlas
