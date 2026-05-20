@@ -14,8 +14,8 @@ complete.
 | Phase | Title                  | Status |
 | ----- | ---------------------- | ------ |
 | 1     | Foundation             | done   |
-| 2     | Ingestion & parsing    | in progress |
-| 3     | Graph                  | -      |
+| 2     | Ingestion & parsing    | done   |
+| 3     | Graph                  | in progress |
 | 4     | Embeddings & search    | -      |
 | 5     | Synthesis              | -      |
 | 6     | Q&A                    | -      |
