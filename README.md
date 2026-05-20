@@ -21,8 +21,8 @@ complete.
 | 6     | Q&A                    | done   |
 | 7     | Drift                  | done   |
 | 8     | Dashboard              | done   |
-| 9     | CI                     | in progress |
-| 10    | Polish                 | -      |
+| 9     | CI                     | done   |
+| 10    | Polish                 | in progress |
 
 ## Quick start (dev)
 

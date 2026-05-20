@@ -8,6 +8,7 @@ import { registerDocsCommand } from './commands/docsCmd.js';
 import { registerAskCommand } from './commands/askCmd.js';
 import { registerDriftCommand } from './commands/driftCmd.js';
 import { registerServeCommand } from './commands/serveCmd.js';
+import { registerCiCommentCommand } from './commands/ciCommentCmd.js';
 
 const program = new Command();
 
@@ -24,6 +25,7 @@ registerDocsCommand(program);
 registerAskCommand(program);
 registerDriftCommand(program);
 registerServeCommand(program);
+registerCiCommentCommand(program);
 
 program.parseAsync(process.argv).catch((err: unknown) => {
   const msg = err instanceof Error ? err.message : String(err);

@@ -1,0 +1,91 @@
+name: atlas
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  atlas:
+    name: index + drift
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck + lint + test
+        run: |
+          npm run typecheck
+          npm run lint
+          npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Index repository
+        run: node ./dist/cli/index.js index .
+
+      - name: Generate docs (offline)
+        run: node ./dist/cli/index.js docs --offline
+
+      - name: Run drift (capture)
+        id: drift
+        run: |
+          set +e
+          node ./dist/cli/index.js drift --json > .atlas/drift.json
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -eq 0 ]; then
+            echo "has_drift=false" >> "$GITHUB_OUTPUT"
+          elif [ "$code" -eq 2 ]; then
+            echo "has_drift=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "atlas drift failed with code $code" >&2
+            exit "$code"
+          fi
+          set -e
+
+      - name: Render comment
+        if: github.event_name == 'pull_request'
+        run: node ./dist/cli/index.js ci-comment --in .atlas/drift.json --out .atlas/comment.md
+
+      - name: Post / update PR comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const body = fs.readFileSync('.atlas/comment.md', 'utf8');
+            const marker = '<!-- atlas-pr-bot -->';
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const all = await github.paginate(
+              github.rest.issues.listComments,
+              { owner, repo, issue_number, per_page: 100 },
+            );
+            const existing = all.find((c) => c.user.type === 'Bot' && c.body && c.body.includes(marker));
+            const full = `${marker}\n${body}`;
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body: full });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body: full });
+            }
+
+      - name: Fail job if drift present
+        if: steps.drift.outputs.has_drift == 'true'
+        run: |
+          echo "Atlas detected documentation drift. See PR comment for details."
+          exit 1
