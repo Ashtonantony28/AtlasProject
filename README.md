@@ -18,8 +18,8 @@ complete.
 | 3     | Graph                  | done   |
 | 4     | Embeddings & search    | done   |
 | 5     | Synthesis              | done   |
-| 6     | Q&A                    | in progress |
-| 7     | Drift                  | -      |
+| 6     | Q&A                    | done   |
+| 7     | Drift                  | in progress |
 | 8     | Dashboard              | -      |
 | 9     | CI                     | -      |
 | 10    | Polish                 | -      |

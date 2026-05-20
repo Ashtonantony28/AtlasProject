@@ -5,6 +5,7 @@ import { registerIndexCommand } from './commands/indexCmd.js';
 import { registerGraphCommand } from './commands/graphCmd.js';
 import { registerSearchCommand } from './commands/searchCmd.js';
 import { registerDocsCommand } from './commands/docsCmd.js';
+import { registerAskCommand } from './commands/askCmd.js';
 
 const program = new Command();
 
@@ -18,6 +19,7 @@ registerIndexCommand(program);
 registerGraphCommand(program);
 registerSearchCommand(program);
 registerDocsCommand(program);
+registerAskCommand(program);
 
 program.parseAsync(process.argv).catch((err: unknown) => {
   const msg = err instanceof Error ? err.message : String(err);

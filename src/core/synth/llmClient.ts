@@ -65,6 +65,11 @@ export async function createAnthropicClient(model: string): Promise<LLMClient> {
 /**
  * Offline fake. Echoes a structured summary built from the prompt itself,
  * which is enough to verify the pipeline end-to-end without API spend.
+ *
+ * Two prompt shapes are recognized:
+ *  - synthesis: starts with "Target: ..." — produces a markdown doc.
+ *  - Q&A: starts with "Question: ..." — produces an answer that cites the
+ *    grounded snippets [n] (file:line) it was given.
  */
 export function createOfflineClient(model = 'offline-mock-v1'): LLMClient {
   return {
@@ -72,20 +77,46 @@ export function createOfflineClient(model = 'offline-mock-v1'): LLMClient {
     async complete(params: LLMCallParams): Promise<LLMResult> {
       const lastUser = [...params.messages].reverse().find((m) => m.role === 'user');
       const body = lastUser?.content ?? '';
-      // Extract a "Target:" line if present.
-      const targetMatch = body.match(/^Target:\s*(.+)$/m);
-      const target = targetMatch ? targetMatch[1]?.trim() : 'this module';
-      // Extract bullet lines that look like symbol references (file:line).
-      const refs = [...body.matchAll(/([\w./-]+\.(?:ts|tsx|js|jsx|py)):(\d+)/g)]
-        .slice(0, 5)
-        .map((m) => `\`${m[1]}:${m[2]}\``);
-      const refLine = refs.length > 0 ? `References: ${refs.join(', ')}.` : '';
-      const content =
-        `# ${target}\n\n` +
-        `${target} contains the symbols listed above. The graph shows the ` +
-        `incoming and outgoing relationships used to ground this summary.\n\n` +
-        (refLine ? `${refLine}\n` : '') +
-        `\n_Generated offline (mock client)._`;
+
+      let content: string;
+      const qMatch = body.match(/^Question:\s*(.+)$/m);
+      if (qMatch) {
+        const question = qMatch[1]?.trim() ?? '';
+        // Find snippet headers: "[n] kind: name (file:start-end)"
+        const snippetRefs = [
+          ...body.matchAll(
+            /\[(\d+)\]\s+\w+:\s+([\w.$/-]+)\s+\(([\w./-]+):(\d+)-(\d+)\)/g,
+          ),
+        ];
+        const cited = snippetRefs.slice(0, 3).map((m) => ({
+          idx: m[1] ?? '',
+          name: m[2] ?? '',
+          file: m[3] ?? '',
+          start: m[4] ?? '',
+          end: m[5] ?? '',
+        }));
+        const bullets = cited
+          .map((c) => `- \`${c.name}\` is defined in ${c.file}:${c.start} (see [${c.idx}]).`)
+          .join('\n');
+        content =
+          `Based on the grounded snippets, here is what I can say about: "${question}"\n\n` +
+          (bullets || '_No snippets matched._') +
+          `\n\n_Answer generated offline (mock client)._`;
+      } else {
+        const targetMatch = body.match(/^Target:\s*(.+)$/m);
+        const target = targetMatch ? targetMatch[1]?.trim() : 'this module';
+        const refs = [...body.matchAll(/([\w./-]+\.(?:ts|tsx|js|jsx|py)):(\d+)/g)]
+          .slice(0, 5)
+          .map((m) => `\`${m[1]}:${m[2]}\``);
+        const refLine = refs.length > 0 ? `References: ${refs.join(', ')}.` : '';
+        content =
+          `# ${target}\n\n` +
+          `${target} contains the symbols listed above. The graph shows the ` +
+          `incoming and outgoing relationships used to ground this summary.\n\n` +
+          (refLine ? `${refLine}\n` : '') +
+          `\n_Generated offline (mock client)._`;
+      }
+
       const tokens = Math.ceil(body.length / 4);
       return {
         content,
