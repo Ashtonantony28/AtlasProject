@@ -49,7 +49,8 @@ export function registerIndexCommand(program: Command): void {
             `scanned ${stats.filesScanned} files`,
             `indexed ${stats.filesIndexed}, skipped ${stats.filesSkipped}, failed ${stats.filesFailed}`,
             `wrote ${stats.symbols} symbols, ${stats.imports} imports in ${stats.durationMs}ms`,
-            `totals: files=${final.files} symbols=${final.symbols} imports=${final.imports}`,
+            `resolved ${stats.edges} edges (${stats.weakEdges} weak)`,
+            `totals: files=${final.files} symbols=${final.symbols} imports=${final.imports} edges=${final.edges}`,
           ].join('\n') + '\n',
         );
       } finally {

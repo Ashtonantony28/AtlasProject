@@ -13,6 +13,7 @@ import {
 import { walkRepo, type WalkOptions } from './walker.js';
 import { sha256, countLoc } from './hash.js';
 import { parseSource } from '../parse/parser.js';
+import { resolveGraph } from '../graph/resolver.js';
 import type { LanguageId } from './language.js';
 
 export interface IndexOptions extends WalkOptions {
@@ -29,6 +30,8 @@ export interface IndexStats {
   filesFailed: number;
   symbols: number;
   imports: number;
+  edges: number;
+  weakEdges: number;
   durationMs: number;
 }
 
@@ -46,6 +49,8 @@ export async function indexRepo(
     filesFailed: 0,
     symbols: 0,
     imports: 0,
+    edges: 0,
+    weakEdges: 0,
     durationMs: 0,
   };
 
@@ -130,6 +135,11 @@ export async function indexRepo(
       });
     }
   }
+
+  // Resolve cross-file references and rebuild the edges table.
+  const resolveStats = resolveGraph(db, { root });
+  stats.edges = resolveStats.edges;
+  stats.weakEdges = resolveStats.weakEdges;
 
   stats.durationMs = Date.now() - t0;
   finishRun(db, runId, { ...stats, totals: counts(db) });

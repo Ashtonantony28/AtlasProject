@@ -2,6 +2,7 @@
 import { Command } from 'commander';
 import { registerInitCommand } from './commands/init.js';
 import { registerIndexCommand } from './commands/indexCmd.js';
+import { registerGraphCommand } from './commands/graphCmd.js';
 
 const program = new Command();
 
@@ -12,6 +13,7 @@ program
 
 registerInitCommand(program);
 registerIndexCommand(program);
+registerGraphCommand(program);
 
 program.parseAsync(process.argv).catch((err: unknown) => {
   const msg = err instanceof Error ? err.message : String(err);
