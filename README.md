@@ -19,8 +19,8 @@ complete.
 | 4     | Embeddings & search    | done   |
 | 5     | Synthesis              | done   |
 | 6     | Q&A                    | done   |
-| 7     | Drift                  | in progress |
-| 8     | Dashboard              | -      |
+| 7     | Drift                  | done   |
+| 8     | Dashboard              | in progress |
 | 9     | CI                     | -      |
 | 10    | Polish                 | -      |
 
