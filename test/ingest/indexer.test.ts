@@ -75,4 +75,15 @@ describe('indexRepo end-to-end on fixture', () => {
     expect(second.filesIndexed).toBe(4);
     closeDatabase(db);
   });
+
+  it('a no-change second run is near-zero work', async () => {
+    const db = openDatabase(join(dir, 'index.db'));
+    await indexRepo(db, FIXTURE);
+    const second = await indexRepo(db, FIXTURE);
+    expect(second.filesIndexed).toBe(0);
+    expect(second.symbols).toBe(0);
+    expect(second.imports).toBe(0);
+    expect(second.embeddings).toBe(0);
+    closeDatabase(db);
+  });
 });

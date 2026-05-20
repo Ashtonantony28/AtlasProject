@@ -50,3 +50,26 @@ implementation, so swapping in Vite/React later is a self-contained change.
 `atlas drift` uses exit code 2 so CI scripts can distinguish drift ("there is
 work to do") from generic command failure (exit 1). Conventional for "soft
 failure".
+
+## 2026-05-20 — Phase 10 wrap-up
+- Hash-based incremental indexing was already in place from Phase 2; added a
+  short-circuit that skips the resolver pass when no files changed, so a
+  no-op `atlas index` finishes in ~15ms on the fixture (DoD: "near-zero
+  work").
+- Packaging: `bin` + `files` + `prepublishOnly` are wired; the built CLI
+  retains its shebang so `npx atlas` works once published.
+- Demo script `scripts/demo.sh` runs the entire surface against the bundled
+  fixture using the offline LLM, exercising every CLI command in order.
+- Smoke-tested on Atlas's own source: 69 files → 469 symbols → 757 edges in
+  ~400ms.
+
+## 2026-05-20 — Final summary
+Atlas ships its end-to-end pipeline: walk → parse → graph → embed → search →
+synth → ask → drift, with a local dashboard and a CI PR comment workflow.
+52 tests, 0 lint errors, strict TS. The whole thing runs offline by default
+(deterministic local embeddings + mock LLM) and switches to the real
+Anthropic API by exporting `ANTHROPIC_API_KEY`. Future work (out of scope
+for v1): proper call-graph resolution via tree-sitter queries rather than a
+regex heuristic, sqlite-vec virtual-table embeddings, language coverage
+beyond TS/JS/Python, and a real Vite/React dashboard if/when the vanilla
+one's limits start to bite.

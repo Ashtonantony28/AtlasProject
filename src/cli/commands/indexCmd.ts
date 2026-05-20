@@ -44,12 +44,16 @@ export function registerIndexCommand(program: Command): void {
           },
         });
         const final = counts(db);
+        const edgesLine =
+          stats.filesIndexed > 0
+            ? `resolved ${stats.edges} edges (${stats.weakEdges} weak)`
+            : `edges: ${final.edges} (graph unchanged)`;
         process.stdout.write(
           [
             `scanned ${stats.filesScanned} files`,
             `indexed ${stats.filesIndexed}, skipped ${stats.filesSkipped}, failed ${stats.filesFailed}`,
             `wrote ${stats.symbols} symbols, ${stats.imports} imports in ${stats.durationMs}ms`,
-            `resolved ${stats.edges} edges (${stats.weakEdges} weak)`,
+            edgesLine,
             `embedded ${stats.embeddings} new symbols`,
             `totals: files=${final.files} symbols=${final.symbols} imports=${final.imports} edges=${final.edges}`,
           ].join('\n') + '\n',

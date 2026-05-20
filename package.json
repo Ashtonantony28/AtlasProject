@@ -20,7 +20,8 @@
     "lint:fix": "eslint \"src/**/*.ts\" \"test/**/*.ts\" --fix",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "keywords": [
     "codebase",
@@ -31,6 +32,13 @@
     "search"
   ],
   "license": "MIT",
+  "files": [
+    "dist",
+    "README.md",
+    "DECISIONS.md",
+    "CLAUDE.md",
+    "LICENSE"
+  ],
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
     "better-sqlite3": "^11.5.0",

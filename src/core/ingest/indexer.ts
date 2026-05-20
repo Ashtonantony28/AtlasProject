@@ -142,10 +142,17 @@ export async function indexRepo(
     }
   }
 
-  // Resolve cross-file references and rebuild the edges table.
-  const resolveStats = resolveGraph(db, { root });
-  stats.edges = resolveStats.edges;
-  stats.weakEdges = resolveStats.weakEdges;
+  // Resolve cross-file references and rebuild the edges table — only if
+  // something actually changed (or the edges table is empty).
+  const currentTotals = counts(db);
+  const needsResolve = stats.filesIndexed > 0 || currentTotals.edges === 0 || opts.force === true;
+  if (needsResolve) {
+    const resolveStats = resolveGraph(db, { root });
+    stats.edges = resolveStats.edges;
+    stats.weakEdges = resolveStats.weakEdges;
+  } else {
+    stats.edges = currentTotals.edges;
+  }
 
   // Generate embeddings for any new/changed symbols. Local-only, no API spend.
   if (!opts.skipEmbeddings) {
