@@ -17,8 +17,8 @@ complete.
 | 2     | Ingestion & parsing    | done   |
 | 3     | Graph                  | done   |
 | 4     | Embeddings & search    | done   |
-| 5     | Synthesis              | in progress |
-| 6     | Q&A                    | -      |
+| 5     | Synthesis              | done   |
+| 6     | Q&A                    | in progress |
 | 7     | Drift                  | -      |
 | 8     | Dashboard              | -      |
 | 9     | CI                     | -      |
