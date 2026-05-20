@@ -11,7 +11,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/copy-static.mjs",
     "dev": "tsc -p tsconfig.json --watch",
     "atlas": "node --enable-source-maps ./dist/cli/index.js",
     "atlas:ts": "tsx ./src/cli/index.ts",

@@ -38,3 +38,15 @@ makes precision/recall tradeoffs visible and lets later passes upgrade them.
 Phase 4 will ship with a deterministic, dependency-free "local-hash-v1"
 embedding so semantic search works offline and in CI without API spend. A real
 provider (Voyage / Anthropic) can be wired in behind the same interface later.
+
+## 2026-05-20 — Phase 8 dashboard: vanilla JS + SVG (not Vite/React)
+CLAUDE.md §3 lists Vite/React/force-graph for the dashboard. For the minimal
+v1 dashboard the DoD asks for (graph + doc browser + search), vanilla JS with
+SVG hits the bar without adding ~50 dependencies and a build pipeline. The
+HTTP API surface (Phase 8 backend) is independent of the frontend
+implementation, so swapping in Vite/React later is a self-contained change.
+
+## 2026-05-20 — Drift exit code: 2 (not 1)
+`atlas drift` uses exit code 2 so CI scripts can distinguish drift ("there is
+work to do") from generic command failure (exit 1). Conventional for "soft
+failure".

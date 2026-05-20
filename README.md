@@ -20,8 +20,8 @@ complete.
 | 5     | Synthesis              | done   |
 | 6     | Q&A                    | done   |
 | 7     | Drift                  | done   |
-| 8     | Dashboard              | in progress |
-| 9     | CI                     | -      |
+| 8     | Dashboard              | done   |
+| 9     | CI                     | in progress |
 | 10    | Polish                 | -      |
 
 ## Quick start (dev)

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Atlas</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Atlas</h1>
+      <div class="stats" id="stats"></div>
+      <form id="searchForm">
+        <input id="q" name="q" type="search" placeholder="search symbols…" autocomplete="off" />
+        <select id="kind">
+          <option value="">all kinds</option>
+          <option value="function">function</option>
+          <option value="method">method</option>
+          <option value="class">class</option>
+          <option value="interface">interface</option>
+          <option value="type">type</option>
+          <option value="variable">variable</option>
+        </select>
+        <button type="submit">search</button>
+      </form>
+    </header>
+    <main>
+      <section id="left">
+        <h2>Files</h2>
+        <ul id="fileList"></ul>
+      </section>
+      <section id="center">
+        <div class="tabs">
+          <button data-tab="graph" class="active">Graph</button>
+          <button data-tab="doc">Doc</button>
+          <button data-tab="results">Search</button>
+        </div>
+        <div id="tab-graph" class="tab active">
+          <svg id="graph" width="100%" height="600" viewBox="0 0 1200 600"></svg>
+          <div class="legend">
+            <span><i class="dot edge-imports"></i>imports</span>
+            <span><i class="dot edge-calls"></i>calls</span>
+            <span><i class="dot edge-extends"></i>extends</span>
+            <span><i class="dot edge-implements"></i>implements</span>
+          </div>
+        </div>
+        <div id="tab-doc" class="tab" hidden>
+          <h3 id="docTitle">Select a file</h3>
+          <pre id="docBody"></pre>
+        </div>
+        <div id="tab-results" class="tab" hidden>
+          <h3>Results</h3>
+          <ol id="results"></ol>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
