@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "atlas": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["./dist/cli/index.js", "mcp"],
+      "env": {}
+    }
+  }
+}

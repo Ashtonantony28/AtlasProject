@@ -92,6 +92,25 @@ A re-read of each Phase's DoD turned up five real gaps. All closed:
   ci-comment) that asserts the exact payload the workflow posts, for both
   the clean and the drift cases. Stands in for `act --dry-run`.
 
+## 2026-05-22 — MCP layer replaces direct Anthropic API calls
+
+Added `src/mcp/server.ts` using `@modelcontextprotocol/sdk` (v1.x, `McpServer`
+high-level API with `registerTool`). Five tools exposed: `atlas_index`,
+`atlas_search`, `atlas_symbol`, `atlas_graph`, `atlas_drift`. Deleted
+`src/core/synth/` (LLM client, synthesizer, budget, context) and `src/core/qa/ask.ts`.
+Synthesis and Q&A are now Claude Code's responsibility via these MCP tools —
+Atlas is a pure data + retrieval layer with no Anthropic API dependency at
+runtime.
+
+Context functions (`buildArchitectureContext`, `architectureContextToPrompt`,
+`buildModuleContext`) moved from `synth/context.ts` to `graph/context.ts` since
+drift detection still needs them and they contain no LLM calls.
+
+`atlas mcp --cwd <path>` starts the server; `.claude/settings.json` auto-
+connects Claude Code when working in this repo. The CI workflow drops the
+`docs --offline` step (no synthesizer to invoke); drift still runs and catches
+stale/missing docs committed via Claude Code.
+
 ## 2026-05-20 — Final summary
 Atlas ships its end-to-end pipeline: walk → parse → graph → embed → search →
 synth → ask → drift, with a local dashboard and a CI PR comment workflow.

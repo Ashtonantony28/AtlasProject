@@ -1,4 +1,5 @@
-// Build grounding context (prompt input) for synthesis from the index graph.
+// Architecture-level context used by drift detection and the MCP layer.
+// (Module-level context lives here too for completeness.)
 
 import {
   type DB,
@@ -17,7 +18,6 @@ export interface ModuleContext {
   imports: Array<{ module: string; imported: string | null; alias: string | null }>;
   incomingCalls: Array<{ from: string; symbol: string }>;
   outgoingCalls: Array<{ to: string; symbol: string }>;
-  // A trimmed source snippet for top symbols (capped to keep prompt small).
   sourceSnippets: Array<{ symbol: string; file: string; line: number; code: string }>;
   contentHash: string;
 }
@@ -34,11 +34,9 @@ export function buildModuleContext(db: DB, root: string, file: FileRow): ModuleC
     alias: i.alias,
   }));
 
-  // Edges via this file's symbols.
   const edges = getAllEdges(db);
   const fileSymbolIds = new Set(publicSymbols.map((s) => s.id));
   const symbolName = new Map<number, { file: string; name: string }>();
-  // Light-weight lookup for cross-file edges.
   for (const f of getAllFiles(db)) {
     for (const s of getSymbolsForFile(db, f.id)) {
       symbolName.set(s.id, { file: f.path, name: s.qualified_name ?? s.name });
@@ -63,7 +61,6 @@ export function buildModuleContext(db: DB, root: string, file: FileRow): ModuleC
     }
   }
 
-  // Source snippets for the top MAX_SNIPPETS symbols.
   const source = readFileFromRoot(root, db, file.id);
   const lines = source ? source.split('\n') : [];
   const snippets: ModuleContext['sourceSnippets'] = [];
@@ -90,61 +87,6 @@ export function buildModuleContext(db: DB, root: string, file: FileRow): ModuleC
   };
 }
 
-export function moduleContextToPrompt(ctx: ModuleContext): string {
-  const lines: string[] = [];
-  lines.push(`Target: module ${ctx.file.path}`);
-  lines.push(`Language: ${ctx.file.language}`);
-  lines.push(`LOC: ${ctx.file.loc}`);
-  if (ctx.publicSymbols.length > 0) {
-    lines.push('');
-    lines.push('Symbols:');
-    for (const s of ctx.publicSymbols) {
-      lines.push(
-        `  - [${s.kind}] ${s.qualified_name ?? s.name} (${ctx.file.path}:${s.start_line})${
-          s.docstring ? ` — ${oneLine(s.docstring).slice(0, 120)}` : ''
-        }`,
-      );
-    }
-  }
-  if (ctx.imports.length > 0) {
-    lines.push('');
-    lines.push('Imports:');
-    for (const i of ctx.imports) {
-      lines.push(
-        `  - from "${i.module}" import ${i.imported ?? '*'}${i.alias ? ` as ${i.alias}` : ''}`,
-      );
-    }
-  }
-  if (ctx.outgoingCalls.length > 0) {
-    lines.push('');
-    lines.push('Outgoing calls (this module -> others):');
-    for (const o of ctx.outgoingCalls.slice(0, 12)) {
-      lines.push(`  - ${o.symbol} -> ${o.to}`);
-    }
-  }
-  if (ctx.incomingCalls.length > 0) {
-    lines.push('');
-    lines.push('Incoming calls (others -> this module):');
-    for (const i of ctx.incomingCalls.slice(0, 12)) {
-      lines.push(`  - ${i.from} -> ${i.symbol}`);
-    }
-  }
-  if (ctx.sourceSnippets.length > 0) {
-    lines.push('');
-    lines.push('Source excerpts (truncated):');
-    for (const s of ctx.sourceSnippets) {
-      lines.push(`\n// ${s.symbol} — ${s.file}:${s.line}`);
-      lines.push(s.code);
-    }
-  }
-  return lines.join('\n');
-}
-
-function oneLine(s: string): string {
-  return s.replace(/\s+/g, ' ').trim();
-}
-
-/** Aggregate digest across all modules for the architecture doc. */
 export interface ArchitectureContext {
   files: Array<{ path: string; language: string; loc: number; symbolCount: number }>;
   totals: { files: number; symbols: number; edges: number };
@@ -160,7 +102,6 @@ export function buildArchitectureContext(db: DB): ArchitectureContext {
     symbolCount: getSymbolsForFile(db, f.id).filter((s) => s.kind !== 'module').length,
   }));
   const edges = getAllEdges(db);
-  // Compute per-file degree.
   const degree = new Map<string, number>();
   const symbolFile = new Map<number, string>();
   for (const f of files) {

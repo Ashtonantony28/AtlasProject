@@ -5,8 +5,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { closeDatabase, openDatabase } from '../../src/core/db/index.js';
 import { indexRepo } from '../../src/core/ingest/index.js';
-import { synthesizeDocs, createOfflineClient } from '../../src/core/synth/index.js';
 import { startServer } from '../../src/web/server.js';
+import { insertMockDocs } from '../helpers/mockDocs.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURE = join(__dirname, '..', '..', 'fixtures', 'sample');
@@ -29,7 +29,7 @@ describe('dashboard HTTP API', () => {
   it('boots, serves the index page, and answers /api/* queries', async () => {
     const db = openDatabase(join(dir, 'index.db'));
     await indexRepo(db, FIXTURE);
-    await synthesizeDocs(db, createOfflineClient(), { root: FIXTURE, tokenBudget: 200_000 });
+    insertMockDocs(db);
 
     // Port 0 = OS-assigned ephemeral. We'll use 0; server will pick. But our
     // server takes a fixed port; instead, pick a high-numbered port for tests.

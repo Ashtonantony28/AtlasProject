@@ -18,7 +18,7 @@ import {
   type SymbolRow,
 } from '../db/index.js';
 import { sha256 } from '../ingest/index.js';
-import { buildArchitectureContext, architectureContextToPrompt } from '../synth/index.js';
+import { buildArchitectureContext, architectureContextToPrompt } from '../graph/context.js';
 
 export type StaleKind = 'file' | 'architecture';
 

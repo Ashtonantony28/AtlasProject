@@ -5,8 +5,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { closeDatabase, openDatabase } from '../../src/core/db/index.js';
 import { indexRepo } from '../../src/core/ingest/index.js';
-import { synthesizeDocs, createOfflineClient } from '../../src/core/synth/index.js';
 import { detectDrift, formatDriftReport } from '../../src/core/drift/index.js';
+import { insertMockDocs } from '../helpers/mockDocs.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURE = join(__dirname, '..', '..', 'fixtures', 'sample');
@@ -35,10 +35,10 @@ describe('detectDrift', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it('reports no stale docs immediately after synthesis (when all symbols are mentioned)', async () => {
+  it('reports no stale docs immediately after docs are inserted (all symbols mentioned)', async () => {
     const db = openDatabase(join(dir, 'index.db'));
     await indexRepo(db, workRoot);
-    await synthesizeDocs(db, createOfflineClient(), { root: workRoot, tokenBudget: 200_000 });
+    insertMockDocs(db);
     const report = detectDrift(db);
     expect(report.stale.length).toBe(0);
     closeDatabase(db);
@@ -47,10 +47,9 @@ describe('detectDrift', () => {
   it('reports a doc as stale after the file it covers is mutated and re-indexed', async () => {
     const db = openDatabase(join(dir, 'index.db'));
     await indexRepo(db, workRoot);
-    await synthesizeDocs(db, createOfflineClient(), { root: workRoot, tokenBudget: 200_000 });
+    insertMockDocs(db);
     expect(detectDrift(db).stale.length).toBe(0);
 
-    // Mutate src/shapes.ts and re-index without re-synthesizing.
     const shapes = join(workRoot, 'src/shapes.ts');
     const original = readFileSync(shapes, 'utf8');
     writeFileSync(shapes, original + '\n// mutation marker\n');
@@ -58,8 +57,6 @@ describe('detectDrift', () => {
 
     const report = detectDrift(db);
     expect(report.hasDrift).toBe(true);
-    // Exactly src/shapes.ts is stale (architecture may also drift if the digest changed,
-    // but only the file doc must be in the list).
     const fileStale = report.stale.filter((s) => s.kind === 'file');
     expect(fileStale).toHaveLength(1);
     expect(fileStale[0]?.targetPath).toBe('src/shapes.ts');
@@ -70,10 +67,8 @@ describe('detectDrift', () => {
   it('reports undocumented public symbols when no docs exist', async () => {
     const db = openDatabase(join(dir, 'index.db'));
     await indexRepo(db, workRoot);
-    // No synth call.
     const report = detectDrift(db);
     expect(report.undocumented.length).toBeGreaterThan(0);
-    // Names should be present.
     const names = report.undocumented.map((u) => u.symbol);
     expect(names).toContain('add');
     expect(names).toContain('Circle');

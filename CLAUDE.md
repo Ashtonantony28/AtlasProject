@@ -51,11 +51,13 @@ CLI that does three things beats a half-finished system that does ten.
 - **CLI:** `commander`. **Validation:** `zod`. **Tests:** `vitest`.
 - **Parsing:** `tree-sitter` + grammars. Start with TS/JS and Python only.
 - **Index:** SQLite via `better-sqlite3`; vectors via `sqlite-vec`.
-- **Synthesis/Q&A:** Anthropic API (`@anthropic-ai/sdk`).
+- **MCP:** `@modelcontextprotocol/sdk` — synthesis and Q&A are delegated to the
+  MCP client (Claude Code). Atlas exposes data; the LLM synthesizes.
 - **Dashboard:** React + Vite + a force-graph library. Phase 8 only.
 - **Lint/format:** ESLint + Prettier (or Biome — pick one, record it, move on).
 
-Everything is local-first. The only network dependency is the Anthropic API.
+Everything is local-first. There are **no direct LLM API calls** in Atlas core.
+Synthesis and Q&A are performed by the MCP client using the Atlas tools.
 
 ---
 
@@ -65,17 +67,19 @@ Everything is local-first. The only network dependency is the Anthropic API.
 atlas/
   src/
     cli/          # commander commands, thin — delegate to core
+    mcp/          # MCP server (atlas_index, atlas_search, atlas_symbol, atlas_graph, atlas_drift)
     core/
       ingest/     # repo walking, hashing, language detection
       parse/      # tree-sitter symbol extraction
-      graph/      # reference resolution, edge building
+      graph/      # reference resolution, edge building, arch context
       vector/     # embeddings + sqlite-vec queries
-      synth/      # LLM doc generation + Q&A (RAG)
+      qa/         # retrieval (retrieve.ts) — no LLM calls
       drift/      # stale-doc / undocumented detection
       db/         # schema, migrations, typed query helpers
     web/          # Vite + React dashboard (phase 8)
   fixtures/       # checked-in sample repos used by tests
   test/           # vitest specs mirroring src/ structure
+  .claude/        # Claude Code settings (MCP server auto-connect)
   .github/workflows/
   CLAUDE.md  DECISIONS.md  README.md
 ```
@@ -83,6 +87,41 @@ atlas/
 - CLI commands are **thin**: parse args, call a core function, format output.
   All logic lives in `core/` and is unit-testable without the CLI.
 - Every `core/` module exposes a typed, side-effect-light public API.
+
+---
+
+## 4a. MCP Server — Claude Code Integration
+
+Atlas exposes a Model Context Protocol server so Claude Code auto-connects when
+you open this repository. The config lives in `.claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "atlas": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["./dist/cli/index.js", "mcp"]
+    }
+  }
+}
+```
+
+**Before using Atlas tools in Claude Code:** run `npm run build` to compile the
+CLI, then run `atlas_index` via the tool to populate the index.
+
+### Available MCP tools
+
+| Tool | Description |
+|------|-------------|
+| `atlas_index` | Walk & parse the repo; build graph + embeddings. Run first. |
+| `atlas_search` | Hybrid semantic + structural symbol search. |
+| `atlas_symbol` | Look up a symbol by name with source excerpt. |
+| `atlas_graph` | Export the dependency graph (JSON or DOT). |
+| `atlas_drift` | Detect stale docs and undocumented public symbols. |
+
+Synthesis (writing docs) and Q&A are **not** built into Atlas — Claude Code does
+that using the grounding data these tools return.
 
 ---
 

@@ -38,9 +38,6 @@ jobs:
       - name: Index repository
         run: node ./dist/cli/index.js index .
 
-      - name: Generate docs (offline)
-        run: node ./dist/cli/index.js docs --offline
-
       - name: Run drift (capture)
         id: drift
         run: |

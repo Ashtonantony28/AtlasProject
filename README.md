@@ -1,9 +1,9 @@
 # Atlas
 
 > Local-first codebase intelligence engine. Point it at any repository and get
-> a symbol + dependency graph, self-maintaining docs, hybrid (semantic +
-> structural) search, grounded Q&A, and doc-drift detection — with a CLI and a
-> local dashboard.
+> a symbol + dependency graph, hybrid (semantic + structural) search, and
+> doc-drift detection — with a CLI, a local dashboard, and an **MCP server** so
+> Claude Code can synthesize docs and answer questions grounded in the index.
 
 ## Status
 
@@ -13,8 +13,8 @@
 | 2     | Ingestion & parsing    | done   |
 | 3     | Graph                  | done   |
 | 4     | Embeddings & search    | done   |
-| 5     | Synthesis              | done   |
-| 6     | Q&A                    | done   |
+| 5     | Synthesis (via MCP)    | done   |
+| 6     | Q&A (via MCP)          | done   |
 | 7     | Drift                  | done   |
 | 8     | Dashboard              | done   |
 | 9     | CI                     | done   |
@@ -41,14 +41,6 @@ node ./dist/cli/index.js search "shape" --kind class --cwd ./fixtures/sample
 node ./dist/cli/index.js graph --format dot --cwd ./fixtures/sample > graph.dot
 node ./dist/cli/index.js graph --format json --cwd ./fixtures/sample | jq '.nodes | length'
 
-# generate module + architecture docs (offline mock — no API spend)
-node ./dist/cli/index.js docs --offline --cwd ./fixtures/sample
-node ./dist/cli/index.js docs --show src/shapes.ts --cwd ./fixtures/sample
-node ./dist/cli/index.js docs --show architecture --cwd ./fixtures/sample
-
-# ask a grounded question (offline mock cites the snippets it received)
-node ./dist/cli/index.js ask --offline --cwd ./fixtures/sample "How is the area of a circle computed?"
-
 # drift report (exits non-zero if any doc is stale or any public symbol is undocumented)
 node ./dist/cli/index.js drift --cwd ./fixtures/sample
 
@@ -57,30 +49,56 @@ node ./dist/cli/index.js serve --cwd ./fixtures/sample
 # then open http://127.0.0.1:4321/
 ```
 
-For the real LLM-backed synthesis and Q&A, set `ANTHROPIC_API_KEY` and drop
-`--offline`:
+## MCP Server (Claude Code integration)
+
+Atlas ships an MCP server so Claude Code can query the index directly.
+The `.claude/settings.json` in this repo auto-connects when you open it in
+Claude Code (after building):
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-…
-node ./dist/cli/index.js docs --cwd ./fixtures/sample
-node ./dist/cli/index.js ask --cwd ./fixtures/sample "How does Counter.increment work?"
+npm run build
+# Claude Code auto-connects to the atlas MCP server via .claude/settings.json
 ```
+
+Or start it manually for any target repository:
+
+```bash
+node ./dist/cli/index.js mcp --cwd /path/to/repo
+```
+
+### Available tools
+
+| Tool | What it does |
+|------|-------------|
+| `atlas_index` | Walk & parse the repo; build graph + embeddings. |
+| `atlas_search` | Hybrid semantic + structural symbol search. |
+| `atlas_symbol` | Look up a symbol by name with source excerpt. |
+| `atlas_graph` | Export the dependency graph (JSON or DOT). |
+| `atlas_drift` | Detect stale docs and undocumented public symbols. |
+
+Once connected, ask Claude Code to:
+- *"Index this repository"* → calls `atlas_index`
+- *"Find where Circle.area is defined"* → calls `atlas_symbol`
+- *"Search for shape-related classes"* → calls `atlas_search`
+- *"Generate module docs for src/shapes.ts"* → uses `atlas_symbol` + `atlas_graph` to ground its output
+- *"What's drifted since last doc run?"* → calls `atlas_drift`
 
 ## What's in here
 
 | Path | Purpose |
 | --- | --- |
-| `src/cli/`        | `commander` commands; thin — all logic in `core/` |
+| `src/cli/`        | `commander` commands; thin — all logic in `core/` or `mcp/` |
+| `src/mcp/`        | MCP server (StdioServerTransport + 5 tools) |
 | `src/core/db/`    | SQLite schema + migrations + typed query helpers |
 | `src/core/ingest/`| repo walker, language detect, content hashing, indexer |
 | `src/core/parse/` | tree-sitter symbol extractors (TS/JS/Python) |
-| `src/core/graph/` | reference resolution + JSON/DOT export |
+| `src/core/graph/` | reference resolution + JSON/DOT export + arch context |
 | `src/core/vector/`| local-hash embeddings + hybrid search |
-| `src/core/synth/` | LLM client interface (Anthropic + offline) + doc synthesis |
-| `src/core/qa/`    | retrieval + grounded ask |
+| `src/core/qa/`    | retrieval (grounded snippets for graph expansion) |
 | `src/core/drift/` | stale-doc + undocumented detection |
 | `src/web/`        | dashboard HTTP server + static UI |
 | `fixtures/sample/`| tiny multi-language repo used by tests |
+| `.claude/settings.json` | MCP auto-connect config for Claude Code |
 | `.github/workflows/atlas.yml` | PR action that runs index + drift + posts a comment |
 
 ## Development
@@ -94,14 +112,11 @@ npm run build
 
 ## Costs and safety
 
-- **Secrets:** `ANTHROPIC_API_KEY` is read from the environment; `.env` is
-  gitignored.
-- **Spend cap:** per-run token budget from config (`tokenBudget`); the
-  synthesizer skips work rather than overrunning.
-- **Offline mode:** `--offline` swaps in a deterministic mock LLM so synthesis
-  and Q&A can run in tests / CI / on planes.
+- **No direct LLM calls in Atlas core.** All synthesis and Q&A happen in the
+  MCP client (Claude Code). Atlas is purely a data and retrieval layer.
 - **Read-only on inputs:** Atlas never modifies the target repository; it only
   writes to its own index under `.atlas/`.
+- **Offline by default:** search, graph, and drift work without any API key.
 
 See `DECISIONS.md` for non-obvious choices and `CLAUDE.md` for the operating
 manual that drove the build.
