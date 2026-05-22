@@ -92,6 +92,20 @@ A re-read of each Phase's DoD turned up five real gaps. All closed:
   ci-comment) that asserts the exact payload the workflow posts, for both
   the clean and the drift cases. Stands in for `act --dry-run`.
 
+## 2026-05-22 — CJS require() restoration and external verification baseline
+`collectCjsRequires()` was re-implemented in ts.ts (the previous session's fix
+was never committed and was lost when the ephemeral container recycled).
+Four shapes are covered: default, member (`.Router`), destructured (`{json}`),
+and aliased destructured (`{json: parseJson}`). Also handles the
+`require('mod')(args)` double-call factory pattern (e.g. `require('debug')('ns')`).
+
+The previously cited "387 imports / 407 edges" for express cannot be reproduced:
+that number came from an unknown test environment in the prior session. The current
+baseline against express@5 (installed, full dep tree flattened to bypass the
+walker's node_modules exclusion) is **154 imports / 348 edges across 98 JS files**.
+This is reproducible via `scripts/verify-external.sh express`. The CJS fix is
+verified working (was 0 imports before; 154 after).
+
 ## 2026-05-20 — Final summary
 Atlas ships its end-to-end pipeline: walk → parse → graph → embed → search →
 synth → ask → drift, with a local dashboard and a CI PR comment workflow.
