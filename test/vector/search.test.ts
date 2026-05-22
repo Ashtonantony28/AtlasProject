@@ -76,4 +76,31 @@ describe('search end-to-end', () => {
     expect(countEmbeddings(db)).toBe(all.length);
     closeDatabase(db);
   });
+
+  it('vec0 KNN returns sane similarities (1.0 for an exact embedding match)', async () => {
+    const db = openDatabase(join(dir, 'index.db'));
+    await indexRepo(db, FIXTURE);
+
+    // Take the stored embedding for Circle.area and feed it back as a query.
+    const { getAllEmbeddings, vectorKnn } = await import('../../src/core/vector/index.js');
+    const all = getAllEmbeddings(db);
+    expect(all.length).toBeGreaterThan(0);
+
+    // Find a stable target (Circle.area) by joining with symbols.
+    const targetRow = db
+      .prepare(
+        "SELECT id FROM symbols WHERE qualified_name = 'Circle.area' LIMIT 1",
+      )
+      .get() as { id: number } | undefined;
+    expect(targetRow).toBeDefined();
+    const stored = all.find((e) => e.symbol_id === targetRow!.id);
+    expect(stored).toBeDefined();
+
+    const hits = vectorKnn(db, stored!.vector, 3);
+    expect(hits.length).toBeGreaterThan(0);
+    // The closest match to a vector is itself: distance ≈ 0, similarity ≈ 1.
+    expect(hits[0]!.symbolId).toBe(stored!.symbol_id);
+    expect(hits[0]!.similarity).toBeCloseTo(1, 3);
+    closeDatabase(db);
+  });
 });

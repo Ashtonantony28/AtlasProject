@@ -1,11 +1,17 @@
 // SQL migrations. Append-only — never edit a past migration; add a new one.
 // Each migration runs in a single transaction.
+//
+// The embeddings table is the only one that needs the sqlite-vec extension
+// loaded; openDatabase() loads it before runMigrations() so the v2 migration
+// can create the vec0 virtual table.
 
 export interface Migration {
   version: number;
   name: string;
   sql: string;
 }
+
+export const EMBEDDING_DIM = 384;
 
 export const MIGRATIONS: Migration[] = [
   {
@@ -94,6 +100,23 @@ export const MIGRATIONS: Migration[] = [
 
       CREATE INDEX IF NOT EXISTS idx_imports_file ON imports(file_id);
       CREATE INDEX IF NOT EXISTS idx_imports_module ON imports(module);
+    `,
+  },
+  {
+    version: 2,
+    name: 'embeddings_vec0',
+    sql: `
+      DROP TABLE IF EXISTS embeddings;
+
+      CREATE VIRTUAL TABLE IF NOT EXISTS embeddings_vec USING vec0(
+        embedding float[${EMBEDDING_DIM}]
+      );
+
+      CREATE TABLE IF NOT EXISTS embeddings_meta (
+        symbol_id INTEGER PRIMARY KEY REFERENCES symbols(id) ON DELETE CASCADE,
+        model     TEXT NOT NULL,
+        dim       INTEGER NOT NULL
+      );
     `,
   },
 ];

@@ -40,7 +40,7 @@ export async function embedAllSymbols(
 
   // Find which symbols still need embeddings.
   const existing = new Map<number, string>(
-    (db.prepare('SELECT symbol_id, model FROM embeddings').all() as
+    (db.prepare('SELECT symbol_id, model FROM embeddings_meta').all() as
       { symbol_id: number; model: string }[])
       .map((r) => [r.symbol_id, r.model]),
   );

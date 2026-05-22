@@ -47,12 +47,14 @@ echo "== ask (offline) =="
 $ATLAS ask --offline --cwd "$FIXTURE" "How is the area of a circle computed?"
 
 echo
-echo "== drift (expects exit 2 in this demo) =="
+echo "== drift =="
+# After offline synth, every public symbol is named in its module doc, so
+# drift exits 0. Mutating a file before this step would produce exit 2.
 set +e
 $ATLAS drift --cwd "$FIXTURE"
 DRIFT_RC=$?
 set -e
-echo "drift exit code: $DRIFT_RC"
+echo "drift exit code: $DRIFT_RC  (0 = clean, 2 = drift detected)"
 
 echo
 echo "== ci-comment =="

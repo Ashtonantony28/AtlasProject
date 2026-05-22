@@ -104,17 +104,55 @@ export function createOfflineClient(model = 'offline-mock-v1'): LLMClient {
           `\n\n_Answer generated offline (mock client)._`;
       } else {
         const targetMatch = body.match(/^Target:\s*(.+)$/m);
-        const target = targetMatch ? targetMatch[1]?.trim() : 'this module';
+        const target = (targetMatch?.[1]?.trim()) ?? 'this module';
+
+        // Extract grounded symbol entries from the "Symbols:" section so the
+        // generated doc literally references the real symbol names (not just
+        // file paths). The synthesis prompt emits lines of the form:
+        //   "  - [kind] qualified.name (file.ts:N)"
+        // Each captured tuple becomes a bullet in the generated doc.
+        const symbolEntries: Array<{ kind: string; name: string; file: string; line: string }> = [];
+        const symbolsHeaderIdx = body.indexOf('\nSymbols:');
+        if (symbolsHeaderIdx >= 0) {
+          const tail = body.slice(symbolsHeaderIdx);
+          const blockEnd = tail.search(/\n[A-Z][A-Za-z ]+:\s*\n/);
+          const block = blockEnd > 0 ? tail.slice(0, blockEnd) : tail;
+          const re = /^\s*-\s*\[(\w+)\]\s+([\w.$-]+)\s+\(([\w./-]+):(\d+)\)/gm;
+          for (let m = re.exec(block); m !== null; m = re.exec(block)) {
+            symbolEntries.push({
+              kind: m[1] ?? '',
+              name: m[2] ?? '',
+              file: m[3] ?? '',
+              line: m[4] ?? '',
+            });
+          }
+        }
+
         const refs = [...body.matchAll(/([\w./-]+\.(?:ts|tsx|js|jsx|py)):(\d+)/g)]
           .slice(0, 5)
           .map((m) => `\`${m[1]}:${m[2]}\``);
         const refLine = refs.length > 0 ? `References: ${refs.join(', ')}.` : '';
+
+        // Scale bullets with the token budget: tight budgets produce short
+        // docs; generous budgets cover every grounded symbol up to a sane cap.
+        const maxBullets = Math.max(1, Math.min(50, Math.floor(params.maxTokens / 40)));
+        const bullets = symbolEntries
+          .slice(0, maxBullets)
+          .map((s) => `- \`${s.name}\` — ${s.kind} (${s.file}:${s.line})`)
+          .join('\n');
+
+        const isArchitecture = target.toLowerCase().includes('architecture');
+        const heading = isArchitecture ? '# Architecture' : `# ${target}`;
+        const lede = isArchitecture
+          ? `This codebase's modules collaborate through the graph above.`
+          : `\`${target}\` exposes the following public surface:`;
+
         content =
-          `# ${target}\n\n` +
-          `${target} contains the symbols listed above. The graph shows the ` +
-          `incoming and outgoing relationships used to ground this summary.\n\n` +
-          (refLine ? `${refLine}\n` : '') +
-          `\n_Generated offline (mock client)._`;
+          `${heading}\n\n` +
+          `${lede}\n\n` +
+          (bullets || '_No symbols extracted._') +
+          (refLine ? `\n\n${refLine}` : '') +
+          `\n\n_Generated offline (mock client)._`;
       }
 
       const tokens = Math.ceil(body.length / 4);

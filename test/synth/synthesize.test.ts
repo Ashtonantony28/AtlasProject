@@ -3,7 +3,13 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { closeDatabase, openDatabase, getAllDocs, getDoc, getAllFiles } from '../../src/core/db/index.js';
+import {
+  closeDatabase,
+  openDatabase,
+  getAllDocs,
+  getAllFiles,
+  getDoc,
+} from '../../src/core/db/index.js';
 import { indexRepo } from '../../src/core/ingest/index.js';
 import { createOfflineClient, synthesizeDocs, TokenBudget } from '../../src/core/synth/index.js';
 
@@ -19,7 +25,7 @@ describe('synthesizeDocs (offline)', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it('produces one doc per file plus an architecture doc, grounded in real files', async () => {
+  it('produces one doc per file plus an architecture doc, grounded in real symbols', async () => {
     const db = openDatabase(join(dir, 'index.db'));
     await indexRepo(db, FIXTURE);
     const llm = createOfflineClient();
@@ -28,11 +34,62 @@ describe('synthesizeDocs (offline)', () => {
     expect(stats.modulesGenerated).toBe(4);
     expect(stats.architectureGenerated).toBe(true);
 
-    // The stored docs reference at least one real file from the fixture.
     const allDocs = getAllDocs(db);
     expect(allDocs.length).toBe(5); // 4 files + architecture
-    const shapesDoc = allDocs.find((d) => d.content.includes('src/shapes.ts'));
+
+    // Every module doc must be non-empty and reference its own file path.
+    const fileDocs = allDocs.filter((d) => d.target_kind === 'file');
+    expect(fileDocs).toHaveLength(4);
+    for (const d of fileDocs) expect(d.content.length).toBeGreaterThan(0);
+
+    // The shapes doc must reference REAL SYMBOLS from that file by name
+    // (Circle / Shape / Drawable), not just the file path.
+    const files = getAllFiles(db);
+    const shapesFile = files.find((f) => f.path === 'src/shapes.ts')!;
+    const shapesDoc = fileDocs.find((d) => d.target_id === shapesFile.id);
     expect(shapesDoc).toBeDefined();
+    expect(shapesDoc!.content).toMatch(/\bCircle\b/);
+    expect(shapesDoc!.content).toMatch(/\bShape\b/);
+    expect(shapesDoc!.content).toMatch(/\bDrawable\b/);
+
+    // The math doc references its real symbols.
+    const mathFile = files.find((f) => f.path === 'src/math.ts')!;
+    const mathDoc = fileDocs.find((d) => d.target_id === mathFile.id);
+    expect(mathDoc!.content).toMatch(/\badd\b/);
+    expect(mathDoc!.content).toMatch(/\bmultiply\b/);
+
+    // The Python doc references its real symbols.
+    const utilFile = files.find((f) => f.path === 'src/util.py')!;
+    const utilDoc = fileDocs.find((d) => d.target_id === utilFile.id);
+    expect(utilDoc!.content).toMatch(/\bCounter\b/);
+    expect(utilDoc!.content).toMatch(/\bgreet\b/);
+
+    closeDatabase(db);
+  });
+
+  it('asserts structure when running with a low per-doc token cap', async () => {
+    // Smoke test for the DoD: with a low per-doc cap (small max_tokens),
+    // each generated doc must still be non-empty, have a markdown heading,
+    // and reference at least one real symbol from its file.
+    const db = openDatabase(join(dir, 'index.db'));
+    await indexRepo(db, FIXTURE);
+    const llm = createOfflineClient();
+    const stats = await synthesizeDocs(db, llm, {
+      root: FIXTURE,
+      tokenBudget: 200_000,
+      perDocMaxTokens: 120, // tight, but enough to render a few bullets
+    });
+    expect(stats.modulesGenerated + stats.modulesCached).toBe(4);
+
+    const docs = getAllDocs(db).filter((d) => d.target_kind === 'file');
+    expect(docs).toHaveLength(4);
+    for (const d of docs) {
+      expect(d.content.length).toBeGreaterThan(0);
+      // Each module doc has a markdown heading.
+      expect(d.content).toMatch(/^#\s+/m);
+      // Each module doc cites a file:line.
+      expect(d.content).toMatch(/[\w./-]+\.(?:ts|py):\d+/);
+    }
     closeDatabase(db);
   });
 

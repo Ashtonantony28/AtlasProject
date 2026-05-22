@@ -19,7 +19,17 @@ describe('migrations', () => {
       .prepare("SELECT name FROM sqlite_master WHERE type='table'")
       .all() as { name: string }[];
     const names = new Set(tables.map((t) => t.name));
-    for (const expected of ['files', 'symbols', 'edges', 'embeddings', 'docs', 'runs', 'imports']) {
+    for (const expected of [
+      'files',
+      'symbols',
+      'edges',
+      // sqlite-vec vec0 virtual table + meta side-car (migration v2)
+      'embeddings_vec',
+      'embeddings_meta',
+      'docs',
+      'runs',
+      'imports',
+    ]) {
       expect(names.has(expected)).toBe(true);
     }
     expect(counts(db)).toEqual({ files: 0, symbols: 0, edges: 0, docs: 0, imports: 0 });

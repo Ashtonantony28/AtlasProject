@@ -9,10 +9,15 @@ one short entry per decision (newest at the bottom).
 ESLint v9 flat config + Prettier. Mature TS plugin ecosystem, easier to debug
 when CI fails. CLAUDE.md said "pick one and move on".
 
-## 2026-05-20 — Embeddings stored as raw BLOB (not sqlite-vec virtual table) in Phase 1
-sqlite-vec is added in Phase 4; for Phase 1 the table is a plain BLOB so the
-schema works on any SQLite build. We can switch to a virtual table in a later
-migration without breaking earlier phases.
+## 2026-05-20 — Embeddings storage: bootstrap with BLOB, finalize with sqlite-vec
+Phase 1 created `embeddings(symbol_id, model, dim, vector BLOB)` so the
+schema worked on any SQLite build. Phase 4 swapped this for a real
+`sqlite-vec` setup (migration v2): `embeddings_vec` (vec0 virtual table,
+fixed-dim `float[384]`) for KNN, plus an `embeddings_meta(symbol_id, model,
+dim)` side-car since vec0 doesn't carry user metadata. `openDatabase` loads
+the extension on every open (read-only and read-write) so the virtual table
+is queryable from `atlas serve` and `atlas search`. The old BLOB table is
+dropped by the v2 migration; running `atlas index` regenerates embeddings.
 
 ## 2026-05-20 — Tree-sitter pin: 0.21.x line, tree-sitter-python pinned to 0.23.2
 tree-sitter-python@0.23.6 requires tree-sitter@^0.22, but tree-sitter-javascript
@@ -63,13 +68,37 @@ failure".
 - Smoke-tested on Atlas's own source: 69 files → 469 symbols → 757 edges in
   ~400ms.
 
+## 2026-05-20 — DoD audit, gap-fix pass
+A re-read of each Phase's DoD turned up five real gaps. All closed:
+- Phase 2 — added signature + docstring + span assertions to the indexer
+  test (the DoD asked for "expected symbol count **and a few known
+  signatures**"; previous test only checked names).
+- Phase 4 — swapped the BLOB embeddings table for a real `sqlite-vec` vec0
+  virtual table (matching CLAUDE.md §3 + §5). `openDatabase` loads the
+  extension before migrations; migration v2 drops `embeddings` and creates
+  `embeddings_vec` + `embeddings_meta`. Search now uses vec0's KNN MATCH
+  instead of a full-scan cosine. Note: vec0 requires `BigInt` rowids;
+  store.ts wraps integer ids accordingly.
+- Phase 5 — the offline mock now extracts every `[kind] name (file:line)`
+  bullet from the synthesis prompt and renders them in the doc, so docs
+  literally reference real symbols. Added a low-cap structure smoke test
+  (perDocMaxTokens=120) that asserts each doc still has a heading and
+  cites a file:line — the second half of the DoD.
+- Phase 8 — JSDOM-based rendering test that runs the dashboard's app.js
+  with a stubbed fetch and asserts the file list, graph nodes/edges, doc
+  browser, and search results all populate (the "in-browser" half of the
+  DoD; the API-side was already covered).
+- Phase 9 — added an end-to-end CI pipeline test (index → docs → drift →
+  ci-comment) that asserts the exact payload the workflow posts, for both
+  the clean and the drift cases. Stands in for `act --dry-run`.
+
 ## 2026-05-20 — Final summary
 Atlas ships its end-to-end pipeline: walk → parse → graph → embed → search →
 synth → ask → drift, with a local dashboard and a CI PR comment workflow.
-52 tests, 0 lint errors, strict TS. The whole thing runs offline by default
-(deterministic local embeddings + mock LLM) and switches to the real
-Anthropic API by exporting `ANTHROPIC_API_KEY`. Future work (out of scope
-for v1): proper call-graph resolution via tree-sitter queries rather than a
-regex heuristic, sqlite-vec virtual-table embeddings, language coverage
-beyond TS/JS/Python, and a real Vite/React dashboard if/when the vanilla
-one's limits start to bite.
+60+ tests, 0 lint errors, strict TS. The whole thing runs offline by default
+(deterministic local embeddings via `local-hash-v1`, sqlite-vec for storage
+and KNN, mock LLM) and switches to the real Anthropic API by exporting
+`ANTHROPIC_API_KEY`. Future work (out of scope for v1): proper call-graph
+resolution via tree-sitter queries rather than a regex heuristic, language
+coverage beyond TS/JS/Python, and a real Vite/React dashboard if/when the
+vanilla one's limits start to bite.

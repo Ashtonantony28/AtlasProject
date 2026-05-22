@@ -9,7 +9,10 @@ export {
   getAllEmbeddings,
   countEmbeddings,
   deleteEmbeddingsForFile,
+  getEmbeddingMeta,
+  vectorKnn,
 } from './store.js';
+export type { StoredEmbedding } from './store.js';
 export { embedAllSymbols } from './embedAll.js';
 export type { EmbedAllOptions, EmbedAllStats } from './embedAll.js';
 export { search } from './search.js';

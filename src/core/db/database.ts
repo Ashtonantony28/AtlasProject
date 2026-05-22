@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3';
+import * as sqliteVec from 'sqlite-vec';
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { MIGRATIONS } from './schema.js';
@@ -10,8 +11,15 @@ export interface OpenDbOptions {
   fileMustExist?: boolean;
 }
 
+/** Load the sqlite-vec extension. Required before any vec0 virtual table is queried. */
+function loadVecExtension(db: DB): void {
+  sqliteVec.load(db);
+}
+
 /**
  * Open (or create) the Atlas SQLite index, applying any pending migrations.
+ * Loads the sqlite-vec extension on every open (read-only or read-write) so
+ * downstream code can query the embeddings_vec virtual table either way.
  */
 export function openDatabase(dbPath: string, opts: OpenDbOptions = {}): DB {
   if (!opts.readonly && !existsSync(dbPath)) {
@@ -22,6 +30,10 @@ export function openDatabase(dbPath: string, opts: OpenDbOptions = {}): DB {
     readonly: opts.readonly ?? false,
     fileMustExist: opts.fileMustExist ?? false,
   });
+
+  // sqlite-vec is needed even in read-only mode because the embeddings_vec
+  // virtual table created by migration v2 is queried on search.
+  loadVecExtension(db);
 
   if (!opts.readonly) {
     db.pragma('journal_mode = WAL');

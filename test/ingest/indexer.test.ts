@@ -46,6 +46,25 @@ describe('indexRepo end-to-end on fixture', () => {
     expect(names.has('Circle.area')).toBe(true);
     expect(names.has('Counter.increment')).toBe(true);
 
+    // Known signatures — the parser must capture the declaration line.
+    const byQName = new Map(symbols.map((s) => [s.qualified_name, s]));
+    expect(byQName.get('add')?.signature).toMatch(/function add\(a:\s*number,\s*b:\s*number\)/);
+    expect(byQName.get('Circle')?.signature).toMatch(/class Circle/);
+    expect(byQName.get('Circle.area')?.signature).toMatch(/area\(\)/);
+    expect(byQName.get('Counter.increment')?.signature).toMatch(/def increment\(self/);
+
+    // Spans — every symbol has a valid start/end line, and they're 1-based.
+    for (const s of symbols) {
+      expect(s.start_line).toBeGreaterThanOrEqual(1);
+      expect(s.end_line).toBeGreaterThanOrEqual(s.start_line);
+    }
+
+    // Docstrings — at least one symbol carries a captured docstring.
+    const docstringed = symbols.filter((s) => s.docstring && s.docstring.length > 0);
+    expect(docstringed.length).toBeGreaterThan(0);
+    const greetPy = byQName.get('greet');
+    expect(greetPy?.docstring).toMatch(/friendly greeting/);
+
     // Spot check that imports of './math.js' got recorded.
     const imps = getAllImports(db);
     const fromMath = imps.filter((i) => i.module === './math.js');
