@@ -64,6 +64,15 @@ describe('synthesizeDocs (offline)', () => {
     expect(utilDoc!.content).toMatch(/\bCounter\b/);
     expect(utilDoc!.content).toMatch(/\bgreet\b/);
 
+    // The architecture doc must list the actual modules + show real totals.
+    const archDoc = allDocs.find((d) => d.target_kind === 'architecture');
+    expect(archDoc).toBeDefined();
+    expect(archDoc!.content).toMatch(/^#\s+Architecture/m);
+    expect(archDoc!.content).toMatch(/src\/shapes\.ts/);
+    expect(archDoc!.content).toMatch(/src\/math\.ts/);
+    expect(archDoc!.content).toMatch(/src\/util\.py/);
+    expect(archDoc!.content).toMatch(/Totals:\s*\*\*\s*4\s+files/);
+
     closeDatabase(db);
   });
 
