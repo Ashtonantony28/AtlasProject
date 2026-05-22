@@ -177,11 +177,12 @@ function visit(node: Node, ctx: Ctx): void {
   }
 
   // Top-level lexical declarations (const/let/var). We only record top-level
-  // (ctx.qualifier empty) to avoid noise from local variables.
+  // (ctx.qualifier empty) to avoid noise from local variables. Also detect CJS require().
   if (
     (node.type === 'lexical_declaration' || node.type === 'variable_declaration') &&
     ctx.qualifier.length === 0
   ) {
+    collectCjsRequires(node, ctx);
     for (const decl of node.namedChildren) {
       if (decl.type !== 'variable_declarator') continue;
       const nameNode = decl.childForFieldName('name');
@@ -265,6 +266,85 @@ function trimQuotes(s: string): string {
     return s.slice(1, -1);
   }
   return s;
+}
+
+/** If `node` is a `require('module')` call, return the module string; else null. */
+function requireCallModule(node: Node): string | null {
+  if (node.type !== 'call_expression') return null;
+  const fn = node.childForFieldName('function');
+  if (!fn || fn.type !== 'identifier' || fn.text !== 'require') return null;
+  const args = node.childForFieldName('arguments');
+  if (!args) return null;
+  const firstArg = args.namedChildren[0];
+  if (!firstArg || firstArg.type !== 'string') return null;
+  return trimQuotes(firstArg.text);
+}
+
+/**
+ * Collect CJS require() calls from a lexical/variable declaration node.
+ * Handles four shapes:
+ *   const express = require('express')           // default
+ *   const Router  = require('express').Router    // member
+ *   const { json, urlencoded } = require('express')  // destructured
+ *   const { json: parseJson } = require('express')   // aliased destructured
+ */
+function collectCjsRequires(declNode: Node, ctx: Ctx): void {
+  const line = lineOf(declNode);
+  for (const decl of declNode.namedChildren) {
+    if (decl.type !== 'variable_declarator') continue;
+    const nameNode = decl.childForFieldName('name');
+    const valueNode = decl.childForFieldName('value');
+    if (!valueNode || !nameNode) continue;
+
+    let moduleStr: string | null = null;
+    let memberAccess: string | null = null;
+
+    if (valueNode.type === 'member_expression') {
+      // const Router = require('express').Router
+      const obj = valueNode.childForFieldName('object');
+      const prop = valueNode.childForFieldName('property');
+      if (obj) moduleStr = requireCallModule(obj);
+      if (prop) memberAccess = prop.text;
+    } else if (valueNode.type === 'call_expression') {
+      // Either require('mod') or require('mod')(args) — the latter is a call whose
+      // function is itself the require() call, e.g. require('debug')('ns').
+      const directMod = requireCallModule(valueNode);
+      if (directMod !== null) {
+        moduleStr = directMod;
+      } else {
+        const innerFn = valueNode.childForFieldName('function');
+        if (innerFn) moduleStr = requireCallModule(innerFn);
+      }
+    }
+
+    if (!moduleStr) continue;
+
+    if (nameNode.type === 'identifier') {
+      // default or member form
+      ctx.imports.push({
+        module: moduleStr,
+        imported: memberAccess ?? 'default',
+        alias: nameNode.text,
+        line,
+      });
+    } else if (nameNode.type === 'object_pattern') {
+      // destructured form: { json } or { json: parseJson }
+      for (const prop of nameNode.namedChildren) {
+        if (prop.type === 'shorthand_property_identifier_pattern') {
+          ctx.imports.push({ module: moduleStr, imported: prop.text, alias: null, line });
+        } else if (prop.type === 'pair_pattern') {
+          const key = prop.childForFieldName('key');
+          const val = prop.childForFieldName('value');
+          ctx.imports.push({
+            module: moduleStr,
+            imported: key?.text ?? null,
+            alias: val?.text ?? null,
+            line,
+          });
+        }
+      }
+    }
+  }
 }
 
 export function parseTsLike(root: Node, language: LanguageId): ParseResult {

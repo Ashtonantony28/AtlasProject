@@ -76,6 +76,34 @@ export type Pair = [number, number];
     expect(result.symbols.find((s) => s.name === 'Drawable')?.kind).toBe('interface');
     expect(result.symbols.find((s) => s.name === 'Pair')?.kind).toBe('type');
   });
+
+  it('extracts CJS require() — default, member, destructured, and aliased forms', async () => {
+    const src = `
+const express = require('express');
+const Router = require('express').Router;
+const { json, urlencoded } = require('express');
+const { json: parseJson } = require('express');
+`;
+    const result = await parseSource(src, 'javascript');
+
+    // default: const express = require('express')
+    const def = result.imports.find((i) => i.module === 'express' && i.imported === 'default');
+    expect(def?.alias).toBe('express');
+
+    // member: const Router = require('express').Router
+    const member = result.imports.find((i) => i.module === 'express' && i.imported === 'Router');
+    expect(member?.alias).toBe('Router');
+
+    // destructured: const { json, urlencoded } = require('express')
+    const json = result.imports.find((i) => i.module === 'express' && i.imported === 'json' && i.alias === null);
+    expect(json).toBeDefined();
+    const urlencoded = result.imports.find((i) => i.module === 'express' && i.imported === 'urlencoded');
+    expect(urlencoded).toBeDefined();
+
+    // aliased destructured: const { json: parseJson } = require('express')
+    const aliased = result.imports.find((i) => i.module === 'express' && i.imported === 'json' && i.alias === 'parseJson');
+    expect(aliased).toBeDefined();
+  });
 });
 
 describe('Python parser', () => {
