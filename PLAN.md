@@ -44,7 +44,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 | SG6 | Docs + drift + CI that actually detects staleness | SG2, SG3 | unassigned | proposed |
 | SG7 | Grounded Q&A citation checks | SG5 | unassigned | proposed |
 | SG8 | Read-only on target + CLI hygiene | SG0 | unassigned | proposed |
-| SG9 | MCP server (additive, keeps `docs`/`ask`) | SG6, SG7 | unassigned | pending user decision |
+| SG9 | MCP server (additive, keeps `docs`/`ask`) | SG6, SG7 | unassigned | proposed (user chose "keep both", 2026-10-19) |
 
 ### SG0: Shared interfaces + bench harness
 - Migration v3 (`symbols.exported`), `ParsedSymbol.exported`, `createEmbedder`, FTS5 table `symbols_fts` (migration v3), plus contract tests that pin each item in §Interfaces.
@@ -84,7 +84,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 - Config moves into `.atlas/` (no `atlas.config.json` written to the target root); no `process.exit` inside `try/finally`; remove unused config keys or wire them.
 - Accept: a test that indexes a git repo and asserts `git status --porcelain` lists only `.atlas/`.
 
-### SG9: MCP server (pending decision)
+### SG9: MCP server
 - Port `relaxed-knuth-DHc0Q`'s `src/mcp/server.ts` as an additional surface without deleting `synth/`, `docs` or `ask`.
 - Accept: `test/mcp/server.test.ts` passes alongside the existing suite.
 
