@@ -5,18 +5,18 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { dirname, extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
-import {
-  type DB,
-  getAllDocs,
-  getAllEdges,
-  getAllFiles,
-  getAllSymbols,
-  getDoc,
-} from '../core/db/index.js';
+import { type DB, getAllEdges, getAllFiles, getAllSymbols } from '../core/db/index.js';
 import { createEmbedder, search } from '../core/vector/index.js';
-import { loadConfig } from '../core/config.js';
-import type { SymbolKind } from '../core/db/index.js';
+import { loadConfig, resolvePaths } from '../core/config.js';
 import { buildGraphJson } from '../core/graph/index.js';
+import { listDocs } from '../core/synth/index.js';
+import {
+  listArg,
+  numberArg,
+  ParamError,
+  parseParams,
+  SearchParamsSchema,
+} from '../core/params.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -69,7 +69,12 @@ export async function startServer(db: DB, root: string, opts: ServeOptions = {})
   const host = opts.host ?? '127.0.0.1';
   const port = opts.port ?? 4321;
   const staticRoot = findStaticRoot();
-  const embedder = createEmbedder(loadConfig(root));
+  const config = loadConfig(root);
+  const embedder = createEmbedder(config);
+  // Docs come from the index, then `.atlas/docs` (read-only), as for the CLI and MCP.
+  const docsDir = join(resolvePaths(root, config).atlasDir, 'docs');
+  const docFor = (target: string | undefined) =>
+    target === undefined ? undefined : listDocs(db, docsDir).find((d) => d.target === target);
 
   const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     try {
@@ -85,7 +90,7 @@ export async function startServer(db: DB, root: string, opts: ServeOptions = {})
         const files = getAllFiles(db).length;
         const symbols = getAllSymbols(db).length;
         const edges = getAllEdges(db).length;
-        const docs = getAllDocs(db).length;
+        const docs = listDocs(db, docsDir).length;
         jsonResponse(res, 200, { files, symbols, edges, docs });
         return;
       }
@@ -98,7 +103,17 @@ export async function startServer(db: DB, root: string, opts: ServeOptions = {})
         return;
       }
       if (path === '/api/docs') {
-        jsonResponse(res, 200, getAllDocs(db));
+        jsonResponse(
+          res,
+          200,
+          listDocs(db, docsDir).map((d) => ({
+            kind: d.kind,
+            target: d.target,
+            source: d.source,
+            sourceHash: d.sourceHash,
+            chars: d.content.length,
+          })),
+        );
         return;
       }
       if (path.startsWith('/api/doc/file/')) {
@@ -108,7 +123,7 @@ export async function startServer(db: DB, root: string, opts: ServeOptions = {})
           jsonResponse(res, 400, { error: 'bad id' });
           return;
         }
-        const doc = getDoc(db, 'file', id);
+        const doc = docFor(getAllFiles(db).find((f) => f.id === id)?.path);
         if (!doc) {
           jsonResponse(res, 404, { error: 'not found' });
           return;
@@ -117,7 +132,7 @@ export async function startServer(db: DB, root: string, opts: ServeOptions = {})
         return;
       }
       if (path === '/api/doc/architecture') {
-        const doc = getDoc(db, 'architecture', 0);
+        const doc = docFor('architecture');
         if (!doc) {
           jsonResponse(res, 404, { error: 'not found' });
           return;
@@ -126,18 +141,17 @@ export async function startServer(db: DB, root: string, opts: ServeOptions = {})
         return;
       }
       if (path === '/api/search') {
-        const q = url.searchParams.get('q') ?? '';
-        const limit = Number.parseInt(url.searchParams.get('limit') ?? '10', 10);
-        const kindParam = url.searchParams.get('kind');
-        const fileParam = url.searchParams.get('file');
-        if (!q.trim()) {
-          jsonResponse(res, 200, []);
-          return;
-        }
-        const hits = await search(db, embedder, q, {
+        const p = url.searchParams;
+        const { query, kind, file, limit } = parseParams(SearchParamsSchema, {
+          query: p.get('q') ?? '',
+          kind: listArg(p.get('kind')),
+          file: p.get('file') ?? undefined,
+          limit: numberArg(p.get('limit')),
+        });
+        const hits = await search(db, embedder, query, {
           limit,
-          ...(kindParam ? { kind: kindParam.split(',') as SymbolKind[] } : {}),
-          ...(fileParam ? { file: fileParam } : {}),
+          ...(kind?.length ? { kind } : {}),
+          ...(file ? { file } : {}),
         });
         jsonResponse(
           res,
@@ -151,6 +165,11 @@ export async function startServer(db: DB, root: string, opts: ServeOptions = {})
             score: h.totalScore,
           })),
         );
+        return;
+      }
+
+      if (path === '/api' || path.startsWith('/api/')) {
+        jsonResponse(res, 404, { error: `unknown endpoint: ${path}` });
         return;
       }
 
@@ -183,7 +202,7 @@ export async function startServer(db: DB, root: string, opts: ServeOptions = {})
       res.end('not found');
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      jsonResponse(res, 500, { error: msg });
+      jsonResponse(res, err instanceof ParamError ? 400 : 500, { error: msg });
     }
   };
 

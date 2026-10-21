@@ -3,15 +3,27 @@
 // Two signals:
 //   - stale: a doc whose stored source_hash differs from sha256 of the prompt
 //     it would be generated from now (its grounding context moved on), or a
-//     persisted doc whose file no longer exists. Fatal in the CLI.
+//     persisted doc whose file no longer exists, or a doc whose file on disk no
+//     longer matches its indexed content hash (edited, or failed to re-index).
+//     In DB mode a pruned file's doc survives as a tombstone until the next
+//     `atlas docs`, so deletions are stale here too. Fatal in the CLI.
 //   - undocumented: an exported symbol whose name (qualified or bare) does
-//     not appear as a whole identifier in its file's doc. Reported only;
-//     fatal with `atlas drift --strict`.
+//     not appear as a whole identifier in its file's doc, or a `module` entry
+//     for a file with no doc and no exported symbols (e.g. added since), so
+//     every undocumented file is listed. Reported only;
+//     fatal with `strict` (`atlas drift --strict`).
+//
+// `hasDrift` is true when either list is non-empty; `failing` is the gate
+// (stale docs, or undocumented symbols under `strict`) and is exactly when
+// `atlas drift` exits 2.
 
-import { type DB, getAllFiles, getSymbolsForFile } from '../db/index.js';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { type DB, type FileRow, getAllFiles, getSymbolsForFile } from '../db/index.js';
 import { sha256 } from '../ingest/index.js';
 import {
   architecturePrompt,
+  deletedDocsFromDb,
   docsFromDb,
   modulePrompt,
   type PersistedDoc,
@@ -24,7 +36,7 @@ export interface StaleDocReport {
   targetId: number;
   targetPath: string; // file path or "architecture"
   storedHash: string;
-  currentHash: string; // "missing" when the file no longer exists
+  currentHash: string; // "missing" when the file no longer exists; "unindexed" when it changed since indexing
 }
 
 export interface UndocumentedSymbolReport {
@@ -42,7 +54,11 @@ export interface DriftReport {
     docs: number;
     publicSymbols: number; // exported, non-module symbols
   };
+  // Anything to report: stale docs or undocumented symbols.
   hasDrift: boolean;
+  // The drift gate failed: stale docs, or undocumented symbols when `strict`.
+  failing: boolean;
+  strict: boolean;
 }
 
 export interface DetectOptions {
@@ -52,11 +68,14 @@ export interface DetectOptions {
   skipArchitecture?: boolean;
   // Check these docs (e.g. read from `.atlas/docs`) instead of the docs table.
   docs?: PersistedDoc[];
+  // Undocumented symbols also fail the gate (`failing`).
+  strict?: boolean;
 }
 
 export function detectDrift(db: DB, opts: DetectOptions): DriftReport {
   const files = getAllFiles(db);
-  const docs = opts.docs ?? docsFromDb(db);
+  const strict = opts.strict ?? false;
+  const docs = opts.docs ?? [...deletedDocsFromDb(db), ...docsFromDb(db)];
   const fileDocs = new Map<string, PersistedDoc>();
   let archDoc: PersistedDoc | undefined;
   for (const d of docs) {
@@ -73,7 +92,9 @@ export function detectDrift(db: DB, opts: DetectOptions): DriftReport {
     seen.add(file.path);
     const doc = fileDocs.get(file.path);
     if (doc) {
-      const current = sha256(modulePrompt(db, opts.root, file));
+      const current = indexedContentChanged(opts.root, file)
+        ? 'unindexed'
+        : sha256(modulePrompt(db, opts.root, file));
       if (doc.sourceHash !== current) {
         stale.push({
           kind: 'file',
@@ -88,6 +109,9 @@ export function detectDrift(db: DB, opts: DetectOptions): DriftReport {
     const exported = getSymbolsForFile(db, file.id).filter(
       (s) => s.exported === 1 && s.kind !== 'module',
     );
+    if (!doc && exported.length === 0) {
+      undocumented.push({ file: file.path, symbol: file.path, kind: 'module', startLine: 1 });
+    }
     publicSymbolCount += exported.length;
     for (const sym of exported) {
       const ref = sym.qualified_name ?? sym.name;
@@ -123,9 +147,26 @@ export function detectDrift(db: DB, opts: DetectOptions): DriftReport {
   return {
     stale,
     undocumented,
-    totals: { files: files.length, docs: docs.length, publicSymbols: publicSymbolCount },
+    totals: {
+      files: files.length,
+      docs: fileDocs.size + (archDoc ? 1 : 0),
+      publicSymbols: publicSymbolCount,
+    },
     hasDrift: stale.length > 0 || undocumented.length > 0,
+    failing: stale.length > 0 || (strict && undocumented.length > 0),
+    strict,
   };
+}
+
+/** The index is behind the file (edited since, or its re-index failed and kept the old rows). */
+function indexedContentChanged(root: string, file: FileRow): boolean {
+  let content: string;
+  try {
+    content = readFileSync(join(root, file.path), 'utf8');
+  } catch {
+    return false; // unreadable or deleted: the prompt check and pruning cover it
+  }
+  return sha256(content) !== file.content_hash;
 }
 
 /** Whole-identifier, case-sensitive match (`get` does not match inside `target`). */
@@ -162,6 +203,11 @@ export function formatDriftReport(report: DriftReport): string {
   lines.push('');
   lines.push(
     `summary: ${report.stale.length} stale, ${report.undocumented.length} undocumented (of ${report.totals.publicSymbols} public)`,
+  );
+  lines.push(
+    report.failing
+      ? 'drift check: failed'
+      : 'drift check: passed (undocumented symbols fail only with --strict)',
   );
   return lines.join('\n');
 }

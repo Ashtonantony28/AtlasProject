@@ -14,7 +14,14 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname, join, relative, sep } from 'node:path';
-import { type DB, getAllDocs, getAllFiles, getDoc, upsertDoc } from '../db/index.js';
+import {
+  type DB,
+  getAllDocs,
+  getAllFiles,
+  getDoc,
+  getDocTombstones,
+  upsertDoc,
+} from '../db/index.js';
 
 export interface PersistedDoc {
   kind: 'file' | 'architecture';
@@ -34,7 +41,8 @@ function render(doc: PersistedDoc): string {
   return `---\nkind: ${doc.kind}\ntarget: ${doc.target}\nsource_hash: ${doc.sourceHash}\n---\n${doc.content}\n`;
 }
 
-function parse(text: string): PersistedDoc | null {
+function parse(raw: string): PersistedDoc | null {
+  const text = raw.replace(/\r\n/g, '\n');
   const m = text.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
   if (!m) return null;
   const meta = new Map<string, string>();
@@ -70,6 +78,20 @@ export function docsFromDb(db: DB): PersistedDoc[] {
     out.push({ kind: d.target_kind, target, sourceHash: d.source_hash, content: d.content });
   }
   return out;
+}
+
+/** Docs of files pruned since the last `atlas docs` run, by their old path (newest wins). */
+export function deletedDocsFromDb(db: DB): PersistedDoc[] {
+  const byPath = new Map<string, PersistedDoc>();
+  for (const t of getDocTombstones(db)) {
+    byPath.set(t.path, {
+      kind: 'file',
+      target: t.path,
+      sourceHash: t.source_hash,
+      content: t.content,
+    });
+  }
+  return [...byPath.values()];
 }
 
 /** Mirror the DB's docs into `dir`, rewriting only changed files and pruning orphans. */
@@ -128,4 +150,21 @@ export function importPersistedDocs(db: DB, dir: string): number {
     imported++;
   }
   return imported;
+}
+
+export type DocEntry = PersistedDoc & { source: 'index' | 'persisted' };
+
+/** Docs from the index, with `dir` (`.atlas/docs`) filling targets the index lacks. Read-only. */
+export function listDocs(db: DB, dir: string): DocEntry[] {
+  const out = new Map<string, DocEntry>();
+  for (const d of readPersistedDocs(dir)) out.set(d.target, { ...d, source: 'persisted' });
+  for (const d of docsFromDb(db)) out.set(d.target, { ...d, source: 'index' });
+  return [...out.values()].sort((a, b) => (a.target < b.target ? -1 : a.target > b.target ? 1 : 0));
+}
+
+/** The doc for a file path or "architecture"; throws when there is none. */
+export function findDoc(db: DB, dir: string, target: string): DocEntry {
+  const doc = listDocs(db, dir).find((d) => d.target === target);
+  if (!doc) throw new Error(`no doc for '${target}': run \`atlas docs\` to generate docs`);
+  return doc;
 }

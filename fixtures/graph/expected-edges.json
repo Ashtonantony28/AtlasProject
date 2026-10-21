@@ -148,5 +148,245 @@
     "src": "web/consumer.js::useLegacy",
     "dst": "web/legacy.cjs::default.tidy",
     "kind": "calls"
+  },
+  {
+    "src": "py/pkg/api/__init__.py::<module>",
+    "dst": "py/pkg/api/star_src.py::<module>",
+    "kind": "imports"
+  },
+  {
+    "src": "py/pkg/api/__init__.py::<module>",
+    "dst": "py/pkg/api/views.py::view",
+    "kind": "imports"
+  },
+  {
+    "src": "py/pkg/repo.py::<module>",
+    "dst": "py/pkg/api/__init__.py::<module>",
+    "kind": "imports"
+  },
+  {
+    "src": "py/pkg/repo.py::<module>",
+    "dst": "py/pkg/api/star_src.py::starred",
+    "kind": "imports"
+  },
+  {
+    "src": "py/pkg/repo.py::<module>",
+    "dst": "py/pkg/api/views.py::view",
+    "kind": "imports"
+  },
+  {
+    "src": "py/pkg/repo.py::<module>",
+    "dst": "py/pkg/models.py::Base",
+    "kind": "imports"
+  },
+  {
+    "src": "py/pkg/repo.py::<module>",
+    "dst": "py/pkg/util.py::helper",
+    "kind": "imports"
+  },
+  {
+    "src": "py/pkg/repo.py::Repo.get",
+    "dst": "py/pkg/api/views.py::view",
+    "kind": "calls"
+  },
+  {
+    "src": "py/pkg/repo.py::UserRepo",
+    "dst": "py/pkg/models.py::Base",
+    "kind": "extends"
+  },
+  {
+    "src": "py/pkg/repo.py::UserRepo",
+    "dst": "py/pkg/repo.py::Repo",
+    "kind": "extends"
+  },
+  {
+    "src": "py/pkg/repo.py::UserRepo.all",
+    "dst": "py/pkg/models.py::Base.save",
+    "kind": "calls"
+  },
+  {
+    "src": "py/pkg/repo.py::UserRepo.all",
+    "dst": "py/pkg/repo.py::Repo.get",
+    "kind": "calls"
+  },
+  {
+    "src": "py/pkg/repo.py::lazy",
+    "dst": "py/pkg/api/star_src.py::starred",
+    "kind": "calls"
+  },
+  {
+    "src": "py/pkg/repo.py::lazy",
+    "dst": "py/pkg/util.py::helper",
+    "kind": "calls"
+  },
+  {
+    "src": "py/pkg/star_use.py::<module>",
+    "dst": "py/pkg/api/star_src.py::<module>",
+    "kind": "imports"
+  },
+  {
+    "src": "py/pkg/star_use.py::use",
+    "dst": "py/pkg/api/star_src.py::starred",
+    "kind": "calls"
+  },
+  {
+    "src": "web/app.tsx::<module>",
+    "dst": "web/ids.ts::makeId",
+    "kind": "imports"
+  },
+  {
+    "src": "web/app.tsx::<module>",
+    "dst": "web/store.ts::Store",
+    "kind": "imports"
+  },
+  {
+    "src": "web/app.tsx::<module>",
+    "dst": "web/ui/Base.ts::BaseView",
+    "kind": "imports"
+  },
+  {
+    "src": "web/app.tsx::<module>",
+    "dst": "web/ui/Base.ts::helperA",
+    "kind": "imports"
+  },
+  {
+    "src": "web/app.tsx::<module>",
+    "dst": "web/ui/Panel.tsx::Panel",
+    "kind": "imports"
+  },
+  {
+    "src": "web/app.tsx::<module>",
+    "dst": "web/ui/cycle.ts::cyc",
+    "kind": "imports"
+  },
+  {
+    "src": "web/app.tsx::<module>",
+    "dst": "web/ui/extra.ts::extra",
+    "kind": "imports"
+  },
+  {
+    "src": "web/app.tsx::<module>",
+    "dst": "web/ui/index.ts::<module>",
+    "kind": "imports"
+  },
+  {
+    "src": "web/app.tsx::App",
+    "dst": "web/ui/Panel.tsx::Panel",
+    "kind": "calls"
+  },
+  {
+    "src": "web/app.tsx::Screen",
+    "dst": "web/ui/Base.ts::BaseView",
+    "kind": "extends"
+  },
+  {
+    "src": "web/app.tsx::Screen.draw",
+    "dst": "web/ids.ts::makeId",
+    "kind": "calls"
+  },
+  {
+    "src": "web/app.tsx::Screen.draw",
+    "dst": "web/ui/Base.ts::BaseView.mount",
+    "kind": "calls"
+  },
+  {
+    "src": "web/app.tsx::Screen.draw",
+    "dst": "web/ui/Base.ts::helperA",
+    "kind": "calls"
+  },
+  {
+    "src": "web/app.tsx::Screen.draw",
+    "dst": "web/ui/cycle.ts::cyc",
+    "kind": "calls"
+  },
+  {
+    "src": "web/app.tsx::Screen.draw",
+    "dst": "web/ui/extra.ts::extra",
+    "kind": "calls"
+  },
+  {
+    "src": "web/app.tsx::useStore",
+    "dst": "web/store.ts::Store",
+    "kind": "calls"
+  },
+  {
+    "src": "web/cjs/index.js::<module>",
+    "dst": "web/cjs/app.js::<module>",
+    "kind": "imports"
+  },
+  {
+    "src": "web/cjs/index.js::<module>",
+    "dst": "web/cjs/app.js::createApp",
+    "kind": "imports"
+  },
+  {
+    "src": "web/cjs/main.js::<module>",
+    "dst": "web/cjs/Model.js::Model",
+    "kind": "imports"
+  },
+  {
+    "src": "web/cjs/main.js::<module>",
+    "dst": "web/cjs/app.js::createApp",
+    "kind": "imports"
+  },
+  {
+    "src": "web/cjs/main.js::<module>",
+    "dst": "web/cjs/index.js::<module>",
+    "kind": "imports"
+  },
+  {
+    "src": "web/cjs/main.js::Sub",
+    "dst": "web/cjs/Model.js::Model",
+    "kind": "extends"
+  },
+  {
+    "src": "web/cjs/main.js::Sub.run",
+    "dst": "web/cjs/Model.js::Model.save",
+    "kind": "calls"
+  },
+  {
+    "src": "web/cjs/main.js::main",
+    "dst": "web/cjs/Model.js::Model",
+    "kind": "calls"
+  },
+  {
+    "src": "web/cjs/main.js::main",
+    "dst": "web/cjs/app.js::createApp",
+    "kind": "calls"
+  },
+  {
+    "src": "web/cjs/main.js::main",
+    "dst": "web/cjs/app.js::version",
+    "kind": "calls"
+  },
+  {
+    "src": "web/ui/cycle.ts::<module>",
+    "dst": "web/ui/index.ts::<module>",
+    "kind": "imports"
+  },
+  {
+    "src": "web/ui/index.ts::<module>",
+    "dst": "web/ui/Base.ts::BaseView",
+    "kind": "imports"
+  },
+  {
+    "src": "web/ui/index.ts::<module>",
+    "dst": "web/ui/Base.ts::helperA",
+    "kind": "imports"
+  },
+  {
+    "src": "web/ui/index.ts::<module>",
+    "dst": "web/ui/Panel.tsx::Panel",
+    "kind": "imports"
+  },
+  {
+    "src": "web/ui/index.ts::<module>",
+    "dst": "web/ui/cycle.ts::<module>",
+    "kind": "imports"
+  },
+  {
+    "src": "web/ui/index.ts::<module>",
+    "dst": "web/ui/extra.ts::<module>",
+    "kind": "imports"
   }
 ]

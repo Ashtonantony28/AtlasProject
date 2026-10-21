@@ -172,4 +172,16 @@ export const MIGRATIONS: Migration[] = [
       UPDATE files SET content_hash = '';
     `,
   },
+  {
+    version: 5,
+    name: 'imports_reexport',
+    sql: `
+      -- 1 = the row re-exports rather than binds (export ... from), or, with module '',
+      -- exports a local name under alias (export default x, module.exports = x).
+      ALTER TABLE imports ADD COLUMN reexport INTEGER NOT NULL DEFAULT 0;
+
+      -- Force a re-parse so files indexed before v5 get their re-export rows.
+      UPDATE files SET content_hash = '';
+    `,
+  },
 ];

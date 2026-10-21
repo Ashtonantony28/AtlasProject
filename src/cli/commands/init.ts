@@ -1,7 +1,8 @@
 import type { Command } from 'commander';
-import { relative, resolve } from 'node:path';
+import { relative } from 'node:path';
 import { closeDatabase, openDatabase } from '../../core/db/index.js';
 import { writeDefaultConfig } from '../../core/config.js';
+import { requireRoot } from '../../core/project.js';
 
 interface InitArgs {
   force?: boolean;
@@ -15,7 +16,7 @@ export function registerInitCommand(program: Command): void {
     .option('-f, --force', 'Overwrite existing config file')
     .option('--cwd <path>', 'Project root (defaults to process.cwd())')
     .action(async (opts: InitArgs) => {
-      const root = resolve(opts.cwd ?? process.cwd());
+      const root = requireRoot(opts.cwd ?? process.cwd());
       const result = writeDefaultConfig(root, { force: opts.force });
 
       // Create + migrate the index DB so callers see a valid empty index.

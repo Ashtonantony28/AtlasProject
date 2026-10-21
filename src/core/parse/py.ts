@@ -1,6 +1,20 @@
 import type Parser from 'tree-sitter';
-import type { ParsedImport, ParsedReference, ParsedSymbol, ParseResult, RefKind } from './types.js';
-import { forEachOfType, uniqueRefs } from './refs.js';
+import type {
+  ParseDiagnostic,
+  ParsedImport,
+  ParsedReference,
+  ParsedSymbol,
+  ParseResult,
+  RefKind,
+} from './types.js';
+import {
+  forEachOfType,
+  internalDiagnostic,
+  pushAll,
+  uniqueRefs,
+  walkFrames,
+  type Frame,
+} from './refs.js';
 
 type Node = Parser.SyntaxNode;
 
@@ -52,15 +66,21 @@ interface Ctx {
 }
 
 const CALL_NODES = new Set(['call']);
+const IMPORT_NODES = new Set(['import_statement', 'import_from_statement']);
 
 /** `a`, `a.b.c` for identifier chains; null for anything computed. */
 function dotted(node: Node): string | null {
-  if (node.type === 'identifier') return node.text;
-  if (node.type !== 'attribute') return null;
-  const obj = node.childForFieldName('object');
-  const attr = node.childForFieldName('attribute');
-  const head = obj ? dotted(obj) : null;
-  return head && attr ? `${head}.${attr.text}` : null;
+  const parts: string[] = [];
+  let cur: Node | null = node;
+  while (cur?.type === 'attribute') {
+    const attr = cur.childForFieldName('attribute');
+    if (!attr) return null;
+    parts.push(attr.text);
+    cur = cur.childForFieldName('object');
+  }
+  if (cur?.type !== 'identifier') return null;
+  parts.push(cur.text);
+  return parts.reverse().join('.');
 }
 
 function addRef(ctx: Ctx, from: string | null, node: Node | null, kind: RefKind): void {
@@ -114,7 +134,7 @@ function qualify(ctx: Ctx, name: string): string {
   return ctx.qualifier.length === 0 ? name : `${ctx.qualifier.join('.')}.${name}`;
 }
 
-function visit(node: Node, ctx: Ctx): void {
+function visit(node: Node, ctx: Ctx, stack: Frame[]): void {
   if (node.type === 'import_statement' || node.type === 'import_from_statement') {
     collectImports(node, ctx);
     return;
@@ -125,6 +145,8 @@ function visit(node: Node, ctx: Ctx): void {
     const body = node.childForFieldName('body');
     if (nameNode) collectCalls(ctx, node, qualify(ctx, nameNode.text));
     else collectCalls(ctx, node, ctx.owner);
+    // Function-local imports bind file-wide: an approximation that keeps their edges.
+    forEachOfType(node, IMPORT_NODES, (n) => collectImports(n, ctx));
     if (nameNode) {
       const isMethod = ctx.qualifier.length > 0;
       ctx.symbols.push({
@@ -158,16 +180,24 @@ function visit(node: Node, ctx: Ctx): void {
       });
       const qname = qualify(ctx, nameNode.text);
       for (const base of node.childForFieldName('superclasses')?.namedChildren ?? []) {
-        addRef(ctx, qname, base, 'extends');
+        // `Repo[User]`, `Generic[T]`: the subscripted value is the base.
+        addRef(
+          ctx,
+          qname,
+          base.type === 'subscript' ? base.childForFieldName('value') : base,
+          'extends',
+        );
       }
       if (body) {
         const saved = { scopeExported: ctx.scopeExported, owner: ctx.owner };
         ctx.qualifier.push(nameNode.text);
         ctx.scopeExported = exported;
         ctx.owner = qname;
-        for (const c of body.namedChildren) visit(c, ctx);
-        ctx.qualifier.pop();
-        Object.assign(ctx, saved);
+        stack.push(() => {
+          ctx.qualifier.pop();
+          Object.assign(ctx, saved);
+        });
+        pushAll(stack, body.namedChildren);
       }
     }
     return;
@@ -188,7 +218,7 @@ function visit(node: Node, ctx: Ctx): void {
         exported: isExported(ctx, left.text),
       });
       const right = node.childForFieldName('right');
-      if (right?.type === 'assignment') visit(right, ctx);
+      if (right?.type === 'assignment') stack.push(right);
       else collectCalls(ctx, right, left.text);
       return;
     }
@@ -196,9 +226,7 @@ function visit(node: Node, ctx: Ctx): void {
 
   if (node.type === 'call') addRef(ctx, ctx.owner, node.childForFieldName('function'), 'calls');
 
-  for (const child of node.namedChildren) {
-    visit(child, ctx);
-  }
+  pushAll(stack, node.namedChildren);
 }
 
 function collectImports(node: Node, ctx: Ctx): void {
@@ -256,18 +284,23 @@ export function parsePython(root: Node): ParseResult {
     symbols: [],
     imports: [],
     qualifier: [],
-    all: literalAll(root),
+    all: null,
     scopeExported: false,
     references: [],
     owner: null,
   };
-  for (const child of root.namedChildren) {
-    visit(child, ctx);
+  const diagnostics: ParseDiagnostic[] = [];
+  try {
+    ctx.all = literalAll(root);
+    walkFrames(root.namedChildren, (node, stack) => visit(node, ctx, stack));
+  } catch (err) {
+    diagnostics.push(internalDiagnostic(err));
   }
   return {
     language: 'python',
     symbols: ctx.symbols,
     imports: ctx.imports,
     references: uniqueRefs(ctx.references),
+    diagnostics,
   };
 }

@@ -9,6 +9,7 @@ import {
 } from '../db/index.js';
 import type { Statement } from 'better-sqlite3';
 import { readFileFromRoot } from '../vector/index.js';
+import { sha256 } from '../ingest/index.js';
 
 export interface ModuleContext {
   file: FileRow;
@@ -21,6 +22,8 @@ export interface ModuleContext {
   // A trimmed source snippet for top symbols (capped to keep prompt small).
   sourceSnippets: Array<{ symbol: string; file: string; line: number; code: string }>;
   contentHash: string;
+  // Digest of every cross-file edge (uncapped), so the prompt hash covers what the caps drop.
+  neighbourhoodHash: string;
 }
 
 // Hard caps that keep each prompt (and so each doc's token cost) bounded
@@ -46,23 +49,71 @@ function stmt(db: DB, sql: string): Stmt {
   return s;
 }
 
-// Cross-file call edges touching one file, strongest (most calls) first.
-const OUTGOING_SQL = `
-  SELECT COALESCE(s.qualified_name, s.name) AS symbol, f.path || '#' || COALESCE(t.qualified_name, t.name) AS other
+// Every resolved cross-file edge touching one file, in both directions.
+const NEIGHBOUR_SQL = `
+  SELECT 'out' AS dir, e.kind, e.weak, s.kind AS skind, t.file_id AS fid,
+    COALESCE(s.qualified_name, s.name) AS symbol, f.path || '#' || COALESCE(t.qualified_name, t.name) AS other
   FROM symbols s
-  JOIN edges e ON e.src_symbol = s.id AND e.kind = 'calls'
+  JOIN edges e ON e.src_symbol = s.id
   JOIN symbols t ON t.id = e.dst_symbol
   JOIN files f ON f.id = t.file_id
-  WHERE s.file_id = ? AND s.kind != 'module' AND t.file_id != s.file_id
-  GROUP BY symbol, other ORDER BY COUNT(*) DESC, other, symbol LIMIT ${MAX_CALLS}`;
-const INCOMING_SQL = `
-  SELECT COALESCE(s.qualified_name, s.name) AS symbol, f.path || '#' || COALESCE(t.qualified_name, t.name) AS other
+  WHERE s.file_id = ? AND t.file_id != s.file_id
+  UNION ALL
+  SELECT 'in', e.kind, e.weak, s.kind, t.file_id,
+    COALESCE(s.qualified_name, s.name), f.path || '#' || COALESCE(t.qualified_name, t.name)
   FROM symbols s
-  JOIN edges e ON e.dst_symbol = s.id AND e.kind = 'calls'
+  JOIN edges e ON e.dst_symbol = s.id
   JOIN symbols t ON t.id = e.src_symbol
   JOIN files f ON f.id = t.file_id
-  WHERE s.file_id = ? AND s.kind != 'module' AND t.file_id != s.file_id
-  GROUP BY symbol, other ORDER BY COUNT(*) DESC, other, symbol LIMIT ${MAX_CALLS}`;
+  WHERE s.file_id = ? AND t.file_id != s.file_id`;
+
+interface NeighbourRow {
+  dir: 'in' | 'out';
+  kind: string;
+  weak: number;
+  skind: string;
+  fid: number;
+  symbol: string;
+  other: string;
+}
+
+/**
+ * Distinct call pairs in one direction, files with the most call pairs first,
+ * then by name; capped at MAX_CALLS.
+ */
+function topCalls(
+  rows: NeighbourRow[],
+  dir: 'in' | 'out',
+): Array<{ symbol: string; other: string }> {
+  const pairs = new Map<string, { symbol: string; other: string; fid: number }>();
+  for (const r of rows) {
+    if (r.dir !== dir || r.kind !== 'calls' || r.skind === 'module') continue;
+    pairs.set(`${r.symbol}\0${r.other}`, { symbol: r.symbol, other: r.other, fid: r.fid });
+  }
+  const perFile = new Map<number, number>();
+  for (const p of pairs.values()) perFile.set(p.fid, (perFile.get(p.fid) ?? 0) + 1);
+  return [...pairs.values()]
+    .sort(
+      (a, b) =>
+        (perFile.get(b.fid) ?? 0) - (perFile.get(a.fid) ?? 0) ||
+        cmp(a.other, b.other) ||
+        cmp(a.symbol, b.symbol),
+    )
+    .slice(0, MAX_CALLS)
+    .map(({ symbol, other }) => ({ symbol, other }));
+}
+
+/** sha256 over the whole cross-file neighbourhood, so capped prompts still change with it. */
+function neighbourhoodHash(rows: NeighbourRow[]): string {
+  const lines = [
+    ...new Set(rows.map((r) => `${r.dir} ${r.kind} ${r.weak} ${r.symbol} ${r.other}`)),
+  ].sort(cmp);
+  return sha256(lines.join('\n'));
+}
+
+function cmp(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
 
 /** Exported symbols first, then source order; `n` of them, back in source order. */
 function pickSymbols(symbols: SymbolRow[], n: number): SymbolRow[] {
@@ -85,10 +136,12 @@ export function buildModuleContext(db: DB, root: string, file: FileRow): ModuleC
     imported: i.imported,
     alias: i.alias,
   }));
-  const calls = (sql: string) =>
-    stmt(db, sql).all(file.id) as Array<{ symbol: string; other: string }>;
-  const outgoingCalls = calls(OUTGOING_SQL).map((r) => ({ to: r.other, symbol: r.symbol }));
-  const incomingCalls = calls(INCOMING_SQL).map((r) => ({ from: r.other, symbol: r.symbol }));
+  const neighbours = stmt(db, NEIGHBOUR_SQL).all(file.id, file.id) as NeighbourRow[];
+  const outgoingCalls = topCalls(neighbours, 'out').map((r) => ({ to: r.other, symbol: r.symbol }));
+  const incomingCalls = topCalls(neighbours, 'in').map((r) => ({
+    from: r.other,
+    symbol: r.symbol,
+  }));
 
   const source = readFileFromRoot(root, db, file.id);
   const lines = source ? source.split('\n') : [];
@@ -119,6 +172,7 @@ export function buildModuleContext(db: DB, root: string, file: FileRow): ModuleC
     outgoingCalls,
     sourceSnippets: snippets,
     contentHash: file.content_hash,
+    neighbourhoodHash: neighbourhoodHash(neighbours),
   };
 }
 
@@ -145,6 +199,7 @@ function renderModule(ctx: ModuleContext, snippetCount: number, symbolCount: num
   lines.push(`Language: ${ctx.file.language}`);
   lines.push(`LOC: ${ctx.file.loc}`);
   lines.push(`Content hash: ${ctx.contentHash}`);
+  lines.push(`Neighbourhood hash: ${ctx.neighbourhoodHash}`);
   const symbols = pickSymbols(ctx.publicSymbols, symbolCount);
   if (symbols.length > 0) {
     lines.push('');
@@ -203,6 +258,8 @@ export interface ArchitectureContext {
   files: Array<{ path: string; language: string; loc: number; symbolCount: number }>;
   omittedFiles: number;
   totals: { files: number; symbols: number; edges: number };
+  // Digest of every indexed path (uncapped), so renames among omitted files still count.
+  filesHash: string;
   topConnected: Array<{ file: string; degree: number }>;
 }
 
@@ -238,6 +295,7 @@ export function buildArchitectureContext(db: DB): ArchitectureContext {
       symbols: all.reduce((sum, f) => sum + f.symbolCount, 0),
       edges,
     },
+    filesHash: sha256(all.map((f) => `${f.path} ${f.language}`).join('\n')),
     topConnected,
   };
 }
@@ -255,6 +313,7 @@ function renderArchitecture(ctx: ArchitectureContext, fileCount: number): string
   const lines: string[] = [];
   lines.push(`Target: architecture overview`);
   lines.push(`Totals: files=${ctx.totals.files} symbols=${ctx.totals.symbols} edges=${ctx.totals.edges}`);
+  lines.push(`Files hash: ${ctx.filesHash}`);
   lines.push('');
   lines.push('Files:');
   const keep = new Set(

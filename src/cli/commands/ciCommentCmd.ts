@@ -37,9 +37,22 @@ export function renderComment(report: DriftReport): string {
   );
   lines.push('');
   if (!report.hasDrift) {
-    lines.push('All docs are in sync and every public symbol is documented. ');
+    lines.push('**Drift check: passed.** All docs are in sync and every public symbol is documented.');
     return lines.join('\n') + '\n';
   }
+  if (report.failing) {
+    const why: string[] = [];
+    if (report.stale.length > 0) why.push(`${report.stale.length} stale doc(s)`);
+    if (report.strict && report.undocumented.length > 0) {
+      why.push(`${report.undocumented.length} undocumented public symbol(s) (--strict)`);
+    }
+    lines.push(`**Drift check: failed** (${why.join(', ')}).`);
+  } else {
+    lines.push(
+      '**Drift check: passed.** No stale docs; the undocumented public symbols below are informational (they fail the check only with `--strict`).',
+    );
+  }
+  lines.push('');
 
   if (report.stale.length > 0) {
     lines.push(`### Stale docs (${report.stale.length})`);

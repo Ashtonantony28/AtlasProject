@@ -26,9 +26,11 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 
 - `ParsedSymbol` gains `exported: boolean`; `symbols.exported INTEGER NOT NULL DEFAULT 0` (migration v3).
 - `docs.source_hash` = `sha256(prompt)`, i.e. a hash of the full grounding context, not the file hash. `detectDrift` recomputes it the same way.
+- `ParseResult` gains `diagnostics: { line; message; severity: 'error' | 'warning' }[]` (additive, SG11); `parseSource` never throws on input.
 - `indexRepo` contract: a file's `content_hash` is written in the same transaction as its symbols and imports, only after a successful parse. Paths not seen by the walk are deleted (with cascades to symbols, imports, edges, embeddings and docs).
 - `Embedder` is chosen by `config.embeddingModel` through `createEmbedder(config)`; `local-hash-v1` stays the default.
 - `search()` signature is unchanged. Candidates are the union of vec0 KNN and an FTS5 index over `name`, `qualified_name` and `docstring`, fused by RRF. Filters apply before truncation.
+- `ParsedImport` gains optional `reexport` and `imports.reexport INTEGER NOT NULL DEFAULT 0` (migration v5, additive, SG10): `export … from` rows; with `module: ''` a local name exported as `alias` (`export default x`, `export { x as y }`, `module.exports = x`).
 - Perf budgets (measured by `scripts/bench.mjs` on `express` and Atlas itself): parse+insert ≤ 5 ms/file median; no-op re-index ≤ 100 ms per 100 files; `search` p95 ≤ 50 ms at 10k symbols; resolver ≤ 2 s at 1k files.
 
 ## Sub-goals
@@ -45,6 +47,10 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 | SG7 | Grounded Q&A citation checks | SG5 | Claude (thread) | done: `[n]`/`file:line` checks flagged in `ask` result, CLI and `--json`; full-span excerpts capped at 120 lines; expansion ranked resolved-first by kind; 135 tests |
 | SG8 | Read-only on target + CLI hygiene | SG0 | Claude (thread) | done: config in `.atlas/`, exitCode not exit; 104 tests, express git status clean |
 | SG9 | MCP server (additive, keeps `docs`/`ask`) | SG6, SG7 | Claude (thread) | done: `atlas mcp` stdio, 7 tools incl. docs + ask (citation checks, budgeted); 186 tests |
+| SG10 | Resolver: re-exports, default/CJS exports, generic Python bases (A1-01, A1-02, A1-03) | SG4 | Claude (thread) | done: re-export rows (v5) followed through barrels/`__init__`/CJS with cycle guard, default + `module.exports` defaults, subscripted bases; also A1-09/10/12; 12 audit tests flipped; 266 tests; express 1444/896 weak → 1554/895, got 4850/3461 → 5004/3156; resolver ~0.9–1.2 s/1k files |
+| SG11 | Parser never throws; diagnostics; failed parse marks docs stale (A1-04, A1-13) | SG3 | Claude (thread) | done: iterative CST walks (20k-term exprs), `ParseResult.diagnostics` (not stored), drift flags files changed since indexing; 3 A1-04 flipped; 241 tests; express 2052/1444, got 5752/4850 |
+| SG12 | Drift completeness: full neighbourhood hash, `--docs-dir` missing fails, CRLF, commit own docs (A1-05..08) | SG6 | Claude (thread) | done: uncapped neighbourhood digest in prompt, deleted-file tombstones, CRLF, `--docs-dir` missing/empty exits 1, `.atlas/config.json` committable; A1-05/06/07/08/17 flipped; 252 tests; got 97k tokens; own docs still uncommitted |
+| SG13 | Surface consistency: drift semantics and validation agree across CLI, HTTP, MCP (A3-01..A3-10) | SG9, SG12 | Claude (thread) | done: `failing` = exit 2 (hasDrift kept), shared `runDrift` errors on no docs (CLI 1, MCP isError), zod params shared by CLI/HTTP 400/MCP, `listDocs` for CLI/dashboard/MCP, budgeted CLI `ask`, no writes on missing root/index, `indexPath` confined to `.atlas/`; also A3-15/16/17; 15 audit tests flipped (A3-11, A3-13 open); 302 tests; express ok |
 
 ### SG0: Shared interfaces + bench harness
 - Migration v3 (`symbols.exported`), `ParsedSymbol.exported`, `createEmbedder`, FTS5 table `symbols_fts` (migration v3), plus contract tests that pin each item in §Interfaces.
@@ -77,7 +83,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 - Cache key = context hash; `buildModuleContext` no longer O(files × all edges); "undocumented" counts only `exported` symbols, with word-boundary matching.
 - CI: persist docs between runs (commit `.atlas/docs/*.md` with hashes in front matter) so a PR that changes code without regenerating docs is reported stale. Fix the trigger branch (`main` does not exist).
 - Accept: a workflow test that runs drift against docs generated from the *base* commit reports the changed file as stale; synthesis on a fully cached 1k-file index ≤ 1 s; the job is green on this repo.
-- Follow-up: Atlas's own `.atlas/docs` are not committed yet, so CI here has nothing to check; commit them after SG9 and the audits.
+- Follow-up done in SG12: `.atlas/docs` and `.atlas/config.json` are committed. Every PR that changes code must run `atlas index . && atlas docs --offline` and commit the result, or CI fails.
 
 ### SG7: Grounded Q&A
 - Parse `[n]` and `file:line` references in answers and flag any citation that is outside the retrieved snippets. Excerpts respect `end_line`. Rank graph expansion by edge strength.
@@ -100,3 +106,8 @@ Fresh subagents that wrote none of the code. Each writes `AUDIT-<n>.md`, ranked 
 2. Performance under load: every §Interfaces budget on a 10k-file synthetic repo.
 3. API consistency: CLI flags, HTTP API, dashboard and `--json` outputs agree.
 4. Test coverage: `vitest --coverage` with lines ≥ 85% in `src/core`, plus untested branches listed.
+
+### Audit round 1
+
+- AUDIT-1 (graph and drift soundness): 0 critical, 6 high, 7 medium, 7 low. Repros in `test/audit/audit-1.test.ts` as `it.fails`; a fix flips its test to `it`. Highs became SG10–SG12; the cheap mediums on the same code paths (A1-06, A1-08, A1-13) ride along.
+- AUDIT-3 (API consistency): 0 critical, 2 high, 8 medium, 7 low. Repros in `test/audit/audit-3.test.ts`. Highs (A3-01, A3-02) and the mediums on the same code paths (A3-03..A3-10) became SG13.

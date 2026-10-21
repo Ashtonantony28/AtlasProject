@@ -1,9 +1,8 @@
 import type { Command } from 'commander';
-import { resolve } from 'node:path';
 import { writeFileSync } from 'node:fs';
-import { closeDatabase, openDatabase, counts } from '../../core/db/index.js';
+import { closeDatabase, counts } from '../../core/db/index.js';
 import { buildGraphJson, buildGraphDot, type GraphFormat } from '../../core/graph/index.js';
-import { loadConfig, resolvePaths } from '../../core/config.js';
+import { openProjectIndex } from '../../core/project.js';
 
 interface GraphArgs {
   format?: GraphFormat;
@@ -19,10 +18,7 @@ export function registerGraphCommand(program: Command): void {
     .option('-o, --out <path>', 'Write to a file instead of stdout')
     .option('--cwd <path>', 'Project root', '.')
     .action((opts: GraphArgs) => {
-      const root = resolve(opts.cwd ?? '.');
-      const config = loadConfig(root);
-      const paths = resolvePaths(root, config);
-      const db = openDatabase(paths.dbPath, { fileMustExist: true });
+      const { db } = openProjectIndex(opts.cwd ?? '.');
       try {
         const fmt = (opts.format ?? 'json') as GraphFormat;
         let body: string;

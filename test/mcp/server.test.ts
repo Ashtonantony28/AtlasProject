@@ -157,11 +157,24 @@ describe('MCP tool handlers', () => {
       expect(handleGraphTool(ctx, { format: 'dot' })).toMatch(/^digraph Atlas \{/);
     });
 
-    it('atlas_drift reports undocumented exports but nothing stale on a fresh index', () => {
+    it('atlas_drift errors when there are no docs to check, like `atlas drift`', () => {
+      expect(() => handleDriftTool(ctx, {})).toThrow(/no docs found in the index/);
+      expect(() => handleDriftTool(ctx, { persisted: true })).toThrow(/docs directory not found/);
+    });
+
+    it('atlas_drift reports undocumented exports as non-failing unless strict', async () => {
+      await synthesize();
+      ctx.db
+        .prepare(
+          "UPDATE docs SET content = '# math' WHERE target_kind = 'file' AND target_id = (SELECT id FROM files WHERE path = 'src/math.ts')",
+        )
+        .run();
       const report = handleDriftTool(ctx, {});
       expect(report.stale).toEqual([]);
       expect(report.undocumented.length).toBeGreaterThan(0);
+      expect(report).toMatchObject({ hasDrift: true, failing: false, strict: false });
       expect(report.formatted).toMatch(/Undocumented/);
+      expect(handleDriftTool(ctx, { strict: true })).toMatchObject({ failing: true, strict: true });
     });
 
     it('atlas_drift reports exactly the mutated file as stale', async () => {
@@ -183,7 +196,7 @@ describe('MCP tool handlers', () => {
       rmSync(join(root, '.atlas', 'index.db'), { force: true });
       ctx = open();
       await handleIndexTool(ctx, {});
-      expect(handleDriftTool(ctx, {}).totals.docs).toBe(0);
+      expect(() => handleDriftTool(ctx, {})).toThrow(/no docs found/);
       const report = handleDriftTool(ctx, { persisted: true });
       expect(report.totals.docs).toBeGreaterThan(0);
       expect(report.stale).toEqual([]);

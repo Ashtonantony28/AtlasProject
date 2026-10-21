@@ -9,6 +9,8 @@ describe('renderComment', () => {
       undocumented: [],
       totals: { files: 4, docs: 5, publicSymbols: 19 },
       hasDrift: false,
+      failing: false,
+      strict: false,
     };
     const md = renderComment(report);
     expect(md).toMatch(/Atlas — documentation report/);
@@ -27,6 +29,8 @@ describe('renderComment', () => {
       ],
       totals: { files: 1, docs: 1, publicSymbols: 5 },
       hasDrift: true,
+      failing: true,
+      strict: false,
     };
     const md = renderComment(report);
     expect(md).toMatch(/Stale docs/);
@@ -48,6 +52,8 @@ describe('renderComment', () => {
       undocumented,
       totals: { files: 1, docs: 0, publicSymbols: 50 },
       hasDrift: true,
+      failing: false,
+      strict: false,
     };
     const md = renderComment(report);
     expect(md).toMatch(/…and 20 more\./);

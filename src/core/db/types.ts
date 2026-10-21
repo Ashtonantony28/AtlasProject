@@ -47,6 +47,7 @@ export interface ImportRow {
   imported: string | null;
   alias: string | null;
   start_line: number;
+  reexport: number;
 }
 
 export interface RefRow {

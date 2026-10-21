@@ -35,6 +35,7 @@ export interface IndexStats {
   filesIndexed: number;
   filesSkipped: number;
   filesFailed: number;
+  filesWithDiagnostics: number; // indexed files whose parse reported syntax errors or partial results
   filesRemoved: number;
   symbols: number;
   imports: number;
@@ -56,6 +57,7 @@ export async function indexRepo(
     filesIndexed: 0,
     filesSkipped: 0,
     filesFailed: 0,
+    filesWithDiagnostics: 0,
     filesRemoved: 0,
     symbols: 0,
     imports: 0,
@@ -150,6 +152,7 @@ export async function indexRepo(
           imported: imp.imported,
           alias: imp.alias,
           start_line: imp.line,
+          reexport: imp.reexport ?? false,
         });
       }
       insertRefs(
@@ -168,7 +171,13 @@ export async function indexRepo(
     stats.symbols += parsed.symbols.length;
     stats.imports += parsed.imports.length;
     stats.filesIndexed++;
-    opts.onFile?.({ path: file.relativePath, status: 'parsed' });
+    const nDiag = parsed.diagnostics.length;
+    if (nDiag > 0) stats.filesWithDiagnostics++;
+    opts.onFile?.({
+      path: file.relativePath,
+      status: 'parsed',
+      ...(nDiag > 0 ? { reason: `${nDiag} parse diagnostic${nDiag === 1 ? '' : 's'}` } : {}),
+    });
   }
 
   // Prune paths the walk no longer returns (deleted, renamed or now ignored).

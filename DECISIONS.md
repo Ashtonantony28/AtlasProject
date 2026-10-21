@@ -234,3 +234,71 @@ Handlers throw and the SDK turns errors, including zod validation failures, into
 `tokenBudget` that refuses a call when ~chars/3 input + `maxTokens` exceeds
 what is left; the Anthropic client is created lazily so the server starts
 without a key. The DB is closed on process exit, after in-flight calls finish.
+
+## 2026-10-21 — SG11: parser never throws; diagnostics; unindexed edits are stale
+CST walks are iterative: `visit` pushes children (and a scope-restore closure)
+onto an explicit stack via `walkFrames`, preserving pre-order, so a 20k-term
+expression parses. `dotted` and CJS `a = b = c` chains are loops too.
+`ParseResult.diagnostics` lists ERROR/MISSING nodes (first 20, then one
+`warning` with the remainder; error-free subtrees are skipped) and, as a last
+resort, a caught walker or tree-sitter failure (partial results + `error`).
+Diagnostics are not stored (no migration): `IndexStats.filesWithDiagnostics`
+and `atlas index` report the count, `--verbose` the per-file number. Drift now
+also hashes each documented file on disk; if it differs from the indexed
+`content_hash` (edited, or a failed re-index kept the old rows per SG2), the
+doc is stale with `currentHash: "unindexed"`.
+
+## 2026-10-21 — SG12: drift completeness (neighbourhood hash, tombstones, docs-dir)
+`source_hash` is still `sha256(prompt)`, but the module prompt header now has a
+`Neighbourhood hash:` line (sha256 over every resolved cross-file edge, both
+directions, all kinds, as `dir kind weak symbol path#other`, uncapped), and the
+architecture prompt a `Files hash:` (all paths); caps still apply to the rest.
+Neighbour content hashes and signatures are not hashed, so editing a callee's
+body does not stale its callers (no new false positives). Shown calls rank by
+call pairs per counterpart file (the old `ORDER BY COUNT(*)` was always 1).
+All existing docs go stale once after upgrading. Pruning turns a file's doc
+into a `deleted_file` tombstone row (JSON `{path, content}`; hidden from
+`getAllDocs`/`counts`, cleared by `synthesizeDocs`), so DB-mode drift reports
+it `missing`; a file with no doc and no exports is listed as an undocumented
+`module` (non-fatal unless `--strict`). Persisted docs are read with CRLF
+normalised. `drift --docs-dir` exits 1 when the dir is missing or has no docs
+while files are indexed, so CI cannot pass silently (CI is red until Atlas's
+own docs are committed). `.atlas/config.json` is no longer gitignored (it holds
+no secrets) so CI indexes with the committed filters. `atlas index` still
+exits 0 when `filesFailed > 0`: drift reports those files as `unindexed`.
+
+## 2026-10-21 — SG10: re-exports and default exports in the resolver
+Migration v5 adds `imports.reexport`. `export … from`, `export *`, `export * as ns`
+and `module.exports = require(...)` are re-export rows (the barrel gets an import
+edge per row but no local binding); `export default x`, `export = x`,
+`export { x as y }` and `module.exports = x` are rows with `module: ''` naming the
+local. The resolver's `exportOf(file, name)` follows own symbols, import bindings
+(so Python `__init__` names and CJS `const x = require()` variables are followed),
+re-export rows and star targets, with a per-chain `seen` set against cycles and a
+memo for top-level lookups only. A consumer importing through a barrel gets edges
+to the defining symbol and to the barrel. Calling a binding whose default is
+unknown (packages, object exports) still resolves to the local require variable,
+as before. Member calls on a function default fall back to its module's exports
+(`exports.m`); class defaults do not. JSX capitalised tags are calls; dynamic
+`import()`/nested `require()` add binding-less imports; Python function-local
+imports bind file-wide; calls to names from a Python star import resolve through
+it, or are weak when a star target is not indexed.
+
+
+## 2026-10-21 — SG13: one contract for drift, params and docs across surfaces
+Drift gate: `DriftReport` gains `failing` (stale docs, or undocumented symbols
+with `strict`) and `strict`; `atlas drift` exits 2 exactly when `failing`, and
+the CI job, README and `ci-comment` ("Drift check: passed/failed") key off it.
+`hasDrift` keeps its meaning ("anything to report"), since tests and JSON
+consumers rely on it; redefining it would silently hide undocumented-only
+reports, so a new field is the least breaking choice (A3-02's test now checks
+`failing`). `runDrift` (core) is the one entry point for the CLI and MCP and
+throws when there is nothing to check: `--docs-dir`/`persisted` missing or
+empty, or no docs in the index (exit 1, MCP `isError`). Shared zod schemas in
+`core/params.ts` validate search/ask/budget/port on the CLI, HTTP (400) and MCP;
+`module` is no longer a search kind. `listDocs`/`findDoc` (index, then
+`.atlas/docs`) back `docs --list/--show`, the dashboard and `atlas_docs`.
+`ask` goes through the same `budgeted` client as MCP. `openProjectIndex` and
+`requireRoot` make read commands fail without creating `.atlas/`; `indexPath`
+must resolve inside `.atlas/`. MCP still creates the index in an existing root
+(it serves `atlas_index`).
