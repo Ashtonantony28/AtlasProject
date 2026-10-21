@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/db/repo.ts
-source_hash: 1fece2aafdbcf0bb72da308f64d2f5ec9d70a681e13fc33cf01d2f0b7c829279
+source_hash: cd0125c8fa556f2a0fab18a65ac78895e3abdb66b22f2fd052a672f4ff651954
 ---
 # module src/core/db/repo.ts
 
@@ -15,18 +15,18 @@ source_hash: 1fece2aafdbcf0bb72da308f64d2f5ec9d70a681e13fc33cf01d2f0b7c829279
 - `deleteImportsForFile` — function (src/core/db/repo.ts:60)
 - `InsertSymbolInput` — interface (src/core/db/repo.ts:64)
 - `insertSymbol` — function (src/core/db/repo.ts:76)
-- `getSymbolsForFile` — function (src/core/db/repo.ts:96)
-- `getAllSymbols` — function (src/core/db/repo.ts:102)
-- `findSymbolByName` — function (src/core/db/repo.ts:106)
-- `findSymbolsByKind` — function (src/core/db/repo.ts:110)
-- `InsertEdgeInput` — interface (src/core/db/repo.ts:114)
-- `insertEdge` — function (src/core/db/repo.ts:122)
-- `insertEdges` — function (src/core/db/repo.ts:132)
-- `getAllEdges` — function (src/core/db/repo.ts:141)
-- `clearEdges` — function (src/core/db/repo.ts:145)
-- `InsertImportInput` — interface (src/core/db/repo.ts:149)
-- `insertImport` — function (src/core/db/repo.ts:158)
-- `getImportsForFile` — function (src/core/db/repo.ts:175)
+- `getSymbolsForFile` — function (src/core/db/repo.ts:95)
+- `getAllSymbols` — function (src/core/db/repo.ts:101)
+- `findSymbolByName` — function (src/core/db/repo.ts:105)
+- `findSymbolsByKind` — function (src/core/db/repo.ts:109)
+- `InsertEdgeInput` — interface (src/core/db/repo.ts:113)
+- `insertEdge` — function (src/core/db/repo.ts:121)
+- `insertEdges` — function (src/core/db/repo.ts:131)
+- `getAllEdges` — function (src/core/db/repo.ts:140)
+- `clearEdges` — function (src/core/db/repo.ts:144)
+- `InsertImportInput` — interface (src/core/db/repo.ts:148)
+- `insertImport` — function (src/core/db/repo.ts:157)
+- `getImportsForFile` — function (src/core/db/repo.ts:173)
 
 References: `src/core/db/repo.ts:17`, `src/core/db/repo.ts:24`, `src/core/db/repo.ts:48`, `src/core/db/repo.ts:52`, `src/core/db/repo.ts:56`.
 

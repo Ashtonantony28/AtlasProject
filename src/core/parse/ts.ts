@@ -14,12 +14,15 @@ import {
   forEachOfType,
   internalDiagnostic,
   pushAll,
+  pushDescendants,
   uniqueRefs,
   walkFrames,
   type Frame,
+  type Peek,
 } from './refs.js';
 
 type Node = Parser.SyntaxNode;
+type Cursor = Parser.TreeCursor;
 
 const FN_NODES = new Set([
   'function_declaration',
@@ -243,8 +246,100 @@ function addCall(ctx: Ctx, from: string | null, call: Node): void {
   addRef(ctx, from, callee, 'calls', call);
 }
 
+/**
+ * `addCall` for the node at `cursor` read through the cursor, which is left where it was, so no
+ * node is materialised. Covers `f()`, `new C()` and member callees; false for anything else.
+ */
+function addCallAt(ctx: Ctx, from: string | null, cursor: Cursor, type: string): boolean {
+  if (type !== 'call_expression' && type !== 'new_expression') return false;
+  const field = type === 'new_expression' ? 'constructor' : 'function';
+  const line = cursor.startPosition.row + 1;
+  if (!cursor.gotoFirstChild()) return false;
+  let t: Target | null | undefined;
+  do {
+    if (cursor.currentFieldName === field) {
+      t = targetAt(cursor);
+      break;
+    }
+  } while (cursor.gotoNextSibling());
+  cursor.gotoParent();
+  if (t === undefined) return false;
+  if (t) ctx.references.push({ fromQualifiedName: from, ...t, kind: 'calls', line });
+  return true;
+}
+
+/** `targetOf` for a callee at `cursor` (left in place); undefined where `addCall` needs the node. */
+function targetAt(cursor: Cursor): Target | null | undefined {
+  const type = cursor.nodeType;
+  if (type === 'identifier') {
+    const name = cursor.nodeText;
+    return name === 'require' ? undefined : { name, receiver: 'none', object: null };
+  }
+  if (type !== 'member_expression') return undefined;
+  if (!cursor.gotoFirstChild()) return null;
+  let seenObj = false;
+  let objType = '';
+  let obj: string | null = null;
+  let prop: string | null = null;
+  let propType = '';
+  do {
+    const field = cursor.currentFieldName;
+    if (field === 'object' && !seenObj) {
+      seenObj = true;
+      objType = cursor.nodeType;
+      if (objType !== 'this' && objType !== 'super') obj = dottedAt(cursor);
+    } else if (field === 'property' && prop === null) {
+      propType = cursor.nodeType;
+      prop = cursor.nodeText;
+    }
+  } while (cursor.gotoNextSibling());
+  cursor.gotoParent();
+  if (prop === null || !seenObj || !NAME_NODES.has(propType)) return null;
+  if (objType === 'this') return { name: prop, receiver: 'this', object: null };
+  if (objType === 'super') return { name: prop, receiver: 'super', object: null };
+  return { name: prop, receiver: 'member', object: obj };
+}
+
+/** `dotted` for the node at `cursor` (left in place). */
+function dottedAt(cursor: Cursor): string | null {
+  const parts: string[] = [];
+  let depth = 0;
+  let result: string | null = null;
+  for (;;) {
+    const type = cursor.nodeType;
+    if (type !== 'member_expression') {
+      if (NAME_NODES.has(type)) result = [cursor.nodeText, ...parts.reverse()].join('.');
+      break;
+    }
+    // The property's text, then on to the object.
+    let prop: string | null = null;
+    let objIndex = -1;
+    if (!cursor.gotoFirstChild()) break;
+    for (let i = 0; ; i++) {
+      const field = cursor.currentFieldName;
+      if (field === 'property' && prop === null) prop = cursor.nodeText;
+      else if (field === 'object' && objIndex < 0) objIndex = i;
+      if (!cursor.gotoNextSibling()) break;
+    }
+    cursor.gotoParent();
+    if (prop === null || objIndex < 0) break;
+    parts.push(prop);
+    cursor.gotoFirstChild();
+    for (let i = 0; i < objIndex; i++) cursor.gotoNextSibling();
+    depth++;
+  }
+  for (; depth > 0; depth--) cursor.gotoParent();
+  return result;
+}
+
 function collectCalls(ctx: Ctx, node: Node | null, from: string | null): void {
-  if (node) forEachOfType(node, CALL_NODES, (c) => addCall(ctx, from, c));
+  if (node)
+    forEachOfType(
+      node,
+      CALL_NODES,
+      (c) => addCall(ctx, from, c),
+      (cursor, type) => addCallAt(ctx, from, cursor, type),
+    );
 }
 
 function collectHeritage(ctx: Ctx, node: Node, from: string): void {
@@ -278,114 +373,134 @@ function cjsObjectScope(assign: Node): string | null {
   return isExports ? (left.childForFieldName('property')?.text ?? null) : null;
 }
 
-function visit(node: Node, ctx: Ctx, stack: Frame[]): void {
+const VISITED_ANYWHERE = [
+  ...FN_NODES,
+  ...CLASS_NODES,
+  ...INTERFACE_NODES,
+  ...TYPE_NODES,
+  ...METHOD_NODES,
+  ...CALL_NODES,
+  'import_statement',
+];
+// The types `visit` acts on at module level and inside a scope; other nodes only have their named children walked.
+const VISITED_TOP = new Set([
+  ...VISITED_ANYWHERE,
+  'lexical_declaration',
+  'variable_declaration',
+  'assignment_expression',
+  'export_statement',
+]);
+const VISITED_MEMBER = new Set([...VISITED_ANYWHERE, ...FIELD_NODES, 'property_signature', 'pair']);
+
+/** Returns true when the node's named children are to be walked. */
+function visit(node: Node, type: string, ctx: Ctx, stack: Frame[]): boolean {
   // ESM imports
-  if (node.type === 'import_statement') {
+  if (type === 'import_statement') {
     collectImports(node, ctx);
   }
 
   // CommonJS require() — only at top level to avoid noise from dynamic requires
   // inside functions. Express, older Node libs, etc.
   if (
-    (node.type === 'lexical_declaration' || node.type === 'variable_declaration') &&
+    (type === 'lexical_declaration' || type === 'variable_declaration') &&
     ctx.qualifier.length === 0
   ) {
     collectRequires(node, ctx);
   }
 
   // Functions — do not descend into function bodies, locals are not symbols.
-  if (FN_NODES.has(node.type)) {
+  if (FN_NODES.has(type)) {
     const name = nameOf(node);
     const sym = name ? push(ctx, 'function', name, node) : null;
     collectCalls(ctx, node, sym?.qualifiedName ?? ctx.owner);
-    return;
+    return false;
   }
 
-  if (CLASS_NODES.has(node.type) || INTERFACE_NODES.has(node.type)) {
+  if (CLASS_NODES.has(type) || INTERFACE_NODES.has(type)) {
     const name = nameOf(node);
     if (name) {
-      const sym = push(ctx, CLASS_NODES.has(node.type) ? 'class' : 'interface', name, node);
+      const sym = push(ctx, CLASS_NODES.has(type) ? 'class' : 'interface', name, node);
       collectHeritage(ctx, node, sym.qualifiedName ?? name);
       visitScope(ctx, stack, name, sym.exported, node.childForFieldName('body'));
-      return;
+      return false;
     }
   }
 
-  if (CALL_NODES.has(node.type)) {
+  if (CALL_NODES.has(type)) {
     addCall(ctx, ctx.owner, node);
   }
 
   // `module.exports = function f() {}` / `= class C {}`: a named default export.
-  if (ctx.qualifier.length === 0 && node.type === 'assignment_expression') {
+  if (ctx.qualifier.length === 0 && type === 'assignment_expression') {
     const right = node.childForFieldName('right');
     const name = right ? nameOf(right) : null;
     if (right && name && isModuleExports(node.childForFieldName('left'))) {
       if (FN_VALUES.has(right.type)) {
         const sym = push(ctx, 'function', name, right, node.parent ?? node);
         collectCalls(ctx, right, sym.qualifiedName);
-        return;
+        return false;
       }
       if (right.type === 'class') {
         const sym = push(ctx, 'class', name, right, node.parent ?? node);
         collectHeritage(ctx, right, sym.qualifiedName ?? name);
         visitScope(ctx, stack, name, sym.exported, right.childForFieldName('body'));
-        return;
+        return false;
       }
     }
   }
 
   if (ctx.qualifier.length === 0) {
-    const value = node.type === 'export_statement' ? node.childForFieldName('value') : null;
+    const value = type === 'export_statement' ? node.childForFieldName('value') : null;
     const scope =
       value?.type === 'object'
         ? 'default'
-        : node.type === 'assignment_expression'
+        : type === 'assignment_expression'
           ? cjsObjectScope(node)
           : null;
     if (scope) {
       visitScope(ctx, stack, scope, true, value ?? node.childForFieldName('right'));
-      return;
+      return false;
     }
   }
 
   // Type aliases & enums; object-type members are qualified like interface members.
-  if (TYPE_NODES.has(node.type)) {
+  if (TYPE_NODES.has(type)) {
     const name = nameOf(node);
     if (name) {
       const sym = push(ctx, 'type', name, node);
       const value = node.childForFieldName('value');
       if (value?.type === 'object_type') visitScope(ctx, stack, name, sym.exported, value);
     }
-    return;
+    return false;
   }
 
   // Methods — don't descend.
-  if (METHOD_NODES.has(node.type)) {
+  if (METHOD_NODES.has(type)) {
     const name = nameOf(node);
     const sym = name ? push(ctx, 'method', name, node) : null;
     collectCalls(ctx, node, sym?.qualifiedName ?? ctx.owner);
-    return;
+    return false;
   }
 
   if (ctx.qualifier.length > 0) {
     // Function-typed interface properties: `onDraw: () => void`.
-    if (node.type === 'property_signature') {
+    if (type === 'property_signature') {
       const name = nameOf(node);
-      const type = node.childForFieldName('type')?.namedChildren[0];
-      if (name && type?.type === 'function_type') push(ctx, 'method', name, node);
-      return;
+      const typeNode = node.childForFieldName('type')?.namedChildren[0];
+      if (name && typeNode?.type === 'function_type') push(ctx, 'method', name, node);
+      return false;
     }
     // Class fields holding functions: `handle = () => {}`.
-    if (FIELD_NODES.has(node.type)) {
+    if (FIELD_NODES.has(type)) {
       const name = (node.childForFieldName('name') ?? node.childForFieldName('property'))?.text;
       const value = node.childForFieldName('value');
       const fn =
         name && value && FN_VALUES.has(value.type) ? push(ctx, 'method', name, node) : null;
       collectCalls(ctx, value, fn?.qualifiedName ?? ctx.owner);
-      return;
+      return false;
     }
     // Object-literal properties holding functions: `{ arrow: () => 2 }`.
-    if (node.type === 'pair') {
+    if (type === 'pair') {
       const key = node.childForFieldName('key');
       const value = node.childForFieldName('value');
       const fn =
@@ -393,14 +508,14 @@ function visit(node: Node, ctx: Ctx, stack: Frame[]): void {
           ? push(ctx, 'method', trimQuotes(key.text), node)
           : null;
       collectCalls(ctx, value, fn?.qualifiedName ?? ctx.owner);
-      return;
+      return false;
     }
   }
 
   // Top-level lexical declarations (const/let/var). We only record top-level
   // (ctx.qualifier empty) to avoid noise from local variables.
   if (
-    (node.type === 'lexical_declaration' || node.type === 'variable_declaration') &&
+    (type === 'lexical_declaration' || type === 'variable_declaration') &&
     ctx.qualifier.length === 0
   ) {
     // Declarators are deferred so each object scope is walked before the next declarator.
@@ -409,11 +524,11 @@ function visit(node: Node, ctx: Ctx, stack: Frame[]): void {
       const decl = decls[i] as Node;
       stack.push(() => visitDeclarator(ctx, stack, node, decl));
     }
-    return;
+    return false;
   }
 
   // Recurse for children unless we already short-circuited.
-  pushAll(stack, node.namedChildren);
+  return true;
 }
 
 function visitDeclarator(ctx: Ctx, stack: Frame[], node: Node, decl: Node): void {
@@ -712,7 +827,17 @@ export function parseTsLike(root: Node, language: LanguageId): ParseResult {
   const diagnostics: ParseDiagnostic[] = [];
   try {
     ctx.exportNames = collectExports(root, ctx.imports);
-    walkFrames(root.namedChildren, (node, stack) => visit(node, ctx, stack));
+    const visitChild = (node: Node, type: string, stack: Frame[]): boolean =>
+      visit(node, type, ctx, stack);
+    // For call nodes `visit` only records the call and walks on.
+    const peekCall: Peek = (cursor, type) =>
+      CALL_NODES.has(type) && addCallAt(ctx, ctx.owner, cursor, type);
+    walkFrames(root.namedChildren, (node, stack) => {
+      if (visit(node, node.type, ctx, stack)) {
+        const types = ctx.qualifier.length === 0 ? VISITED_TOP : VISITED_MEMBER;
+        pushDescendants(stack, node, types, visitChild, peekCall);
+      }
+    });
   } catch (err) {
     diagnostics.push(internalDiagnostic(err));
   }

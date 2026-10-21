@@ -1,0 +1,2756 @@
+{
+ "sample/src/app.ts": {
+  "language": "typescript",
+  "symbols": [
+   {
+    "kind": "function",
+    "name": "totalArea",
+    "signature": "function totalArea(radius: number, side: number): number {",
+    "startLine": 5,
+    "endLine": 9,
+    "docstring": "/** Compute the combined area of one circle and one square. */",
+    "qualifiedName": "totalArea",
+    "exported": true
+   },
+   {
+    "kind": "function",
+    "name": "main",
+    "signature": "function main(): void {",
+    "startLine": 11,
+    "endLine": 14,
+    "docstring": null,
+    "qualifiedName": "main",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": "./shapes.js",
+    "imported": "Circle",
+    "alias": null,
+    "line": 1
+   },
+   {
+    "module": "./shapes.js",
+    "imported": "Square",
+    "alias": null,
+    "line": 1
+   },
+   {
+    "module": "./math.js",
+    "imported": "add",
+    "alias": null,
+    "line": 2
+   }
+  ],
+  "references": [
+   {
+    "fromQualifiedName": "totalArea",
+    "name": "Circle",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 6
+   },
+   {
+    "fromQualifiedName": "totalArea",
+    "name": "Square",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 7
+   },
+   {
+    "fromQualifiedName": "totalArea",
+    "name": "add",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 8
+   },
+   {
+    "fromQualifiedName": "totalArea",
+    "name": "area",
+    "receiver": "member",
+    "object": "c",
+    "kind": "calls",
+    "line": 8
+   },
+   {
+    "fromQualifiedName": "totalArea",
+    "name": "area",
+    "receiver": "member",
+    "object": "s",
+    "kind": "calls",
+    "line": 8
+   },
+   {
+    "fromQualifiedName": "main",
+    "name": "totalArea",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 12
+   },
+   {
+    "fromQualifiedName": "main",
+    "name": "log",
+    "receiver": "member",
+    "object": "console",
+    "kind": "calls",
+    "line": 13
+   }
+  ],
+  "diagnostics": []
+ },
+ "sample/src/math.ts": {
+  "language": "typescript",
+  "symbols": [
+   {
+    "kind": "function",
+    "name": "add",
+    "signature": "function add(a: number, b: number): number {",
+    "startLine": 4,
+    "endLine": 6,
+    "docstring": "/**\n * Add two numbers.\n */",
+    "qualifiedName": "add",
+    "exported": true
+   },
+   {
+    "kind": "function",
+    "name": "multiply",
+    "signature": "function multiply(a: number, b: number): number {",
+    "startLine": 11,
+    "endLine": 13,
+    "docstring": "/**\n * Multiply two numbers.\n */",
+    "qualifiedName": "multiply",
+    "exported": true
+   },
+   {
+    "kind": "variable",
+    "name": "PI",
+    "signature": "PI = 3.14159",
+    "startLine": 15,
+    "endLine": 15,
+    "docstring": null,
+    "qualifiedName": "PI",
+    "exported": true
+   }
+  ],
+  "imports": [],
+  "references": [],
+  "diagnostics": []
+ },
+ "sample/src/shapes.ts": {
+  "language": "typescript",
+  "symbols": [
+   {
+    "kind": "interface",
+    "name": "Drawable",
+    "signature": "interface Drawable {",
+    "startLine": 3,
+    "endLine": 5,
+    "docstring": null,
+    "qualifiedName": "Drawable",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "area",
+    "signature": "area(): number",
+    "startLine": 4,
+    "endLine": 4,
+    "docstring": null,
+    "qualifiedName": "Drawable.area",
+    "exported": true
+   },
+   {
+    "kind": "class",
+    "name": "Shape",
+    "signature": "class Shape {",
+    "startLine": 8,
+    "endLine": 14,
+    "docstring": "/** Base shape with a name. */",
+    "qualifiedName": "Shape",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "constructor",
+    "signature": "constructor(public name: string) {}",
+    "startLine": 9,
+    "endLine": 9,
+    "docstring": null,
+    "qualifiedName": "Shape.constructor",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "describe",
+    "signature": "describe(): string {",
+    "startLine": 11,
+    "endLine": 13,
+    "docstring": null,
+    "qualifiedName": "Shape.describe",
+    "exported": true
+   },
+   {
+    "kind": "class",
+    "name": "Circle",
+    "signature": "class Circle extends Shape implements Drawable {",
+    "startLine": 17,
+    "endLine": 25,
+    "docstring": "/** Circle of given radius. */",
+    "qualifiedName": "Circle",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "constructor",
+    "signature": "constructor(public radius: number) {",
+    "startLine": 18,
+    "endLine": 20,
+    "docstring": null,
+    "qualifiedName": "Circle.constructor",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "area",
+    "signature": "area(): number {",
+    "startLine": 22,
+    "endLine": 24,
+    "docstring": null,
+    "qualifiedName": "Circle.area",
+    "exported": true
+   },
+   {
+    "kind": "class",
+    "name": "Square",
+    "signature": "class Square extends Shape implements Drawable {",
+    "startLine": 27,
+    "endLine": 35,
+    "docstring": null,
+    "qualifiedName": "Square",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "constructor",
+    "signature": "constructor(public side: number) {",
+    "startLine": 28,
+    "endLine": 30,
+    "docstring": null,
+    "qualifiedName": "Square.constructor",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "area",
+    "signature": "area(): number {",
+    "startLine": 32,
+    "endLine": 34,
+    "docstring": null,
+    "qualifiedName": "Square.area",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": "./math.js",
+    "imported": "PI",
+    "alias": null,
+    "line": 1
+   },
+   {
+    "module": "./math.js",
+    "imported": "multiply",
+    "alias": null,
+    "line": 1
+   }
+  ],
+  "references": [
+   {
+    "fromQualifiedName": "Circle",
+    "name": "Shape",
+    "receiver": "none",
+    "object": null,
+    "kind": "extends",
+    "line": 17
+   },
+   {
+    "fromQualifiedName": "Circle",
+    "name": "Drawable",
+    "receiver": "none",
+    "object": null,
+    "kind": "implements",
+    "line": 17
+   },
+   {
+    "fromQualifiedName": "Circle.area",
+    "name": "multiply",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 23
+   },
+   {
+    "fromQualifiedName": "Square",
+    "name": "Shape",
+    "receiver": "none",
+    "object": null,
+    "kind": "extends",
+    "line": 27
+   },
+   {
+    "fromQualifiedName": "Square",
+    "name": "Drawable",
+    "receiver": "none",
+    "object": null,
+    "kind": "implements",
+    "line": 27
+   },
+   {
+    "fromQualifiedName": "Square.area",
+    "name": "multiply",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 33
+   }
+  ],
+  "diagnostics": []
+ },
+ "sample/src/util.py": {
+  "language": "python",
+  "symbols": [
+   {
+    "kind": "function",
+    "name": "greet",
+    "signature": "def greet(name: str) -> str:",
+    "startLine": 4,
+    "endLine": 6,
+    "docstring": "Return a friendly greeting.",
+    "qualifiedName": "greet",
+    "exported": true
+   },
+   {
+    "kind": "class",
+    "name": "Counter",
+    "signature": "class Counter:",
+    "startLine": 9,
+    "endLine": 18,
+    "docstring": "A trivial counter to exercise class extraction.",
+    "qualifiedName": "Counter",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "__init__",
+    "signature": "def __init__(self, start: int = 0) -> None:",
+    "startLine": 12,
+    "endLine": 13,
+    "docstring": null,
+    "qualifiedName": "Counter.__init__",
+    "exported": false
+   },
+   {
+    "kind": "method",
+    "name": "increment",
+    "signature": "def increment(self, by: int = 1) -> int:",
+    "startLine": 15,
+    "endLine": 18,
+    "docstring": "Increment and return the new value.",
+    "qualifiedName": "Counter.increment",
+    "exported": true
+   }
+  ],
+  "imports": [],
+  "references": [],
+  "diagnostics": []
+ },
+ "graph/py/pkg/__init__.py": {
+  "language": "python",
+  "symbols": [],
+  "imports": [],
+  "references": [],
+  "diagnostics": []
+ },
+ "graph/py/pkg/api/__init__.py": {
+  "language": "python",
+  "symbols": [],
+  "imports": [
+   {
+    "module": ".views",
+    "imported": "view",
+    "alias": null,
+    "line": 1
+   },
+   {
+    "module": ".star_src",
+    "imported": "*",
+    "alias": null,
+    "line": 2
+   }
+  ],
+  "references": [],
+  "diagnostics": []
+ },
+ "graph/py/pkg/api/star_src.py": {
+  "language": "python",
+  "symbols": [
+   {
+    "kind": "function",
+    "name": "starred",
+    "signature": "def starred():",
+    "startLine": 1,
+    "endLine": 2,
+    "docstring": null,
+    "qualifiedName": "starred",
+    "exported": true
+   }
+  ],
+  "imports": [],
+  "references": [],
+  "diagnostics": []
+ },
+ "graph/py/pkg/api/views.py": {
+  "language": "python",
+  "symbols": [
+   {
+    "kind": "function",
+    "name": "view",
+    "signature": "def view():",
+    "startLine": 1,
+    "endLine": 2,
+    "docstring": null,
+    "qualifiedName": "view",
+    "exported": true
+   }
+  ],
+  "imports": [],
+  "references": [],
+  "diagnostics": []
+ },
+ "graph/py/pkg/models.py": {
+  "language": "python",
+  "symbols": [
+   {
+    "kind": "class",
+    "name": "Base",
+    "signature": "class Base:",
+    "startLine": 4,
+    "endLine": 9,
+    "docstring": null,
+    "qualifiedName": "Base",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "save",
+    "signature": "def save(self):",
+    "startLine": 5,
+    "endLine": 6,
+    "docstring": null,
+    "qualifiedName": "Base.save",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "validate",
+    "signature": "def validate(self):",
+    "startLine": 8,
+    "endLine": 9,
+    "docstring": null,
+    "qualifiedName": "Base.validate",
+    "exported": true
+   },
+   {
+    "kind": "class",
+    "name": "User",
+    "signature": "class User(Base):",
+    "startLine": 12,
+    "endLine": 14,
+    "docstring": null,
+    "qualifiedName": "User",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "create",
+    "signature": "def create(self):",
+    "startLine": 13,
+    "endLine": 14,
+    "docstring": null,
+    "qualifiedName": "User.create",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": "pkg.util",
+    "imported": "helper",
+    "alias": null,
+    "line": 1
+   }
+  ],
+  "references": [
+   {
+    "fromQualifiedName": "Base.save",
+    "kind": "calls",
+    "line": 6,
+    "name": "validate",
+    "receiver": "this",
+    "object": null
+   },
+   {
+    "fromQualifiedName": "Base.validate",
+    "kind": "calls",
+    "line": 9,
+    "name": "helper",
+    "receiver": "none",
+    "object": null
+   },
+   {
+    "fromQualifiedName": "User",
+    "kind": "extends",
+    "line": 12,
+    "name": "Base",
+    "receiver": "none",
+    "object": null
+   },
+   {
+    "fromQualifiedName": "User.create",
+    "kind": "calls",
+    "line": 14,
+    "name": "save",
+    "receiver": "this",
+    "object": null
+   }
+  ],
+  "diagnostics": []
+ },
+ "graph/py/pkg/repo.py": {
+  "language": "python",
+  "symbols": [
+   {
+    "kind": "variable",
+    "name": "T",
+    "signature": "T = TypeVar(\"T\")",
+    "startLine": 6,
+    "endLine": 6,
+    "docstring": null,
+    "qualifiedName": "T",
+    "exported": true
+   },
+   {
+    "kind": "class",
+    "name": "Repo",
+    "signature": "class Repo(Generic[T]):",
+    "startLine": 9,
+    "endLine": 11,
+    "docstring": null,
+    "qualifiedName": "Repo",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "get",
+    "signature": "def get(self):",
+    "startLine": 10,
+    "endLine": 11,
+    "docstring": null,
+    "qualifiedName": "Repo.get",
+    "exported": true
+   },
+   {
+    "kind": "class",
+    "name": "UserRepo",
+    "signature": "class UserRepo(Repo[\"User\"], Base):",
+    "startLine": 14,
+    "endLine": 17,
+    "docstring": null,
+    "qualifiedName": "UserRepo",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "all",
+    "signature": "def all(self):",
+    "startLine": 15,
+    "endLine": 17,
+    "docstring": null,
+    "qualifiedName": "UserRepo.all",
+    "exported": true
+   },
+   {
+    "kind": "function",
+    "name": "lazy",
+    "signature": "def lazy():",
+    "startLine": 20,
+    "endLine": 23,
+    "docstring": null,
+    "qualifiedName": "lazy",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": "typing",
+    "imported": "Generic",
+    "alias": null,
+    "line": 1
+   },
+   {
+    "module": "typing",
+    "imported": "TypeVar",
+    "alias": null,
+    "line": 1
+   },
+   {
+    "module": "pkg.api",
+    "imported": "view",
+    "alias": null,
+    "line": 3
+   },
+   {
+    "module": "pkg.api",
+    "imported": "starred",
+    "alias": null,
+    "line": 3
+   },
+   {
+    "module": ".models",
+    "imported": "Base",
+    "alias": null,
+    "line": 4
+   },
+   {
+    "module": ".util",
+    "imported": "helper",
+    "alias": null,
+    "line": 21
+   }
+  ],
+  "references": [
+   {
+    "fromQualifiedName": "T",
+    "kind": "calls",
+    "line": 6,
+    "name": "TypeVar",
+    "receiver": "none",
+    "object": null
+   },
+   {
+    "fromQualifiedName": "Repo",
+    "kind": "extends",
+    "line": 9,
+    "name": "Generic",
+    "receiver": "none",
+    "object": null
+   },
+   {
+    "fromQualifiedName": "Repo.get",
+    "kind": "calls",
+    "line": 11,
+    "name": "view",
+    "receiver": "none",
+    "object": null
+   },
+   {
+    "fromQualifiedName": "UserRepo",
+    "kind": "extends",
+    "line": 14,
+    "name": "Repo",
+    "receiver": "none",
+    "object": null
+   },
+   {
+    "fromQualifiedName": "UserRepo",
+    "kind": "extends",
+    "line": 14,
+    "name": "Base",
+    "receiver": "none",
+    "object": null
+   },
+   {
+    "fromQualifiedName": "UserRepo.all",
+    "kind": "calls",
+    "line": 16,
+    "name": "save",
+    "receiver": "this",
+    "object": null
+   },
+   {
+    "fromQualifiedName": "UserRepo.all",
+    "kind": "calls",
+    "line": 17,
+    "name": "get",
+    "receiver": "this",
+    "object": null
+   },
+   {
+    "fromQualifiedName": "lazy",
+    "kind": "calls",
+    "line": 23,
+    "name": "helper",
+    "receiver": "none",
+    "object": null
+   },
+   {
+    "fromQualifiedName": "lazy",
+    "kind": "calls",
+    "line": 23,
+    "name": "starred",
+    "receiver": "none",
+    "object": null
+   }
+  ],
+  "diagnostics": []
+ },
+ "graph/py/pkg/star_use.py": {
+  "language": "python",
+  "symbols": [
+   {
+    "kind": "function",
+    "name": "use",
+    "signature": "def use():",
+    "startLine": 4,
+    "endLine": 5,
+    "docstring": null,
+    "qualifiedName": "use",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": ".api.star_src",
+    "imported": "*",
+    "alias": null,
+    "line": 1
+   }
+  ],
+  "references": [
+   {
+    "fromQualifiedName": "use",
+    "kind": "calls",
+    "line": 5,
+    "name": "starred",
+    "receiver": "none",
+    "object": null
+   }
+  ],
+  "diagnostics": []
+ },
+ "graph/py/pkg/sub/__init__.py": {
+  "language": "python",
+  "symbols": [],
+  "imports": [],
+  "references": [],
+  "diagnostics": []
+ },
+ "graph/py/pkg/sub/service.py": {
+  "language": "python",
+  "symbols": [
+   {
+    "kind": "function",
+    "name": "run",
+    "signature": "def run():",
+    "startLine": 7,
+    "endLine": 14,
+    "docstring": null,
+    "qualifiedName": "run",
+    "exported": true
+   },
+   {
+    "kind": "function",
+    "name": "decoy",
+    "signature": "def decoy():",
+    "startLine": 17,
+    "endLine": 20,
+    "docstring": "Calls run() only in this docstring.",
+    "qualifiedName": "decoy",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": "pkg.util",
+    "imported": null,
+    "alias": null,
+    "line": 1
+   },
+   {
+    "module": "..util",
+    "imported": "other",
+    "alias": null,
+    "line": 2
+   },
+   {
+    "module": "..models",
+    "imported": "User",
+    "alias": null,
+    "line": 3
+   },
+   {
+    "module": ".",
+    "imported": "tools",
+    "alias": null,
+    "line": 4
+   }
+  ],
+  "references": [
+   {
+    "fromQualifiedName": "run",
+    "kind": "calls",
+    "line": 10,
+    "name": "User",
+    "receiver": "none",
+    "object": null
+   },
+   {
+    "fromQualifiedName": "run",
+    "kind": "calls",
+    "line": 11,
+    "name": "create",
+    "receiver": "member",
+    "object": "user"
+   },
+   {
+    "fromQualifiedName": "run",
+    "kind": "calls",
+    "line": 12,
+    "name": "format_it",
+    "receiver": "member",
+    "object": "tools"
+   },
+   {
+    "fromQualifiedName": "run",
+    "kind": "calls",
+    "line": 13,
+    "name": "helper",
+    "receiver": "member",
+    "object": "pkg.util"
+   },
+   {
+    "fromQualifiedName": "run",
+    "kind": "calls",
+    "line": 14,
+    "name": "other",
+    "receiver": "none",
+    "object": null
+   }
+  ],
+  "diagnostics": []
+ },
+ "graph/py/pkg/sub/tools.py": {
+  "language": "python",
+  "symbols": [
+   {
+    "kind": "function",
+    "name": "format_it",
+    "signature": "def format_it(value):",
+    "startLine": 1,
+    "endLine": 2,
+    "docstring": null,
+    "qualifiedName": "format_it",
+    "exported": true
+   }
+  ],
+  "imports": [],
+  "references": [
+   {
+    "fromQualifiedName": "format_it",
+    "kind": "calls",
+    "line": 2,
+    "name": "str",
+    "receiver": "none",
+    "object": null
+   }
+  ],
+  "diagnostics": []
+ },
+ "graph/py/pkg/util.py": {
+  "language": "python",
+  "symbols": [
+   {
+    "kind": "function",
+    "name": "helper",
+    "signature": "def helper():",
+    "startLine": 1,
+    "endLine": 2,
+    "docstring": null,
+    "qualifiedName": "helper",
+    "exported": true
+   },
+   {
+    "kind": "function",
+    "name": "other",
+    "signature": "def other():",
+    "startLine": 5,
+    "endLine": 6,
+    "docstring": null,
+    "qualifiedName": "other",
+    "exported": true
+   }
+  ],
+  "imports": [],
+  "references": [],
+  "diagnostics": []
+ },
+ "graph/web/app.tsx": {
+  "language": "typescript",
+  "symbols": [
+   {
+    "kind": "class",
+    "name": "Screen",
+    "signature": "class Screen extends BaseView<string> {",
+    "startLine": 5,
+    "endLine": 10,
+    "docstring": null,
+    "qualifiedName": "Screen",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "draw",
+    "signature": "draw(): number {",
+    "startLine": 6,
+    "endLine": 9,
+    "docstring": null,
+    "qualifiedName": "Screen.draw",
+    "exported": true
+   },
+   {
+    "kind": "function",
+    "name": "App",
+    "signature": "function App() {",
+    "startLine": 12,
+    "endLine": 14,
+    "docstring": null,
+    "qualifiedName": "App",
+    "exported": true
+   },
+   {
+    "kind": "function",
+    "name": "useStore",
+    "signature": "function useStore(): Store {",
+    "startLine": 16,
+    "endLine": 18,
+    "docstring": null,
+    "qualifiedName": "useStore",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": "./ui",
+    "imported": "BaseView",
+    "alias": null,
+    "line": 1
+   },
+   {
+    "module": "./ui",
+    "imported": "aliasA",
+    "alias": null,
+    "line": 1
+   },
+   {
+    "module": "./ui",
+    "imported": "extra",
+    "alias": null,
+    "line": 1
+   },
+   {
+    "module": "./ui",
+    "imported": "Panel",
+    "alias": null,
+    "line": 1
+   },
+   {
+    "module": "./ui",
+    "imported": "cyc",
+    "alias": null,
+    "line": 1
+   },
+   {
+    "module": "./store",
+    "imported": "default",
+    "alias": "Store",
+    "line": 2
+   },
+   {
+    "module": "./ids.js",
+    "imported": "default",
+    "alias": "makeId",
+    "line": 3
+   }
+  ],
+  "references": [
+   {
+    "fromQualifiedName": "Screen",
+    "name": "BaseView",
+    "receiver": "none",
+    "object": null,
+    "kind": "extends",
+    "line": 5
+   },
+   {
+    "fromQualifiedName": "Screen.draw",
+    "name": "mount",
+    "receiver": "this",
+    "object": null,
+    "kind": "calls",
+    "line": 7
+   },
+   {
+    "fromQualifiedName": "Screen.draw",
+    "name": "aliasA",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 8
+   },
+   {
+    "fromQualifiedName": "Screen.draw",
+    "name": "extra",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 8
+   },
+   {
+    "fromQualifiedName": "Screen.draw",
+    "name": "cyc",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 8
+   },
+   {
+    "fromQualifiedName": "Screen.draw",
+    "name": "makeId",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 8
+   },
+   {
+    "fromQualifiedName": "App",
+    "name": "Panel",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 13
+   },
+   {
+    "fromQualifiedName": "useStore",
+    "name": "Store",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 17
+   }
+  ],
+  "diagnostics": []
+ },
+ "graph/web/Button.tsx": {
+  "language": "typescript",
+  "symbols": [
+   {
+    "kind": "function",
+    "name": "Button",
+    "signature": "function Button({ label }: { label: string }) {",
+    "startLine": 3,
+    "endLine": 5,
+    "docstring": null,
+    "qualifiedName": "Button",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": "./strings",
+    "imported": "slugify",
+    "alias": null,
+    "line": 1
+   }
+  ],
+  "references": [
+   {
+    "fromQualifiedName": "Button",
+    "name": "slugify",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 4
+   }
+  ],
+  "diagnostics": []
+ },
+ "graph/web/cjs/app.js": {
+  "language": "javascript",
+  "symbols": [
+   {
+    "kind": "function",
+    "name": "createApp",
+    "signature": "function createApp() {",
+    "startLine": 1,
+    "endLine": 3,
+    "docstring": null,
+    "qualifiedName": "createApp",
+    "exported": true
+   },
+   {
+    "kind": "function",
+    "name": "version",
+    "signature": "function version() {",
+    "startLine": 5,
+    "endLine": 7,
+    "docstring": null,
+    "qualifiedName": "version",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": "",
+    "imported": "createApp",
+    "alias": "default",
+    "line": 9,
+    "reexport": true
+   }
+  ],
+  "references": [],
+  "diagnostics": []
+ },
+ "graph/web/cjs/index.js": {
+  "language": "javascript",
+  "symbols": [],
+  "imports": [
+   {
+    "module": "./app",
+    "imported": "*",
+    "alias": null,
+    "line": 1,
+    "reexport": true
+   },
+   {
+    "module": "./app",
+    "imported": "default",
+    "alias": "default",
+    "line": 1,
+    "reexport": true
+   },
+   {
+    "module": "./app",
+    "imported": null,
+    "alias": null,
+    "line": 1
+   }
+  ],
+  "references": [],
+  "diagnostics": []
+ },
+ "graph/web/cjs/main.js": {
+  "language": "javascript",
+  "symbols": [
+   {
+    "kind": "variable",
+    "name": "app",
+    "signature": "app = require('./index')",
+    "startLine": 1,
+    "endLine": 1,
+    "docstring": null,
+    "qualifiedName": "app",
+    "exported": false
+   },
+   {
+    "kind": "variable",
+    "name": "Model",
+    "signature": "Model = require('./Model')",
+    "startLine": 2,
+    "endLine": 2,
+    "docstring": null,
+    "qualifiedName": "Model",
+    "exported": false
+   },
+   {
+    "kind": "function",
+    "name": "main",
+    "signature": "function main() {",
+    "startLine": 4,
+    "endLine": 8,
+    "docstring": null,
+    "qualifiedName": "main",
+    "exported": true
+   },
+   {
+    "kind": "class",
+    "name": "Sub",
+    "signature": "class Sub extends Model {",
+    "startLine": 10,
+    "endLine": 14,
+    "docstring": null,
+    "qualifiedName": "Sub",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "run",
+    "signature": "run() {",
+    "startLine": 11,
+    "endLine": 13,
+    "docstring": null,
+    "qualifiedName": "Sub.run",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": "./index",
+    "imported": "default",
+    "alias": "app",
+    "line": 1
+   },
+   {
+    "module": "./Model",
+    "imported": "default",
+    "alias": "Model",
+    "line": 2
+   }
+  ],
+  "references": [
+   {
+    "fromQualifiedName": "main",
+    "name": "app",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 5
+   },
+   {
+    "fromQualifiedName": "main",
+    "name": "version",
+    "receiver": "member",
+    "object": "app",
+    "kind": "calls",
+    "line": 6
+   },
+   {
+    "fromQualifiedName": "main",
+    "name": "Model",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 7
+   },
+   {
+    "fromQualifiedName": "Sub",
+    "name": "Model",
+    "receiver": "none",
+    "object": null,
+    "kind": "extends",
+    "line": 10
+   },
+   {
+    "fromQualifiedName": "Sub.run",
+    "name": "save",
+    "receiver": "this",
+    "object": null,
+    "kind": "calls",
+    "line": 12
+   }
+  ],
+  "diagnostics": []
+ },
+ "graph/web/cjs/Model.js": {
+  "language": "javascript",
+  "symbols": [
+   {
+    "kind": "class",
+    "name": "Model",
+    "signature": "class Model {",
+    "startLine": 1,
+    "endLine": 5,
+    "docstring": null,
+    "qualifiedName": "Model",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "save",
+    "signature": "save() {",
+    "startLine": 2,
+    "endLine": 4,
+    "docstring": null,
+    "qualifiedName": "Model.save",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": "",
+    "imported": "Model",
+    "alias": "default",
+    "line": 1,
+    "reexport": true
+   }
+  ],
+  "references": [],
+  "diagnostics": []
+ },
+ "graph/web/consumer.js": {
+  "language": "javascript",
+  "symbols": [
+   {
+    "kind": "variable",
+    "name": "legacy",
+    "signature": "legacy = require('./legacy.cjs')",
+    "startLine": 1,
+    "endLine": 1,
+    "docstring": null,
+    "qualifiedName": "legacy",
+    "exported": false
+   },
+   {
+    "kind": "function",
+    "name": "useLegacy",
+    "signature": "function useLegacy() {",
+    "startLine": 3,
+    "endLine": 5,
+    "docstring": null,
+    "qualifiedName": "useLegacy",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": "",
+    "imported": "useLegacy",
+    "alias": "default",
+    "line": 7,
+    "reexport": true
+   },
+   {
+    "module": "./legacy.cjs",
+    "imported": "default",
+    "alias": "legacy",
+    "line": 1
+   }
+  ],
+  "references": [
+   {
+    "fromQualifiedName": "useLegacy",
+    "name": "tidy",
+    "receiver": "member",
+    "object": "legacy",
+    "kind": "calls",
+    "line": 4
+   }
+  ],
+  "diagnostics": []
+ },
+ "graph/web/decoys.ts": {
+  "language": "typescript",
+  "symbols": [
+   {
+    "kind": "function",
+    "name": "decoy",
+    "signature": "function decoy(): string {",
+    "startLine": 6,
+    "endLine": 13,
+    "docstring": null,
+    "qualifiedName": "decoy",
+    "exported": true
+   },
+   {
+    "kind": "variable",
+    "name": "banner",
+    "signature": "banner = 'shout(nothing)'",
+    "startLine": 15,
+    "endLine": 15,
+    "docstring": null,
+    "qualifiedName": "banner",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": "./strings.js",
+    "imported": "slugify",
+    "alias": null,
+    "line": 1
+   },
+   {
+    "module": "./strings.js",
+    "imported": "shout",
+    "alias": null,
+    "line": 1
+   }
+  ],
+  "references": [],
+  "diagnostics": []
+ },
+ "graph/web/ids.ts": {
+  "language": "typescript",
+  "symbols": [
+   {
+    "kind": "function",
+    "name": "makeId",
+    "signature": "function makeId(): number {",
+    "startLine": 1,
+    "endLine": 3,
+    "docstring": null,
+    "qualifiedName": "makeId",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": "",
+    "imported": "makeId",
+    "alias": "default",
+    "line": 5,
+    "reexport": true
+   }
+  ],
+  "references": [],
+  "diagnostics": []
+ },
+ "graph/web/legacy.cjs": {
+  "language": "javascript",
+  "symbols": [
+   {
+    "kind": "method",
+    "name": "tidy",
+    "signature": "tidy() {",
+    "startLine": 2,
+    "endLine": 4,
+    "docstring": null,
+    "qualifiedName": "default.tidy",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "neat",
+    "signature": "neat: function () {",
+    "startLine": 5,
+    "endLine": 7,
+    "docstring": null,
+    "qualifiedName": "default.neat",
+    "exported": true
+   }
+  ],
+  "imports": [],
+  "references": [
+   {
+    "fromQualifiedName": "default.neat",
+    "name": "tidy",
+    "receiver": "this",
+    "object": null,
+    "kind": "calls",
+    "line": 6
+   }
+  ],
+  "diagnostics": []
+ },
+ "graph/web/lib/index.mts": {
+  "language": "typescript",
+  "symbols": [
+   {
+    "kind": "function",
+    "name": "clamp",
+    "signature": "function clamp(n: number, lo: number, hi: number): number {",
+    "startLine": 1,
+    "endLine": 3,
+    "docstring": null,
+    "qualifiedName": "clamp",
+    "exported": true
+   }
+  ],
+  "imports": [],
+  "references": [
+   {
+    "fromQualifiedName": "clamp",
+    "name": "min",
+    "receiver": "member",
+    "object": "Math",
+    "kind": "calls",
+    "line": 2
+   },
+   {
+    "fromQualifiedName": "clamp",
+    "name": "max",
+    "receiver": "member",
+    "object": "Math",
+    "kind": "calls",
+    "line": 2
+   }
+  ],
+  "diagnostics": []
+ },
+ "graph/web/store.ts": {
+  "language": "typescript",
+  "symbols": [
+   {
+    "kind": "class",
+    "name": "Store",
+    "signature": "class Store {}",
+    "startLine": 1,
+    "endLine": 1,
+    "docstring": null,
+    "qualifiedName": "Store",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": "",
+    "imported": "Store",
+    "alias": "default",
+    "line": 1,
+    "reexport": true
+   }
+  ],
+  "references": [],
+  "diagnostics": []
+ },
+ "graph/web/strings.ts": {
+  "language": "typescript",
+  "symbols": [
+   {
+    "kind": "function",
+    "name": "slugify",
+    "signature": "function slugify(text: string): string {",
+    "startLine": 1,
+    "endLine": 3,
+    "docstring": null,
+    "qualifiedName": "slugify",
+    "exported": true
+   },
+   {
+    "kind": "function",
+    "name": "shout",
+    "signature": "function shout(text: string): string {",
+    "startLine": 5,
+    "endLine": 7,
+    "docstring": null,
+    "qualifiedName": "shout",
+    "exported": true
+   }
+  ],
+  "imports": [],
+  "references": [
+   {
+    "fromQualifiedName": "slugify",
+    "name": "replace",
+    "receiver": "member",
+    "object": null,
+    "kind": "calls",
+    "line": 2
+   },
+   {
+    "fromQualifiedName": "slugify",
+    "name": "toLowerCase",
+    "receiver": "member",
+    "object": "text",
+    "kind": "calls",
+    "line": 2
+   },
+   {
+    "fromQualifiedName": "shout",
+    "name": "toUpperCase",
+    "receiver": "member",
+    "object": "text",
+    "kind": "calls",
+    "line": 6
+   }
+  ],
+  "diagnostics": []
+ },
+ "graph/web/ui/Base.ts": {
+  "language": "typescript",
+  "symbols": [
+   {
+    "kind": "class",
+    "name": "BaseView",
+    "signature": "class BaseView<T> {",
+    "startLine": 1,
+    "endLine": 4,
+    "docstring": null,
+    "qualifiedName": "BaseView",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "mount",
+    "signature": "mount(): void {}",
+    "startLine": 3,
+    "endLine": 3,
+    "docstring": null,
+    "qualifiedName": "BaseView.mount",
+    "exported": true
+   },
+   {
+    "kind": "function",
+    "name": "helperA",
+    "signature": "function helperA(): number {",
+    "startLine": 6,
+    "endLine": 8,
+    "docstring": null,
+    "qualifiedName": "helperA",
+    "exported": true
+   }
+  ],
+  "imports": [],
+  "references": [],
+  "diagnostics": []
+ },
+ "graph/web/ui/cycle.ts": {
+  "language": "typescript",
+  "symbols": [
+   {
+    "kind": "function",
+    "name": "cyc",
+    "signature": "function cyc(): number {",
+    "startLine": 3,
+    "endLine": 5,
+    "docstring": null,
+    "qualifiedName": "cyc",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": "./index",
+    "imported": "*",
+    "alias": null,
+    "line": 1,
+    "reexport": true
+   }
+  ],
+  "references": [],
+  "diagnostics": []
+ },
+ "graph/web/ui/extra.ts": {
+  "language": "typescript",
+  "symbols": [
+   {
+    "kind": "function",
+    "name": "extra",
+    "signature": "function extra(): number {",
+    "startLine": 1,
+    "endLine": 3,
+    "docstring": null,
+    "qualifiedName": "extra",
+    "exported": true
+   }
+  ],
+  "imports": [],
+  "references": [],
+  "diagnostics": []
+ },
+ "graph/web/ui/index.ts": {
+  "language": "typescript",
+  "symbols": [],
+  "imports": [
+   {
+    "module": "./Base",
+    "imported": "BaseView",
+    "alias": null,
+    "line": 1,
+    "reexport": true
+   },
+   {
+    "module": "./Base",
+    "imported": "helperA",
+    "alias": "aliasA",
+    "line": 1,
+    "reexport": true
+   },
+   {
+    "module": "./extra",
+    "imported": "*",
+    "alias": null,
+    "line": 2,
+    "reexport": true
+   },
+   {
+    "module": "./Panel",
+    "imported": "default",
+    "alias": "Panel",
+    "line": 3,
+    "reexport": true
+   },
+   {
+    "module": "./cycle",
+    "imported": "*",
+    "alias": null,
+    "line": 4,
+    "reexport": true
+   }
+  ],
+  "references": [],
+  "diagnostics": []
+ },
+ "graph/web/ui/Panel.tsx": {
+  "language": "typescript",
+  "symbols": [
+   {
+    "kind": "function",
+    "name": "Panel",
+    "signature": "function Panel() {",
+    "startLine": 1,
+    "endLine": 3,
+    "docstring": null,
+    "qualifiedName": "Panel",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": "",
+    "imported": "Panel",
+    "alias": "default",
+    "line": 1,
+    "reexport": true
+   }
+  ],
+  "references": [],
+  "diagnostics": []
+ },
+ "graph/web/widget.ts": {
+  "language": "typescript",
+  "symbols": [
+   {
+    "kind": "interface",
+    "name": "Paintable",
+    "signature": "interface Paintable {",
+    "startLine": 4,
+    "endLine": 6,
+    "docstring": null,
+    "qualifiedName": "Paintable",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "paint",
+    "signature": "paint(): string",
+    "startLine": 5,
+    "endLine": 5,
+    "docstring": null,
+    "qualifiedName": "Paintable.paint",
+    "exported": true
+   },
+   {
+    "kind": "class",
+    "name": "Widget",
+    "signature": "class Widget {",
+    "startLine": 8,
+    "endLine": 16,
+    "docstring": null,
+    "qualifiedName": "Widget",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "render",
+    "signature": "render(): string {",
+    "startLine": 9,
+    "endLine": 11,
+    "docstring": null,
+    "qualifiedName": "Widget.render",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "paint",
+    "signature": "paint(): string {",
+    "startLine": 13,
+    "endLine": 15,
+    "docstring": null,
+    "qualifiedName": "Widget.paint",
+    "exported": true
+   },
+   {
+    "kind": "class",
+    "name": "FancyWidget",
+    "signature": "class FancyWidget<",
+    "startLine": 18,
+    "endLine": 29,
+    "docstring": null,
+    "qualifiedName": "FancyWidget",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "paint",
+    "signature": "paint(): string {",
+    "startLine": 26,
+    "endLine": 28,
+    "docstring": null,
+    "qualifiedName": "FancyWidget.paint",
+    "exported": true
+   },
+   {
+    "kind": "function",
+    "name": "compute",
+    "signature": "compute = (n: number): number => {",
+    "startLine": 31,
+    "endLine": 34,
+    "docstring": null,
+    "qualifiedName": "compute",
+    "exported": true
+   },
+   {
+    "kind": "function",
+    "name": "afterLongHeader",
+    "signature": "function afterLongHeader(): Widget {",
+    "startLine": 36,
+    "endLine": 38,
+    "docstring": null,
+    "qualifiedName": "afterLongHeader",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": "./lib/index.mjs",
+    "imported": "clamp",
+    "alias": null,
+    "line": 1
+   },
+   {
+    "module": "./strings.js",
+    "imported": "*",
+    "alias": "strings",
+    "line": 2
+   }
+  ],
+  "references": [
+   {
+    "fromQualifiedName": "Widget.render",
+    "name": "paint",
+    "receiver": "this",
+    "object": null,
+    "kind": "calls",
+    "line": 10
+   },
+   {
+    "fromQualifiedName": "Widget.paint",
+    "name": "shout",
+    "receiver": "member",
+    "object": "strings",
+    "kind": "calls",
+    "line": 14
+   },
+   {
+    "fromQualifiedName": "FancyWidget",
+    "name": "Widget",
+    "receiver": "none",
+    "object": null,
+    "kind": "extends",
+    "line": 23
+   },
+   {
+    "fromQualifiedName": "FancyWidget",
+    "name": "Paintable",
+    "receiver": "none",
+    "object": null,
+    "kind": "implements",
+    "line": 24
+   },
+   {
+    "fromQualifiedName": "FancyWidget.paint",
+    "name": "paint",
+    "receiver": "super",
+    "object": null,
+    "kind": "calls",
+    "line": 27
+   },
+   {
+    "fromQualifiedName": "FancyWidget.paint",
+    "name": "render",
+    "receiver": "this",
+    "object": null,
+    "kind": "calls",
+    "line": 27
+   },
+   {
+    "fromQualifiedName": "compute",
+    "name": "clamp",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 33
+   },
+   {
+    "fromQualifiedName": "afterLongHeader",
+    "name": "FancyWidget",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 37
+   }
+  ],
+  "diagnostics": []
+ },
+ "parse/walk.js": {
+  "language": "javascript",
+  "symbols": [
+   {
+    "kind": "variable",
+    "name": "path",
+    "signature": "path = require('path')",
+    "startLine": 2,
+    "endLine": 2,
+    "docstring": null,
+    "qualifiedName": "path",
+    "exported": false
+   },
+   {
+    "kind": "function",
+    "name": "createApp",
+    "signature": "function createApp(opts) {",
+    "startLine": 5,
+    "endLine": 7,
+    "docstring": null,
+    "qualifiedName": "createApp",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "save",
+    "signature": "save() {",
+    "startLine": 14,
+    "endLine": 16,
+    "docstring": null,
+    "qualifiedName": "save",
+    "exported": false
+   },
+   {
+    "kind": "function",
+    "name": "done",
+    "signature": "done = () => next()",
+    "startLine": 20,
+    "endLine": 20,
+    "docstring": null,
+    "qualifiedName": "done",
+    "exported": false
+   },
+   {
+    "kind": "method",
+    "name": "index",
+    "signature": "index: (req) => render(req)",
+    "startLine": 26,
+    "endLine": 26,
+    "docstring": null,
+    "qualifiedName": "routes.index",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "show",
+    "signature": "show(req) {",
+    "startLine": 27,
+    "endLine": 29,
+    "docstring": null,
+    "qualifiedName": "routes.show",
+    "exported": true
+   },
+   {
+    "kind": "variable",
+    "name": "el",
+    "signature": "el = <Widget onClick={() => go()} />",
+    "startLine": 32,
+    "endLine": 32,
+    "docstring": null,
+    "qualifiedName": "el",
+    "exported": false
+   },
+   {
+    "kind": "function",
+    "name": "calls",
+    "signature": "function calls(a) {",
+    "startLine": 34,
+    "endLine": 40,
+    "docstring": null,
+    "qualifiedName": "calls",
+    "exported": false
+   }
+  ],
+  "imports": [
+   {
+    "module": "",
+    "imported": "createApp",
+    "alias": "default",
+    "line": 5,
+    "reexport": true
+   },
+   {
+    "module": "path",
+    "imported": "default",
+    "alias": "path",
+    "line": 2
+   },
+   {
+    "module": "./paths",
+    "imported": "join",
+    "alias": "j",
+    "line": 3
+   },
+   {
+    "module": "./paths",
+    "imported": "resolve",
+    "alias": null,
+    "line": 3
+   },
+   {
+    "module": "./lazy",
+    "imported": null,
+    "alias": null,
+    "line": 10
+   },
+   {
+    "module": "./inner",
+    "imported": null,
+    "alias": null,
+    "line": 35
+   },
+   {
+    "module": "./dyn",
+    "imported": null,
+    "alias": null,
+    "line": 39
+   }
+  ],
+  "references": [
+   {
+    "fromQualifiedName": "createApp",
+    "name": "build",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 6
+   },
+   {
+    "fromQualifiedName": "createApp",
+    "name": "join",
+    "receiver": "member",
+    "object": "path",
+    "kind": "calls",
+    "line": 6
+   },
+   {
+    "fromQualifiedName": null,
+    "name": "run",
+    "receiver": "member",
+    "object": null,
+    "kind": "calls",
+    "line": 10
+   },
+   {
+    "fromQualifiedName": "save",
+    "name": "write",
+    "receiver": "member",
+    "object": null,
+    "kind": "calls",
+    "line": 15
+   },
+   {
+    "fromQualifiedName": "save",
+    "name": "j",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 15
+   },
+   {
+    "fromQualifiedName": null,
+    "name": "use",
+    "receiver": "member",
+    "object": "app",
+    "kind": "calls",
+    "line": 19
+   },
+   {
+    "fromQualifiedName": "done",
+    "name": "next",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 20
+   },
+   {
+    "fromQualifiedName": null,
+    "name": "on",
+    "receiver": "member",
+    "object": "res",
+    "kind": "calls",
+    "line": 21
+   },
+   {
+    "fromQualifiedName": null,
+    "name": "log",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 21
+   },
+   {
+    "fromQualifiedName": null,
+    "name": "done",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 22
+   },
+   {
+    "fromQualifiedName": "routes.index",
+    "name": "render",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 26
+   },
+   {
+    "fromQualifiedName": "routes.show",
+    "name": "find",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 28
+   },
+   {
+    "fromQualifiedName": "el",
+    "name": "Widget",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 32
+   },
+   {
+    "fromQualifiedName": "el",
+    "name": "go",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 32
+   },
+   {
+    "fromQualifiedName": "calls",
+    "name": "c",
+    "receiver": "member",
+    "object": "a.b",
+    "kind": "calls",
+    "line": 37
+   },
+   {
+    "fromQualifiedName": "calls",
+    "name": "then",
+    "receiver": "member",
+    "object": null,
+    "kind": "calls",
+    "line": 39
+   },
+   {
+    "fromQualifiedName": "calls",
+    "name": "go",
+    "receiver": "member",
+    "object": "m.default",
+    "kind": "calls",
+    "line": 39
+   }
+  ],
+  "diagnostics": []
+ },
+ "parse/walk.ts": {
+  "language": "typescript",
+  "symbols": [
+   {
+    "kind": "variable",
+    "name": "local",
+    "signature": "local = ns.make(ns.deep.read(1), new Map())",
+    "startLine": 7,
+    "endLine": 7,
+    "docstring": null,
+    "qualifiedName": "local",
+    "exported": false
+   },
+   {
+    "kind": "function",
+    "name": "inner",
+    "signature": "function inner(): number {",
+    "startLine": 8,
+    "endLine": 10,
+    "docstring": null,
+    "qualifiedName": "inner",
+    "exported": false
+   },
+   {
+    "kind": "class",
+    "name": "Nested",
+    "signature": "class Nested extends ns.Base<string> implements ns.Shape {",
+    "startLine": 11,
+    "endLine": 17,
+    "docstring": null,
+    "qualifiedName": "Nested",
+    "exported": false
+   },
+   {
+    "kind": "method",
+    "name": "field",
+    "signature": "field = () => this.run(inner())",
+    "startLine": 12,
+    "endLine": 12,
+    "docstring": null,
+    "qualifiedName": "Nested.field",
+    "exported": false
+   },
+   {
+    "kind": "method",
+    "name": "run",
+    "signature": "run(x: number): number {",
+    "startLine": 14,
+    "endLine": 16,
+    "docstring": null,
+    "qualifiedName": "Nested.run",
+    "exported": false
+   },
+   {
+    "kind": "variable",
+    "name": "config",
+    "signature": "config = {",
+    "startLine": 24,
+    "endLine": 30,
+    "docstring": null,
+    "qualifiedName": "config",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "load",
+    "signature": "load(path: string) {",
+    "startLine": 25,
+    "endLine": 27,
+    "docstring": null,
+    "qualifiedName": "config.load",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "save",
+    "signature": "save: async (v: unknown) => write(JSON.stringify(v))",
+    "startLine": 28,
+    "endLine": 28,
+    "docstring": null,
+    "qualifiedName": "config.save",
+    "exported": true
+   },
+   {
+    "kind": "interface",
+    "name": "Listener",
+    "signature": "interface Listener {",
+    "startLine": 32,
+    "endLine": 35,
+    "docstring": null,
+    "qualifiedName": "Listener",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "onEvent",
+    "signature": "onEvent: (e: string) => void",
+    "startLine": 33,
+    "endLine": 33,
+    "docstring": null,
+    "qualifiedName": "Listener.onEvent",
+    "exported": true
+   },
+   {
+    "kind": "type",
+    "name": "Options",
+    "signature": "type Options = { retry: () => number; limit: number };",
+    "startLine": 37,
+    "endLine": 37,
+    "docstring": null,
+    "qualifiedName": "Options",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "retry",
+    "signature": "retry: () => number",
+    "startLine": 37,
+    "endLine": 37,
+    "docstring": null,
+    "qualifiedName": "Options.retry",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "go",
+    "signature": "go() {",
+    "startLine": 40,
+    "endLine": 42,
+    "docstring": null,
+    "qualifiedName": "go",
+    "exported": false
+   },
+   {
+    "kind": "variable",
+    "name": "a",
+    "signature": "a = 1",
+    "startLine": 45,
+    "endLine": 45,
+    "docstring": null,
+    "qualifiedName": "a",
+    "exported": false
+   },
+   {
+    "kind": "variable",
+    "name": "b",
+    "signature": "b = make(a)",
+    "startLine": 46,
+    "endLine": 46,
+    "docstring": null,
+    "qualifiedName": "b",
+    "exported": false
+   },
+   {
+    "kind": "variable",
+    "name": "c",
+    "signature": "c = { m() { return b; } }",
+    "startLine": 47,
+    "endLine": 47,
+    "docstring": null,
+    "qualifiedName": "c",
+    "exported": false
+   },
+   {
+    "kind": "method",
+    "name": "m",
+    "signature": "m() { return b; }",
+    "startLine": 47,
+    "endLine": 47,
+    "docstring": null,
+    "qualifiedName": "c.m",
+    "exported": false
+   },
+   {
+    "kind": "variable",
+    "name": "hoisted",
+    "signature": "hoisted = setup()",
+    "startLine": 50,
+    "endLine": 50,
+    "docstring": null,
+    "qualifiedName": "hoisted",
+    "exported": false
+   },
+   {
+    "kind": "type",
+    "name": "Mode",
+    "signature": "enum Mode { A, B }",
+    "startLine": 51,
+    "endLine": 51,
+    "docstring": null,
+    "qualifiedName": "Mode",
+    "exported": false
+   },
+   {
+    "kind": "class",
+    "name": "Calls",
+    "signature": "class Calls extends Base {",
+    "startLine": 55,
+    "endLine": 75,
+    "docstring": null,
+    "qualifiedName": "Calls",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "#secret",
+    "signature": "#secret() {",
+    "startLine": 56,
+    "endLine": 58,
+    "docstring": null,
+    "qualifiedName": "Calls.#secret",
+    "exported": false
+   },
+   {
+    "kind": "method",
+    "name": "all",
+    "signature": "all(a: any, b: any) {",
+    "startLine": 59,
+    "endLine": 74,
+    "docstring": null,
+    "qualifiedName": "Calls.all",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": "./harness.js",
+    "imported": "describe",
+    "alias": null,
+    "line": 3
+   },
+   {
+    "module": "./harness.js",
+    "imported": "it",
+    "alias": null,
+    "line": 3
+   },
+   {
+    "module": "./ns.js",
+    "imported": "*",
+    "alias": "ns",
+    "line": 4
+   },
+   {
+    "module": "./dyn.js",
+    "imported": null,
+    "alias": null,
+    "line": 72
+   }
+  ],
+  "references": [
+   {
+    "fromQualifiedName": null,
+    "name": "describe",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 6
+   },
+   {
+    "fromQualifiedName": "local",
+    "name": "make",
+    "receiver": "member",
+    "object": "ns",
+    "kind": "calls",
+    "line": 7
+   },
+   {
+    "fromQualifiedName": "local",
+    "name": "read",
+    "receiver": "member",
+    "object": "ns.deep",
+    "kind": "calls",
+    "line": 7
+   },
+   {
+    "fromQualifiedName": "local",
+    "name": "Map",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 7
+   },
+   {
+    "fromQualifiedName": "inner",
+    "name": "helper",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 9
+   },
+   {
+    "fromQualifiedName": "inner",
+    "name": "get",
+    "receiver": "member",
+    "object": "local",
+    "kind": "calls",
+    "line": 9
+   },
+   {
+    "fromQualifiedName": "Nested",
+    "name": "Base",
+    "receiver": "member",
+    "object": "ns",
+    "kind": "extends",
+    "line": 11
+   },
+   {
+    "fromQualifiedName": "Nested",
+    "name": "Shape",
+    "receiver": "member",
+    "object": "ns",
+    "kind": "implements",
+    "line": 11
+   },
+   {
+    "fromQualifiedName": "Nested.field",
+    "name": "run",
+    "receiver": "this",
+    "object": null,
+    "kind": "calls",
+    "line": 12
+   },
+   {
+    "fromQualifiedName": "Nested.field",
+    "name": "inner",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 12
+   },
+   {
+    "fromQualifiedName": "Nested.run",
+    "name": "run",
+    "receiver": "super",
+    "object": null,
+    "kind": "calls",
+    "line": 15
+   },
+   {
+    "fromQualifiedName": "Nested.run",
+    "name": "twice",
+    "receiver": "member",
+    "object": "ns",
+    "kind": "calls",
+    "line": 15
+   },
+   {
+    "fromQualifiedName": null,
+    "name": "it",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 18
+   },
+   {
+    "fromQualifiedName": null,
+    "name": "all",
+    "receiver": "member",
+    "object": "Promise",
+    "kind": "calls",
+    "line": 19
+   },
+   {
+    "fromQualifiedName": null,
+    "name": "inner",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 19
+   },
+   {
+    "fromQualifiedName": null,
+    "name": "run",
+    "receiver": "member",
+    "object": null,
+    "kind": "calls",
+    "line": 19
+   },
+   {
+    "fromQualifiedName": null,
+    "name": "Nested",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 19
+   },
+   {
+    "fromQualifiedName": null,
+    "name": "register",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 20
+   },
+   {
+    "fromQualifiedName": null,
+    "name": "finish",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 20
+   },
+   {
+    "fromQualifiedName": "config.load",
+    "name": "then",
+    "receiver": "member",
+    "object": null,
+    "kind": "calls",
+    "line": 26
+   },
+   {
+    "fromQualifiedName": "config.load",
+    "name": "read",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 26
+   },
+   {
+    "fromQualifiedName": "config.load",
+    "name": "parse",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 26
+   },
+   {
+    "fromQualifiedName": "config.save",
+    "name": "write",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 28
+   },
+   {
+    "fromQualifiedName": "config.save",
+    "name": "stringify",
+    "receiver": "member",
+    "object": "JSON",
+    "kind": "calls",
+    "line": 28
+   },
+   {
+    "fromQualifiedName": "config",
+    "name": "call",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 29
+   },
+   {
+    "fromQualifiedName": "go",
+    "name": "go2",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 41
+   },
+   {
+    "fromQualifiedName": "b",
+    "name": "make",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 46
+   },
+   {
+    "fromQualifiedName": "hoisted",
+    "name": "setup",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 50
+   },
+   {
+    "fromQualifiedName": "Calls",
+    "name": "Base",
+    "receiver": "none",
+    "object": null,
+    "kind": "extends",
+    "line": 55
+   },
+   {
+    "fromQualifiedName": "Calls.all",
+    "name": "b",
+    "receiver": "member",
+    "object": "a",
+    "kind": "calls",
+    "line": 60
+   },
+   {
+    "fromQualifiedName": "Calls.all",
+    "name": "#secret",
+    "receiver": "this",
+    "object": null,
+    "kind": "calls",
+    "line": 62
+   },
+   {
+    "fromQualifiedName": "Calls.all",
+    "name": "x",
+    "receiver": "this",
+    "object": null,
+    "kind": "calls",
+    "line": 63
+   },
+   {
+    "fromQualifiedName": "Calls.all",
+    "name": "y",
+    "receiver": "super",
+    "object": null,
+    "kind": "calls",
+    "line": 64
+   },
+   {
+    "fromQualifiedName": "Calls.all",
+    "name": "B",
+    "receiver": "member",
+    "object": "a",
+    "kind": "calls",
+    "line": 67
+   },
+   {
+    "fromQualifiedName": "Calls.all",
+    "name": "X",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 68
+   },
+   {
+    "fromQualifiedName": "Calls.all",
+    "name": "f",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 69
+   },
+   {
+    "fromQualifiedName": "Calls.all",
+    "name": "d",
+    "receiver": "member",
+    "object": "a.b.c",
+    "kind": "calls",
+    "line": 70
+   },
+   {
+    "fromQualifiedName": "Calls.all",
+    "name": "c",
+    "receiver": "member",
+    "object": null,
+    "kind": "calls",
+    "line": 71
+   },
+   {
+    "fromQualifiedName": "Calls.all",
+    "name": "run",
+    "receiver": "member",
+    "object": null,
+    "kind": "calls",
+    "line": 72
+   },
+   {
+    "fromQualifiedName": "Calls.all",
+    "name": "b",
+    "receiver": "member",
+    "object": "obj.a",
+    "kind": "calls",
+    "line": 73
+   },
+   {
+    "fromQualifiedName": "Calls.all",
+    "name": "Thing",
+    "receiver": "member",
+    "object": "ns.deep",
+    "kind": "calls",
+    "line": 73
+   }
+  ],
+  "diagnostics": [
+   {
+    "line": 77,
+    "message": "syntax error near \"function broken( {\"",
+    "severity": "error"
+   }
+  ]
+ }
+}
