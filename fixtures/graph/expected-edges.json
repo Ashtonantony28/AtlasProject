@@ -1,0 +1,152 @@
+[
+  {
+    "src": "py/pkg/models.py::<module>",
+    "dst": "py/pkg/util.py::helper",
+    "kind": "imports"
+  },
+  {
+    "src": "py/pkg/models.py::Base.save",
+    "dst": "py/pkg/models.py::Base.validate",
+    "kind": "calls"
+  },
+  {
+    "src": "py/pkg/models.py::Base.validate",
+    "dst": "py/pkg/util.py::helper",
+    "kind": "calls"
+  },
+  {
+    "src": "py/pkg/models.py::User",
+    "dst": "py/pkg/models.py::Base",
+    "kind": "extends"
+  },
+  {
+    "src": "py/pkg/models.py::User.create",
+    "dst": "py/pkg/models.py::Base.save",
+    "kind": "calls"
+  },
+  {
+    "src": "py/pkg/sub/service.py::<module>",
+    "dst": "py/pkg/util.py::<module>",
+    "kind": "imports"
+  },
+  {
+    "src": "py/pkg/sub/service.py::<module>",
+    "dst": "py/pkg/util.py::other",
+    "kind": "imports"
+  },
+  {
+    "src": "py/pkg/sub/service.py::<module>",
+    "dst": "py/pkg/models.py::User",
+    "kind": "imports"
+  },
+  {
+    "src": "py/pkg/sub/service.py::<module>",
+    "dst": "py/pkg/sub/tools.py::<module>",
+    "kind": "imports"
+  },
+  {
+    "src": "py/pkg/sub/service.py::run",
+    "dst": "py/pkg/models.py::User",
+    "kind": "calls"
+  },
+  {
+    "src": "py/pkg/sub/service.py::run",
+    "dst": "py/pkg/sub/tools.py::format_it",
+    "kind": "calls"
+  },
+  {
+    "src": "py/pkg/sub/service.py::run",
+    "dst": "py/pkg/util.py::helper",
+    "kind": "calls"
+  },
+  {
+    "src": "py/pkg/sub/service.py::run",
+    "dst": "py/pkg/util.py::other",
+    "kind": "calls"
+  },
+  {
+    "src": "web/decoys.ts::<module>",
+    "dst": "web/strings.ts::slugify",
+    "kind": "imports"
+  },
+  {
+    "src": "web/decoys.ts::<module>",
+    "dst": "web/strings.ts::shout",
+    "kind": "imports"
+  },
+  {
+    "src": "web/widget.ts::<module>",
+    "dst": "web/lib/index.mts::clamp",
+    "kind": "imports"
+  },
+  {
+    "src": "web/widget.ts::<module>",
+    "dst": "web/strings.ts::<module>",
+    "kind": "imports"
+  },
+  {
+    "src": "web/widget.ts::Widget.render",
+    "dst": "web/widget.ts::Widget.paint",
+    "kind": "calls"
+  },
+  {
+    "src": "web/widget.ts::Widget.paint",
+    "dst": "web/strings.ts::shout",
+    "kind": "calls"
+  },
+  {
+    "src": "web/widget.ts::FancyWidget",
+    "dst": "web/widget.ts::Widget",
+    "kind": "extends"
+  },
+  {
+    "src": "web/widget.ts::FancyWidget",
+    "dst": "web/widget.ts::Paintable",
+    "kind": "implements"
+  },
+  {
+    "src": "web/widget.ts::FancyWidget.paint",
+    "dst": "web/widget.ts::Widget.paint",
+    "kind": "calls"
+  },
+  {
+    "src": "web/widget.ts::FancyWidget.paint",
+    "dst": "web/widget.ts::Widget.render",
+    "kind": "calls"
+  },
+  {
+    "src": "web/widget.ts::compute",
+    "dst": "web/lib/index.mts::clamp",
+    "kind": "calls"
+  },
+  {
+    "src": "web/widget.ts::afterLongHeader",
+    "dst": "web/widget.ts::FancyWidget",
+    "kind": "calls"
+  },
+  {
+    "src": "web/Button.tsx::<module>",
+    "dst": "web/strings.ts::slugify",
+    "kind": "imports"
+  },
+  {
+    "src": "web/Button.tsx::Button",
+    "dst": "web/strings.ts::slugify",
+    "kind": "calls"
+  },
+  {
+    "src": "web/legacy.cjs::default.neat",
+    "dst": "web/legacy.cjs::default.tidy",
+    "kind": "calls"
+  },
+  {
+    "src": "web/consumer.js::<module>",
+    "dst": "web/legacy.cjs::<module>",
+    "kind": "imports"
+  },
+  {
+    "src": "web/consumer.js::useLegacy",
+    "dst": "web/legacy.cjs::default.tidy",
+    "kind": "calls"
+  }
+]

@@ -39,10 +39,10 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 | SG1 | Reconcile branches | SG0 | Claude (thread) | done: 70 tests, verify-external express+got ok |
 | SG2 | Indexer correctness | SG0, SG1 | Claude (thread) | done: hash-after-parse, pruning; 73 tests |
 | SG3 | Parser correctness | SG0, SG1 | Claude (thread) | done: tsx, qualified members, exported flag; 86 tests |
-| SG4 | Resolver soundness (CST-based) | SG3 | unassigned | proposed |
+| SG4 | Resolver soundness (CST-based) | SG3 | Claude (thread) | done: refs table (v4), golden fixtures/graph, no FN/FP; express 411→1444 edges, got 1937→4850; resolver ~1 s/1k files |
 | SG5 | True hybrid search | SG0 | Claude (thread) | done: FTS5+KNN RRF, pre-filtered; p95 27.7 ms at 10k |
 | SG6 | Docs + drift + CI that actually detects staleness | SG2, SG3 | Claude (thread) | done: prompt-hash cache, `.atlas/docs` + CI drift, exported-only undocumented; 132 tests, cached 1k synth 0.2 s, got 98k tokens |
-| SG7 | Grounded Q&A citation checks | SG5 | unassigned | proposed |
+| SG7 | Grounded Q&A citation checks | SG5 | Claude (thread) | done: `[n]`/`file:line` checks flagged in `ask` result, CLI and `--json`; full-span excerpts capped at 120 lines; expansion ranked resolved-first by kind; 135 tests |
 | SG8 | Read-only on target + CLI hygiene | SG0 | Claude (thread) | done: config in `.atlas/`, exitCode not exit; 104 tests, express git status clean |
 | SG9 | MCP server (additive, keeps `docs`/`ask`) | SG6, SG7 | unassigned | proposed (user chose "keep both", 2026-10-19) |
 

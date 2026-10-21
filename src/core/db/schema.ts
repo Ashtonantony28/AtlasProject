@@ -150,4 +150,26 @@ export const MIGRATIONS: Migration[] = [
       INSERT INTO symbols_fts (symbols_fts) VALUES ('rebuild');
     `,
   },
+  {
+    version: 4,
+    name: 'refs',
+    sql: `
+      -- Call and heritage references from the CST; the resolver turns them into edges.
+      CREATE TABLE IF NOT EXISTS refs (
+        id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+        file_id             INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+        src_qualified_name  TEXT,
+        name                TEXT NOT NULL,
+        receiver            TEXT NOT NULL,
+        object              TEXT,
+        kind                TEXT NOT NULL,
+        line                INTEGER NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_refs_file ON refs(file_id);
+
+      -- Force a re-parse so files indexed before v4 get their refs.
+      UPDATE files SET content_hash = '';
+    `,
+  },
 ];

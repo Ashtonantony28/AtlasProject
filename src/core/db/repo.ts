@@ -7,6 +7,7 @@ import type {
   SymbolRow,
   EdgeRow,
   ImportRow,
+  RefRow,
   DocRow,
   RunRow,
   SymbolKind,
@@ -128,6 +129,15 @@ export function insertEdge(db: DB, input: InsertEdgeInput): number {
   return Number(info.lastInsertRowid);
 }
 
+export function insertEdges(db: DB, edges: InsertEdgeInput[]): void {
+  const stmt = db.prepare(
+    `INSERT INTO edges (src_symbol, dst_symbol, kind, weak, meta) VALUES (?, ?, ?, ?, ?)`,
+  );
+  for (const e of edges) {
+    stmt.run(e.src_symbol, e.dst_symbol, e.kind, e.weak ? 1 : 0, e.meta ?? null);
+  }
+}
+
 export function getAllEdges(db: DB): EdgeRow[] {
   return db.prepare('SELECT * FROM edges ORDER BY id').all() as EdgeRow[];
 }
@@ -162,6 +172,26 @@ export function getImportsForFile(db: DB, fileId: number): ImportRow[] {
 
 export function getAllImports(db: DB): ImportRow[] {
   return db.prepare('SELECT * FROM imports ORDER BY id').all() as ImportRow[];
+}
+
+export type InsertRefInput = Omit<RefRow, 'id' | 'file_id'>;
+
+export function insertRefs(db: DB, fileId: number, refs: InsertRefInput[]): void {
+  const stmt = db.prepare(
+    `INSERT INTO refs (file_id, src_qualified_name, name, receiver, object, kind, line)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  );
+  for (const r of refs) {
+    stmt.run(fileId, r.src_qualified_name, r.name, r.receiver, r.object, r.kind, r.line);
+  }
+}
+
+export function getAllRefs(db: DB): RefRow[] {
+  return db.prepare('SELECT * FROM refs ORDER BY id').all() as RefRow[];
+}
+
+export function deleteRefsForFile(db: DB, fileId: number): void {
+  db.prepare('DELETE FROM refs WHERE file_id = ?').run(fileId);
 }
 
 export interface UpsertDocInput {

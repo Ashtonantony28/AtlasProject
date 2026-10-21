@@ -49,6 +49,17 @@ export interface ImportRow {
   start_line: number;
 }
 
+export interface RefRow {
+  id: number;
+  file_id: number;
+  src_qualified_name: string | null;
+  name: string;
+  receiver: 'none' | 'this' | 'super' | 'member';
+  object: string | null;
+  kind: 'calls' | 'extends' | 'implements';
+  line: number;
+}
+
 export interface DocRow {
   id: number;
   target_kind: string;

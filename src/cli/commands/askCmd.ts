@@ -23,7 +23,7 @@ export function registerAskCommand(program: Command): void {
     .option('-m, --model <model>', 'Override the synth model from config')
     .option('-k, --k <n>', 'Number of seed snippets to retrieve', '5')
     .option('--expand <n>', 'Number of additional graph-expanded snippets', '5')
-    .option('--json', 'Output JSON (answer + citations)')
+    .option('--json', 'Output JSON (answer, citations, citation checks)')
     .option('--cwd <path>', 'Project root', '.')
     .action(async (questionParts: string[], opts: AskArgs) => {
       const question = questionParts.join(' ').trim();
@@ -50,6 +50,8 @@ export function registerAskCommand(program: Command): void {
                 question,
                 answer: result.answer,
                 citations: result.citations,
+                checks: result.checks,
+                flagged: result.flagged,
                 inputTokens: result.inputTokens,
                 outputTokens: result.outputTokens,
                 model: llm.model,
@@ -68,6 +70,10 @@ export function registerAskCommand(program: Command): void {
               `  [${c.index}] ${c.kind} ${c.symbol} (${c.file}:${c.startLine}-${c.endLine})\n`,
             );
           }
+        }
+        if (result.flagged.length > 0) {
+          process.stdout.write('\nUnverified citations:\n');
+          for (const f of result.flagged) process.stdout.write(`  ${f.raw} ${f.reason}\n`);
         }
         process.stdout.write(
           `\n_tokens: ${result.inputTokens} in / ${result.outputTokens} out  model: ${llm.model}_\n`,
