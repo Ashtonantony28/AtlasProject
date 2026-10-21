@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/cli/commands/indexCmd.ts
-source_hash: c5a7aee7bd12631671605de2f41ceee30a08e4e9534bfd0a8525cb32d29d6d89
+source_hash: 9ce9871c09e16c66bb5b5ee2ea186541a3004192731308ad2ad0bb16b9e11f11
 ---
 # module src/cli/commands/indexCmd.ts
 

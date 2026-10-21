@@ -161,7 +161,12 @@ interface Target {
   object: string | null;
 }
 
-const CALL_NODES = new Set(['call_expression', 'new_expression']);
+const CALL_NODES = new Set([
+  'call_expression',
+  'new_expression',
+  'jsx_self_closing_element',
+  'jsx_opening_element',
+]);
 const NAME_NODES = new Set([
   'identifier',
   'type_identifier',
@@ -217,10 +222,24 @@ function addRef(ctx: Ctx, from: string | null, node: Node | null, kind: RefKind,
 }
 
 function addCall(ctx: Ctx, from: string | null, call: Node): void {
+  if (call.type === 'jsx_self_closing_element' || call.type === 'jsx_opening_element') {
+    const name = call.childForFieldName('name');
+    // Lower-case tags are intrinsic elements (`<div>`), not components.
+    if (name && !(name.type === 'identifier' && /^[a-z]/.test(name.text)))
+      addRef(ctx, from, name, 'calls', call);
+    return;
+  }
   const callee =
     call.type === 'new_expression'
       ? call.childForFieldName('constructor')
       : call.childForFieldName('function');
+  if (callee?.type === 'import' || (callee?.type === 'identifier' && callee.text === 'require')) {
+    // Dynamic `import('x')` and `require('x')` anywhere: a module dependency without a binding.
+    const module = callee.type === 'import' ? stringArg(call) : requireSource(call);
+    if (module && !ctx.imports.some((i) => i.module === module && !i.reexport))
+      ctx.imports.push({ module, imported: null, alias: null, line: lineOf(call) });
+    return;
+  }
   addRef(ctx, from, callee, 'calls', call);
 }
 
@@ -292,8 +311,27 @@ function visit(node: Node, ctx: Ctx, stack: Frame[]): void {
     }
   }
 
-  if (node.type === 'call_expression' || node.type === 'new_expression') {
+  if (CALL_NODES.has(node.type)) {
     addCall(ctx, ctx.owner, node);
+  }
+
+  // `module.exports = function f() {}` / `= class C {}`: a named default export.
+  if (ctx.qualifier.length === 0 && node.type === 'assignment_expression') {
+    const right = node.childForFieldName('right');
+    const name = right ? nameOf(right) : null;
+    if (right && name && isModuleExports(node.childForFieldName('left'))) {
+      if (FN_VALUES.has(right.type)) {
+        const sym = push(ctx, 'function', name, right, node.parent ?? node);
+        collectCalls(ctx, right, sym.qualifiedName);
+        return;
+      }
+      if (right.type === 'class') {
+        const sym = push(ctx, 'class', name, right, node.parent ?? node);
+        collectHeritage(ctx, right, sym.qualifiedName ?? name);
+        visitScope(ctx, stack, name, sym.exported, right.childForFieldName('body'));
+        return;
+      }
+    }
   }
 
   if (ctx.qualifier.length === 0) {
@@ -400,20 +438,34 @@ function isModuleExports(node: Node | null): boolean {
   );
 }
 
-function collectCjsExports(first: Node, names: Set<string>): void {
+function collectCjsExports(first: Node, names: Set<string>, rows: ParsedImport[]): void {
   // `a = b = c` chains nest to the right; walked as a loop.
   for (let assign: Node | null = first; assign; ) {
-    assign = collectCjsExport(assign, names);
+    assign = collectCjsExport(assign, names, rows);
   }
 }
 
 /** Records one assignment's export names; returns the chained right-hand assignment, if any. */
-function collectCjsExport(assign: Node, names: Set<string>): Node | null {
+function collectCjsExport(assign: Node, names: Set<string>, rows: ParsedImport[]): Node | null {
   const left = assign.childForFieldName('left');
   const right = assign.childForFieldName('right');
   if (!left || !right) return null;
+  const line = lineOf(assign);
+  const required = right.type === 'call_expression' ? requireSource(right) : null;
   if (isModuleExports(left)) {
-    if (right.type === 'identifier') names.add(right.text);
+    const named = right.type === 'identifier' ? right.text : nameOf(right);
+    if (
+      named &&
+      (right.type === 'identifier' || FN_VALUES.has(right.type) || right.type === 'class')
+    ) {
+      names.add(named);
+      rows.push(localExport(named, 'default', line));
+    }
+    if (required) {
+      // `module.exports = require('./x')`: a CJS barrel.
+      rows.push({ module: required, imported: '*', alias: null, line, reexport: true });
+      rows.push({ module: required, imported: 'default', alias: 'default', line, reexport: true });
+    }
     if (right.type === 'object') {
       for (const p of right.namedChildren) {
         if (p.type === 'shorthand_property_identifier') names.add(p.text);
@@ -427,25 +479,73 @@ function collectCjsExport(assign: Node, names: Set<string>): Node | null {
       const prop = left.childForFieldName('property');
       if (prop) names.add(prop.text);
       if (right.type === 'identifier') names.add(right.text);
+      if (prop && right.type === 'identifier' && right.text !== prop.text)
+        rows.push(localExport(right.text, prop.text, line));
+      if (prop && required)
+        rows.push({ module: required, imported: '*', alias: prop.text, line, reexport: true });
     }
   }
   return right.type === 'assignment_expression' ? right : null;
 }
 
-function collectExportNames(root: Node): Set<string> {
+/** Local `name` exported as `as` (`export default name`, `export { name as as }`). */
+function localExport(name: string, as: string, line: number): ParsedImport {
+  return { module: '', imported: name, alias: as, line, reexport: true };
+}
+
+/** `export … from '…'`: one re-export row per name, or one for `*` / `* as ns`. */
+function collectReexports(node: Node, module: string, rows: ParsedImport[]): void {
+  const line = lineOf(node);
+  const clause = node.namedChildren.find((c) => c.type === 'export_clause');
+  if (clause) {
+    for (const spec of clause.namedChildren) {
+      const name = spec.type === 'export_specifier' ? spec.childForFieldName('name') : null;
+      if (!name) continue;
+      const alias = spec.childForFieldName('alias')?.text ?? null;
+      rows.push({ module, imported: name.text, alias, line, reexport: true });
+    }
+    return;
+  }
+  const ns = node.namedChildren.find((c) => c.type === 'namespace_export');
+  const alias = ns?.namedChildren.find((c) => c.type === 'identifier')?.text ?? null;
+  rows.push({ module, imported: '*', alias, line, reexport: true });
+}
+
+/** Top-level export names; re-export and default-export rows go to `rows`. */
+function collectExports(root: Node, rows: ParsedImport[]): Set<string> {
   const names = new Set<string>();
   for (const node of root.namedChildren) {
-    if (node.type === 'export_statement' && !node.childForFieldName('source')) {
+    const source = node.type === 'export_statement' ? node.childForFieldName('source') : null;
+    if (source) {
+      collectReexports(node, trimQuotes(source.text), rows);
+    } else if (node.type === 'export_statement') {
+      const line = lineOf(node);
       const value = node.childForFieldName('value');
-      if (value?.type === 'identifier') names.add(value.text);
+      if (value?.type === 'identifier') {
+        names.add(value.text);
+        rows.push(localExport(value.text, 'default', line));
+      }
+      const isDefault = node.children.some((c) => c.type === 'default');
+      const declared = node.childForFieldName('declaration');
+      const declName = declared ? nameOf(declared) : null;
+      if (isDefault && declName) rows.push(localExport(declName, 'default', line));
+      // TS `export = X`
+      const assigned = node.children.some((c) => c.type === '=') ? node.namedChildren[0] : null;
+      if (assigned?.type === 'identifier') {
+        names.add(assigned.text);
+        rows.push(localExport(assigned.text, 'default', line));
+      }
       const clause = node.namedChildren.find((c) => c.type === 'export_clause');
       for (const spec of clause?.namedChildren ?? []) {
         const name = spec.type === 'export_specifier' ? spec.childForFieldName('name') : null;
-        if (name) names.add(name.text);
+        if (!name) continue;
+        names.add(name.text);
+        const alias = spec.childForFieldName('alias')?.text;
+        if (alias && alias !== name.text) rows.push(localExport(name.text, alias, line));
       }
     } else if (node.type === 'expression_statement') {
       const expr = node.namedChildren[0];
-      if (expr?.type === 'assignment_expression') collectCjsExports(expr, names);
+      if (expr?.type === 'assignment_expression') collectCjsExports(expr, names, rows);
     }
   }
   return names;
@@ -455,10 +555,19 @@ function collectImports(node: Node, ctx: Ctx): void {
   // `import_statement` has shape:
   //   import <import_clause>? from <string>;
   // import_clause may contain named_imports / namespace_import / identifier (default).
+  const line = lineOf(node);
+  const req = node.namedChildren.find((c) => c.type === 'import_require_clause');
+  if (req) {
+    // TS `import x = require('./m')`: a namespace binding.
+    const module = req.childForFieldName('source');
+    const id = req.namedChildren.find((c) => c.type === 'identifier');
+    if (module && id)
+      ctx.imports.push({ module: trimQuotes(module.text), imported: '*', alias: id.text, line });
+    return;
+  }
   const src = node.childForFieldName('source');
   const moduleStr = src ? trimQuotes(src.text) : null;
   if (!moduleStr) return;
-  const line = lineOf(node);
 
   const clause = node.namedChildren.find(
     (c) => c.type === 'import_clause' || c.type === 'import_specifier',
@@ -521,6 +630,11 @@ function unwrapCallExpression(node: Node): Node | null {
 function requireSource(callExpr: Node): string | null {
   const fn = callExpr.childForFieldName('function');
   if (!fn || fn.type !== 'identifier' || fn.text !== 'require') return null;
+  return stringArg(callExpr);
+}
+
+/** The first argument of a call when it is a plain string literal. */
+function stringArg(callExpr: Node): string | null {
   const args = callExpr.childForFieldName('arguments');
   if (!args) return null;
   const arg = args.namedChildren[0];
@@ -597,7 +711,7 @@ export function parseTsLike(root: Node, language: LanguageId): ParseResult {
   };
   const diagnostics: ParseDiagnostic[] = [];
   try {
-    ctx.exportNames = collectExportNames(root);
+    ctx.exportNames = collectExports(root, ctx.imports);
     walkFrames(root.namedChildren, (node, stack) => visit(node, ctx, stack));
   } catch (err) {
     diagnostics.push(internalDiagnostic(err));

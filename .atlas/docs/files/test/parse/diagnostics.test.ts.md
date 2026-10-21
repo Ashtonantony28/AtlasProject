@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/parse/diagnostics.test.ts
-source_hash: 3abc24cf57690f2dbc47c3c7fffede796900aca3c295b63dd2c1a1ce49c9e81d
+source_hash: d26093a8ac5218b7d5243b216318fc61c5ce92a013e08dcae7c22df32523e60e
 ---
 # module test/parse/diagnostics.test.ts
 

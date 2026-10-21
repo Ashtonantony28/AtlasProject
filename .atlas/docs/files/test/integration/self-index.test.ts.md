@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/integration/self-index.test.ts
-source_hash: b8cb547d51f845d68a06b8fce6ccd0c7c120545b0c8dee9748ff5314a0453642
+source_hash: 6370efb986e34fe757970ff94435664d5822a4c4b582ecaa8fff103f9f585188
 ---
 # module test/integration/self-index.test.ts
 

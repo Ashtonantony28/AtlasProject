@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/db/repo.ts
-source_hash: dd40dbc6183df7f666331ed6d8f50169ebbb22450337e103d2b45e1d411b9ca0
+source_hash: 7afb70d3b8cab1959c3befaa6aed8dc87b94d4f2ded4b4292d6a492d9796e5bb
 ---
 # module src/core/db/repo.ts
 
@@ -25,8 +25,8 @@ source_hash: dd40dbc6183df7f666331ed6d8f50169ebbb22450337e103d2b45e1d411b9ca0
 - `getAllEdges` — function (src/core/db/repo.ts:141)
 - `clearEdges` — function (src/core/db/repo.ts:145)
 - `InsertImportInput` — interface (src/core/db/repo.ts:149)
-- `insertImport` — function (src/core/db/repo.ts:157)
-- `getImportsForFile` — function (src/core/db/repo.ts:167)
+- `insertImport` — function (src/core/db/repo.ts:158)
+- `getImportsForFile` — function (src/core/db/repo.ts:175)
 
 References: `src/core/db/repo.ts:17`, `src/core/db/repo.ts:24`, `src/core/db/repo.ts:48`, `src/core/db/repo.ts:52`, `src/core/db/repo.ts:56`.
 

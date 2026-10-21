@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/parse/py.ts
-source_hash: 4efe2439417b499bed6fc843db238933e611cc846a4bb9452edd13840d80dbdb
+source_hash: 092dd10762dffd7b024a62234eed24fcefc957859c5375df5a3154e3cdab250f
 ---
 # module src/core/parse/py.ts
 
@@ -15,15 +15,16 @@ source_hash: 4efe2439417b499bed6fc843db238933e611cc846a4bb9452edd13840d80dbdb
 - `cleanPyString` — function (src/core/parse/py.ts:47)
 - `Ctx` — interface (src/core/parse/py.ts:58)
 - `CALL_NODES` — variable (src/core/parse/py.ts:68)
-- `dotted` — function (src/core/parse/py.ts:71)
-- `addRef` — function (src/core/parse/py.ts:85)
-- `collectCalls` — function (src/core/parse/py.ts:105)
-- `isExported` — function (src/core/parse/py.ts:112)
-- `literalAll` — function (src/core/parse/py.ts:118)
-- `qualify` — function (src/core/parse/py.ts:132)
-- `visit` — function (src/core/parse/py.ts:136)
-- `collectImports` — function (src/core/parse/py.ts:223)
-- `parsePython` — function (src/core/parse/py.ts:273)
+- `IMPORT_NODES` — variable (src/core/parse/py.ts:69)
+- `dotted` — function (src/core/parse/py.ts:72)
+- `addRef` — function (src/core/parse/py.ts:86)
+- `collectCalls` — function (src/core/parse/py.ts:106)
+- `isExported` — function (src/core/parse/py.ts:113)
+- `literalAll` — function (src/core/parse/py.ts:119)
+- `qualify` — function (src/core/parse/py.ts:133)
+- `visit` — function (src/core/parse/py.ts:137)
+- `collectImports` — function (src/core/parse/py.ts:232)
+- `parsePython` — function (src/core/parse/py.ts:282)
 
 References: `src/core/parse/py.ts:19`, `src/core/parse/py.ts:21`, `src/core/parse/py.ts:25`, `src/core/parse/py.ts:29`, `src/core/parse/py.ts:35`.
 

@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/vector/embedAll.ts
-source_hash: 52a8ec260a8a9a8bcc552dd325a6aa494b7b836b4592c74bc53078c218c58f58
+source_hash: 0417794fa48e5a066f050701367c2a7cb6bdbfb8b64cede690bef9760dd0476d
 ---
 # module src/core/vector/embedAll.ts
 

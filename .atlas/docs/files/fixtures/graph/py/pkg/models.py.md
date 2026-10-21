@@ -1,7 +1,7 @@
 ---
 kind: file
 target: fixtures/graph/py/pkg/models.py
-source_hash: 2b93ee4ae77afbf1c07babfa4a05d88f2fcf9175cc35a2982cc8a7d3b7e2ed62
+source_hash: 37cccc584b7e389067393d3ceec08e0ea32d3dd97ffc1611457db299ae49bd37
 ---
 # module fixtures/graph/py/pkg/models.py
 

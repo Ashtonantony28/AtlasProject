@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/cli/commands/searchCmd.ts
-source_hash: 38a842b46a19c1fd0a2b44910c3dc93955b18e2b2b819e91270081767a5d67e6
+source_hash: e13de219e1352f5ed89d7b638cd96cbc908ab1b312e25d5fb9facac872964b93
 ---
 # module src/cli/commands/searchCmd.ts
 

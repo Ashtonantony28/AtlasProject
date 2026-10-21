@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/cli/init.test.ts
-source_hash: fed9dcbf55429ea7f5ade782e8c6d8726d07b20ff004cb79175ec22df0fdc8c3
+source_hash: bf1ba35062c31225f3b167b1b0a9b360a5756e5b65bf2534593e96e29e912e1d
 ---
 # module test/cli/init.test.ts
 

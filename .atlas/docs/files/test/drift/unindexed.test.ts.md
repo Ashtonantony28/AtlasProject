@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/drift/unindexed.test.ts
-source_hash: 5a893445ebca6853782e30acd675b14677d42145cc628e8a131f7b164b79f109
+source_hash: f0b3942a9fe788e9bd0b7857804537d0925f8a6ed5ef68d7c72e790712b06c2a
 ---
 # module test/drift/unindexed.test.ts
 

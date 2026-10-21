@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/ci/comment.test.ts
-source_hash: 27cecb37e6a4286bf3ddd1f8bb66e0cc59dea6c0d4f31bb5132bfc1b1b82f892
+source_hash: e0aec06bbc84dff1dfe4138975d235a4327202e6040c6b9dbbe89005682e4207
 ---
 # module test/ci/comment.test.ts
 

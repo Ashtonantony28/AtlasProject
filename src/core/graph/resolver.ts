@@ -3,7 +3,11 @@
 // - Each file gets a 'module' symbol (created here if missing) that imports and
 //   module-level calls attach to.
 // - imports: module symbol → imported symbol, or → target module for namespace,
-//   default and side-effect imports. Unresolved imports become weak edges.
+//   side-effect and unknown default imports. Named and default imports follow
+//   re-exports (`export … from`, `export *`, names bound in a Python `__init__`,
+//   `export default x`, `module.exports = x`) to the defining symbol; an import
+//   through such a barrel also gets an edge to the barrel module. A barrel gets an
+//   import edge per re-export. Unresolved imports become weak edges.
 // - extends/implements and calls come from CST references recorded by the parser:
 //   bare `f()` resolves to a local top-level symbol or an imported binding,
 //   `this.m()`/`self.m()` to a method of the enclosing class or its resolved
@@ -33,10 +37,15 @@ interface FileCtx {
   // Importable names: top-level symbols, then members of a default-export object literal.
   exportsByName: Map<string, SymbolRow>;
   moduleSymbolId: number;
+  imports: ImportRow[]; // bindings (reexport = 0)
+  reexports: ImportRow[]; // reexport = 1; module '' exports a local name as `alias`
+  byLocal: Map<string, ImportRow>; // import rows by the local name they bind
 }
 
 type Binding =
-  | { kind: 'symbol'; sym: SymbolRow }
+  // `home`: the module whose exports `x.m()` falls back to when `sym` is a function
+  // default export (CJS `module.exports = fn; exports.m = ...`).
+  | { kind: 'symbol'; sym: SymbolRow; home?: FileCtx }
   | { kind: 'module'; ctx: FileCtx }
   | { kind: 'external' };
 
@@ -91,6 +100,13 @@ function resolveAll(db: DB): ResolveStats {
       else if (q === `default.${s.name}`) members.push(s);
     }
     for (const s of members) if (!exportsByName.has(s.name)) exportsByName.set(s.name, s);
+    const rows = importsByFile.get(file.id) ?? [];
+    const imports = rows.filter((r) => !r.reexport);
+    const byLocal = new Map<string, ImportRow>();
+    for (const imp of imports) {
+      const name = localNameOf(imp, file.language);
+      if (name) byLocal.set(name, imp);
+    }
     contexts.set(file.id, {
       fileId: file.id,
       filePath: file.path,
@@ -98,6 +114,9 @@ function resolveAll(db: DB): ResolveStats {
       byQName,
       exportsByName,
       moduleSymbolId,
+      imports,
+      reexports: rows.filter((r) => r.reexport),
+      byLocal,
     });
   }
 
@@ -125,48 +144,107 @@ function resolveAll(db: DB): ResolveStats {
     else stats.heritage++;
   };
 
-  // 1) Imports, and the local bindings they create.
+  // What a name exported by `ctx` is bound to, following re-export chains (cycle-safe).
+  const exportMemo = new Map<string, Binding | null>();
+  function exportOf(ctx: FileCtx, name: string, seen = new Set<string>()): Binding | null {
+    const key = `${ctx.fileId}\0${name}`;
+    const top = seen.size === 0;
+    if (top && exportMemo.has(key)) return exportMemo.get(key)!;
+    if (seen.has(key)) return null;
+    seen.add(key);
+    let out = name === 'default' ? null : localOf(ctx, name, seen);
+    for (const r of ctx.reexports) {
+      if (out) break;
+      if ((r.alias ?? r.imported) !== name || (r.imported === '*' && r.alias === null)) continue;
+      out = r.module === '' ? localOf(ctx, r.imported!, seen) : bindingOf(ctx, r, seen);
+      if (out?.kind === 'symbol' && name === 'default' && !out.home) {
+        const home = contexts.get(out.sym.file_id);
+        out = { kind: 'symbol', sym: out.sym, ...(home ? { home } : {}) };
+      }
+    }
+    if (!out && name !== 'default') out = viaStars(ctx, name, seen)?.binding ?? null;
+    if (top) exportMemo.set(key, out);
+    return out;
+  }
+
+  // A top-level name of `ctx`. An import that resolves to a symbol wins over the
+  // variable it declares (`const x = require('./x')`), then own symbols, then modules.
+  function localOf(ctx: FileCtx, name: string, seen: Set<string>): Binding | null {
+    const imp = ctx.byLocal.get(name);
+    const b = imp ? bindingOf(ctx, imp, seen) : null;
+    if (b?.kind === 'symbol') return b;
+    const own = ctx.exportsByName.get(name);
+    if (own) return { kind: 'symbol', sym: own };
+    return b?.kind === 'module' ? b : null;
+  }
+
+  // `export *` and Python `from x import *` (only the latter binds locally): the first
+  // star target exporting `name`. `unresolved`: some star target is outside the index.
+  function viaStars(
+    ctx: FileCtx,
+    name: string,
+    seen: Set<string>,
+    bindingOnly = false,
+  ): { binding: Binding | null; unresolved: boolean } | null {
+    let unresolved = false;
+    let any = false;
+    for (const r of bindingOnly ? ctx.imports : [...ctx.reexports, ...ctx.imports]) {
+      if (r.imported !== '*' || r.alias !== null || r.module === '') continue;
+      any = true;
+      const target = resolveModule(ctx, r.module, byPath);
+      if (!target) {
+        unresolved = true;
+        continue;
+      }
+      const b = exportOf(target, name, seen);
+      if (b) return { binding: b, unresolved };
+    }
+    return any ? { binding: null, unresolved } : null;
+  }
+
+  // The binding an import (or re-export) row creates. Named imports that cannot be
+  // found in an indexed target are `external` with `weak` set by the caller.
+  function bindingOf(ctx: FileCtx, imp: ImportRow, seen = new Set<string>()): Binding {
+    const target = resolveModule(ctx, imp.module, byPath);
+    const name = imp.imported;
+    if (name === null || name === '*') return target ? { kind: 'module', ctx: target } : EXTERNAL;
+    if (target) {
+      const b = exportOf(target, name, seen);
+      if (b) return b;
+      if (name === 'default') return { kind: 'module', ctx: target };
+    }
+    const sub = resolveSubmodule(ctx, imp.module, name, byPath);
+    return sub ? { kind: 'module', ctx: sub } : EXTERNAL;
+  }
+
+  // 1) Imports and re-exports, and the local bindings imports create.
   const bindings = new Map<number, Map<string, Binding>>();
   for (const ctx of contexts.values()) {
     const local = new Map<string, Binding>();
     for (const [name, sym] of ctx.exportsByName) {
       if (!(sym.qualified_name ?? name).includes('.')) local.set(name, { kind: 'symbol', sym });
     }
-    for (const imp of importsByFile.get(ctx.fileId) ?? []) {
+    for (const imp of [...ctx.imports, ...ctx.reexports]) {
+      if (imp.module === '') continue;
       const meta = { module: imp.module, imported: imp.imported, alias: imp.alias };
-      const named = imp.imported !== null && imp.imported !== '*' && imp.imported !== 'default';
-      const localName = imp.alias ?? (named ? imp.imported : null);
       const target = resolveModule(ctx, imp.module, byPath);
-      let binding: Binding = { kind: 'external' };
-      let dst: number | null = null;
-      let weak = false;
-      if (target) {
-        dst = target.moduleSymbolId;
-        binding = { kind: 'module', ctx: target };
-        if (named) {
-          const sym = target.exportsByName.get(imp.imported!);
-          const sub = sym ? null : resolveSubmodule(ctx, imp.module, imp.imported!, byPath);
-          if (sym) {
-            dst = sym.id;
-            binding = { kind: 'symbol', sym };
-          } else if (sub) {
-            dst = sub.moduleSymbolId;
-            binding = { kind: 'module', ctx: sub };
-          } else {
-            weak = true;
-            binding = { kind: 'external' };
-          }
-        }
-      } else if (named) {
-        const sub = resolveSubmodule(ctx, imp.module, imp.imported!, byPath);
-        if (sub) {
-          dst = sub.moduleSymbolId;
-          binding = { kind: 'module', ctx: sub };
-        }
+      const binding = bindingOf(ctx, imp);
+      const dst =
+        binding.kind === 'symbol'
+          ? binding.sym.id
+          : binding.kind === 'module'
+            ? binding.ctx.moduleSymbolId
+            : (target?.moduleSymbolId ?? null);
+      emit(ctx.moduleSymbolId, dst, 'imports', meta, binding.kind === 'external' || dst === null);
+      // Imported through a barrel: the barrel module is a dependency too.
+      const named = imp.imported !== null && imp.imported !== '*';
+      if (target && named && binding.kind !== 'external' && exportOf(target, imp.imported!)) {
+        const home = binding.kind === 'symbol' ? binding.sym.file_id : binding.ctx.fileId;
+        if (home !== target.fileId)
+          emit(ctx.moduleSymbolId, target.moduleSymbolId, 'imports', meta);
       }
-      emit(ctx.moduleSymbolId, dst, 'imports', meta, weak || dst === null);
-      const name =
-        localName ?? (imp.imported === null && ctx.language === 'python' ? imp.module : null);
+      if (imp.reexport) continue;
+      const name = localNameOf(imp, ctx.language);
       if (name) local.set(name, binding);
     }
     bindings.set(ctx.fileId, local);
@@ -182,15 +260,32 @@ function resolveAll(db: DB): ResolveStats {
     const local = bindings.get(ctx.fileId)!;
     const key = ref.receiver === 'none' ? ref.name : (ref.object ?? '');
     const b = local.get(key);
-    if (!b) return local.has(key.split('.')[0]!) ? null : undefined;
+    if (!b) {
+      if (local.has(key.split('.')[0]!)) return null;
+      if (ref.receiver !== 'none') return undefined;
+      const star = viaStars(ctx, ref.name, new Set(), true);
+      if (star?.binding?.kind === 'symbol') return star.binding.sym;
+      return star?.unresolved ? null : undefined;
+    }
     if (ref.receiver === 'none') {
       if (b.kind === 'symbol') return b.sym;
-      // `const x = require('...')` also declares a top-level variable `x`: the call goes through it.
+      const d = b.kind === 'module' ? exportOf(b.ctx, 'default') : null;
+      if (d?.kind === 'symbol') return d.sym;
+      // Default unknown (e.g. a package): `const x = require('...')` also declares a
+      // top-level variable `x`, and the call goes through it.
       const own = ctx.byQName.get(ref.name);
       return own && own.kind !== 'module' ? own : null;
     }
-    if (b.kind === 'module') return b.ctx.exportsByName.get(ref.name) ?? null;
-    if (b.kind === 'symbol') return member(b.sym, ref.name);
+    if (b.kind === 'module') {
+      const e = exportOf(b.ctx, ref.name);
+      return e?.kind === 'symbol' ? e.sym : null;
+    }
+    if (b.kind === 'symbol') {
+      const hit = member(b.sym, ref.name);
+      if (hit || !b.home || (b.sym.kind !== 'function' && b.sym.kind !== 'variable')) return hit;
+      const e = exportOf(b.home, ref.name);
+      return e?.kind === 'symbol' ? e.sym : null;
+    }
     return null;
   };
 
@@ -253,6 +348,18 @@ function resolveAll(db: DB): ResolveStats {
 
   insertEdges(db, edges);
   return stats;
+}
+
+const EXTERNAL: Binding = { kind: 'external' };
+
+/** The local name an import binds: alias, the named import, or a Python `import a.b`'s module. */
+function localNameOf(imp: ImportRow, language: string): string | null {
+  const named = imp.imported !== null && imp.imported !== '*' && imp.imported !== 'default';
+  return (
+    imp.alias ??
+    (named ? imp.imported : null) ??
+    (imp.imported === null && language === 'python' ? imp.module : null)
+  );
 }
 
 function groupByFile<T extends { file_id: number }>(rows: T[]): Map<number, T[]> {

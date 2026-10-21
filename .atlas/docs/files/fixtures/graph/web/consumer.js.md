@@ -1,7 +1,7 @@
 ---
 kind: file
 target: fixtures/graph/web/consumer.js
-source_hash: e2c401e9269889344a8c3442b4414753291c6fb95d48d1d217f4fc21f0de50bd
+source_hash: fff47d4bd257b3885d06da8e6faf28e651cdfd5c10cd8292f21af3a9a786deb0
 ---
 # module fixtures/graph/web/consumer.js
 

@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/drift/staleness.test.ts
-source_hash: 0f8362efddfca2819240547ddc34c1c724248240f4100aa6eb7e07c81e46c82e
+source_hash: f5d2036da719d0c5c3c719180f4c76fc48c18971fc034795debbc88fa454049b
 ---
 # module test/drift/staleness.test.ts
 

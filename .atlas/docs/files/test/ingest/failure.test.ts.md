@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/ingest/failure.test.ts
-source_hash: bb7acb01cd2e6706db49cb59f6fe9f6ccbc7eda99fdacb3bffdfd0889e623b25
+source_hash: 19673d2074597736f0caf2701d9e3515749290c4aa9d53ffaf3c6d7eb5cc1f7c
 ---
 # module test/ingest/failure.test.ts
 

@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/synth/perf.test.ts
-source_hash: d8dfe06d06aa458c02eeb4c57a3a7473f9ea924be4013e97c5327945ae164352
+source_hash: fa63d516c769e3f2727c57a1551fab25ea0ca27cba5f5377483494537cd8a2f3
 ---
 # module test/synth/perf.test.ts
 

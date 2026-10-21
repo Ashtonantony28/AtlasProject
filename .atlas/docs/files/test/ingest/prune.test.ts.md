@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/ingest/prune.test.ts
-source_hash: 02c003a3cc676207b146b72a64fe15399dd77960b1bc3a786a8dd0f3346b0cdb
+source_hash: e68af75257eb7d7fea6b63c3327af8a2d14dc5bdf10763bd98b138c2c14087ea
 ---
 # module test/ingest/prune.test.ts
 

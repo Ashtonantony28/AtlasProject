@@ -83,7 +83,7 @@ async function graphOf(files: Record<string, string>): Promise<Graph> {
 // ---------------------------------------------------------------- graph
 
 describe('AUDIT-1 graph', () => {
-  it.fails('A1-01 TS barrel re-exports resolve to the defining module', async () => {
+  it('A1-01 TS barrel re-exports resolve to the defining module', async () => {
     const g = await graphOf({
       'lib/foo.ts': 'export function foo(): number { return 1; }\nexport class Base<T> {}\n',
       'lib/bar.ts': 'export function bar(): number { return 2; }\n',
@@ -98,34 +98,26 @@ describe('AUDIT-1 graph', () => {
     expect(g.strong).toContain('use.ts::Sub -extends-> lib/foo.ts::Base');
   });
 
-  it.fails(
-    'A1-01 the barrel file itself has an edge (even weak) to each re-exported module',
-    async () => {
-      const g = await graphOf({
-        'lib/foo.ts': 'export function foo(): number { return 1; }\n',
-        'lib/bar.ts': 'export function bar(): number { return 2; }\n',
-        'lib/index.ts': "export { foo } from './foo';\nexport * from './bar';\n",
-      });
-      expect(g.any.filter((e) => e.startsWith('lib/index.ts::<module> -imports->'))).toHaveLength(
-        2,
-      );
-    },
-  );
+  it('A1-01 the barrel file itself has an edge (even weak) to each re-exported module', async () => {
+    const g = await graphOf({
+      'lib/foo.ts': 'export function foo(): number { return 1; }\n',
+      'lib/bar.ts': 'export function bar(): number { return 2; }\n',
+      'lib/index.ts': "export { foo } from './foo';\nexport * from './bar';\n",
+    });
+    expect(g.any.filter((e) => e.startsWith('lib/index.ts::<module> -imports->'))).toHaveLength(2);
+  });
 
-  it.fails(
-    'A1-01 Python re-exports through __init__.py resolve to the defining module',
-    async () => {
-      const g = await graphOf({
-        'app/__init__.py': '',
-        'app/api/__init__.py': 'from .views import view\n',
-        'app/api/views.py': 'def view():\n    return 1\n',
-        'main.py': 'from app.api import view\ndef run():\n    return view()\n',
-      });
-      expect(g.strong).toContain('main.py::run -calls-> app/api/views.py::view');
-    },
-  );
+  it('A1-01 Python re-exports through __init__.py resolve to the defining module', async () => {
+    const g = await graphOf({
+      'app/__init__.py': '',
+      'app/api/__init__.py': 'from .views import view\n',
+      'app/api/views.py': 'def view():\n    return 1\n',
+      'main.py': 'from app.api import view\ndef run():\n    return view()\n',
+    });
+    expect(g.strong).toContain('main.py::run -calls-> app/api/views.py::view');
+  });
 
-  it.fails('A1-02 default imports resolve calls and heritage to the default export', async () => {
+  it('A1-02 default imports resolve calls and heritage to the default export', async () => {
     const g = await graphOf({
       'def.ts': 'export default function makeThing(): number { return 3; }\n',
       'DefClass.ts': 'export default class DefClass {}\n',
@@ -138,20 +130,17 @@ describe('AUDIT-1 graph', () => {
     expect(g.strong).toContain('use.ts::Child -extends-> DefClass.ts::DefClass');
   });
 
-  it.fails(
-    'A1-02 CJS `module.exports = fn` resolves calls to fn, not to the local require binding',
-    async () => {
-      const g = await graphOf({
-        'app.js': 'function createApp() { return 1; }\nmodule.exports = createApp;\n',
-        'main.js':
-          "const app = require('./app');\nfunction main() { return app(); }\nmodule.exports = { main };\n",
-      });
-      expect(g.strong).not.toContain('main.js::main -calls-> main.js::app');
-      expect(g.strong).toContain('main.js::main -calls-> app.js::createApp');
-    },
-  );
+  it('A1-02 CJS `module.exports = fn` resolves calls to fn, not to the local require binding', async () => {
+    const g = await graphOf({
+      'app.js': 'function createApp() { return 1; }\nmodule.exports = createApp;\n',
+      'main.js':
+        "const app = require('./app');\nfunction main() { return app(); }\nmodule.exports = { main };\n",
+    });
+    expect(g.strong).not.toContain('main.js::main -calls-> main.js::app');
+    expect(g.strong).toContain('main.js::main -calls-> app.js::createApp');
+  });
 
-  it.fails('A1-03 Python subscripted base classes (generics) produce an extends edge', async () => {
+  it('A1-03 Python subscripted base classes (generics) produce an extends edge', async () => {
     const g = await graphOf({
       'models.py':
         'from typing import Generic, TypeVar\nT = TypeVar("T")\n' +
@@ -176,7 +165,7 @@ describe('AUDIT-1 graph', () => {
     expect(r.symbols.map((s) => s.name)).toContain('after');
   });
 
-  it.fails('A1-09 JSX component usage produces an edge to the component', async () => {
+  it('A1-09 JSX component usage produces an edge to the component', async () => {
     const g = await graphOf({
       'Button.tsx': 'export function Button(): JSX.Element { return <button />; }\n',
       'App.tsx':
@@ -186,7 +175,7 @@ describe('AUDIT-1 graph', () => {
     expect(g.strong).toContain('App.tsx::App -calls-> Button.tsx::Button');
   });
 
-  it.fails('A1-10 dynamic import() produces an import edge', async () => {
+  it('A1-10 dynamic import() produces an import edge', async () => {
     const g = await graphOf({
       'bar.ts': 'export function bar(): number { return 2; }\n',
       'lazy.ts':
@@ -195,7 +184,7 @@ describe('AUDIT-1 graph', () => {
     expect(g.any.some((e) => e.startsWith('lazy.ts::') && e.includes('bar.ts::'))).toBe(true);
   });
 
-  it.fails('A1-10 require() inside a function produces an import edge', async () => {
+  it('A1-10 require() inside a function produces an import edge', async () => {
     const g = await graphOf({
       'bar.js': 'function bar() { return 2; }\nmodule.exports = { bar };\n',
       'use.js':
@@ -204,7 +193,7 @@ describe('AUDIT-1 graph', () => {
     expect(g.any.some((e) => e.startsWith('use.js::') && e.includes('bar.js::'))).toBe(true);
   });
 
-  it.fails('A1-10 TS `import x = require()` produces an import edge', async () => {
+  it('A1-10 TS `import x = require()` produces an import edge', async () => {
     const g = await graphOf({
       'bar.ts': 'export function bar(): number { return 2; }\n',
       'req.ts': "import B = require('./bar');\nexport function r(): number { return B.bar(); }\n",
@@ -212,7 +201,7 @@ describe('AUDIT-1 graph', () => {
     expect(g.any.some((e) => e.startsWith('req.ts::') && e.includes('bar.ts::'))).toBe(true);
   });
 
-  it.fails('A1-10 Python function-local imports produce import and call edges', async () => {
+  it('A1-10 Python function-local imports produce import and call edges', async () => {
     const g = await graphOf({
       'helpers.py': 'def helper():\n    return 1\n',
       'views.py': 'def view():\n    from helpers import helper\n    return helper()\n',
@@ -250,7 +239,7 @@ describe('AUDIT-1 graph', () => {
     ).toBe(true);
   });
 
-  it.fails('A1-12 Python star imports give calls an edge (resolved or weak)', async () => {
+  it('A1-12 Python star imports give calls an edge (resolved or weak)', async () => {
     const g = await graphOf({
       'pkg/__init__.py': '',
       'pkg/lib.py': 'def star_fn():\n    return 1\n',
@@ -351,58 +340,52 @@ describe('AUDIT-1 drift', () => {
     return files;
   };
 
-  it(
-    "A1-05 a change in a hub module's incoming calls beyond the 12-edge cap marks it stale",
-    async () => {
-      const { db, root, docsDir } = await driftAfter(hub(), (r) =>
-        writeFileSync(
-          join(r, 'zz.ts'),
-          "import { foo, other } from './a';\nexport function zz(): number { return other(); }\n",
-        ),
-      );
-      try {
-        expect(staleOf(db, root)).toContain('a.ts');
-        expect(staleOf(db, root, docsDir)).toContain('a.ts');
-      } finally {
-        closeDatabase(db);
-      }
-    },
-  );
+  it("A1-05 a change in a hub module's incoming calls beyond the 12-edge cap marks it stale", async () => {
+    const { db, root, docsDir } = await driftAfter(hub(), (r) =>
+      writeFileSync(
+        join(r, 'zz.ts'),
+        "import { foo, other } from './a';\nexport function zz(): number { return other(); }\n",
+      ),
+    );
+    try {
+      expect(staleOf(db, root)).toContain('a.ts');
+      expect(staleOf(db, root, docsDir)).toContain('a.ts');
+    } finally {
+      closeDatabase(db);
+    }
+  });
 
-  it(
-    'A1-06 an incoming-call change cut off by the 6,000-char prompt cap marks the doc stale',
-    async () => {
-      const D = 'packages/platform-services/src/modules/notifications/internal/handlers';
-      const files: Record<string, string> = {};
-      let hubSrc = '';
-      for (let i = 1; i <= 30; i++) {
-        const n = String(i).padStart(2, '0');
-        hubSrc += `import { dependencyNumber${n} } from './${D}/dependency_module_number_${n}';\n`;
-        files[`${D}/dependency_module_number_${n}.ts`] =
-          `export function dependencyNumber${n}(): number { return ${i}; }\n`;
-      }
-      files['hub.ts'] =
-        `${hubSrc}export function hubEntryPoint(): number { return dependencyNumber01(); }\n`;
-      for (let i = 1; i <= 12; i++) {
-        const n = String(i).padStart(2, '0');
-        files[`${D}/caller_${n}.ts`] =
-          "import { hubEntryPoint } from '../../../../../../../hub';\n" +
-          `export function callerWithAVeryDescriptiveLongName${n}(): number { return hubEntryPoint(); }\n`;
-      }
-      const { db, root } = await driftAfter(files, (r) => {
-        const p = join(r, D, 'caller_12.ts');
-        writeFileSync(
-          p,
-          readFileSync(p, 'utf8').replace('callerWithAVeryDescriptiveLongName12', 'renamed12'),
-        );
-      });
-      try {
-        expect(staleOf(db, root, undefined, true)).toContain('hub.ts');
-      } finally {
-        closeDatabase(db);
-      }
-    },
-  );
+  it('A1-06 an incoming-call change cut off by the 6,000-char prompt cap marks the doc stale', async () => {
+    const D = 'packages/platform-services/src/modules/notifications/internal/handlers';
+    const files: Record<string, string> = {};
+    let hubSrc = '';
+    for (let i = 1; i <= 30; i++) {
+      const n = String(i).padStart(2, '0');
+      hubSrc += `import { dependencyNumber${n} } from './${D}/dependency_module_number_${n}';\n`;
+      files[`${D}/dependency_module_number_${n}.ts`] =
+        `export function dependencyNumber${n}(): number { return ${i}; }\n`;
+    }
+    files['hub.ts'] =
+      `${hubSrc}export function hubEntryPoint(): number { return dependencyNumber01(); }\n`;
+    for (let i = 1; i <= 12; i++) {
+      const n = String(i).padStart(2, '0');
+      files[`${D}/caller_${n}.ts`] =
+        "import { hubEntryPoint } from '../../../../../../../hub';\n" +
+        `export function callerWithAVeryDescriptiveLongName${n}(): number { return hubEntryPoint(); }\n`;
+    }
+    const { db, root } = await driftAfter(files, (r) => {
+      const p = join(r, D, 'caller_12.ts');
+      writeFileSync(
+        p,
+        readFileSync(p, 'utf8').replace('callerWithAVeryDescriptiveLongName12', 'renamed12'),
+      );
+    });
+    try {
+      expect(staleOf(db, root, undefined, true)).toContain('hub.ts');
+    } finally {
+      closeDatabase(db);
+    }
+  });
 
   it('A1-07 `drift --docs-dir` on a missing directory fails instead of passing', async () => {
     const { db, root } = await driftAfter(BASE, (r) =>
@@ -431,17 +414,14 @@ describe('AUDIT-1 drift', () => {
     }
   });
 
-  it(
-    'A1-17 DB-mode drift reports the doc of a deleted file (with --skip-architecture)',
-    async () => {
-      const { db, root } = await driftAfter(BASE, (r) => rmSync(join(r, 'c.py')));
-      try {
-        expect(staleOf(db, root, undefined, true)).toContain('c.py');
-      } finally {
-        closeDatabase(db);
-      }
-    },
-  );
+  it('A1-17 DB-mode drift reports the doc of a deleted file (with --skip-architecture)', async () => {
+    const { db, root } = await driftAfter(BASE, (r) => rmSync(join(r, 'c.py')));
+    try {
+      expect(staleOf(db, root, undefined, true)).toContain('c.py');
+    } finally {
+      closeDatabase(db);
+    }
+  });
 
   it.fails(
     'A1-18 a member is not "documented" just because another class\'s member shares its name',

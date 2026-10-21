@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/cli/ask.test.ts
-source_hash: ae2fed3b6276857dd29e9a29776c876cdb5da2edaff05580bdcce764c2f856a6
+source_hash: 8185f3775add79cc8b0cf6bf16b954b08993486815a49f3b9064c8174ea52909
 ---
 # module test/cli/ask.test.ts
 

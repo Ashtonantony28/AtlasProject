@@ -266,3 +266,21 @@ while files are indexed, so CI cannot pass silently (CI is red until Atlas's
 own docs are committed). `.atlas/config.json` is no longer gitignored (it holds
 no secrets) so CI indexes with the committed filters. `atlas index` still
 exits 0 when `filesFailed > 0`: drift reports those files as `unindexed`.
+
+## 2026-10-21 — SG10: re-exports and default exports in the resolver
+Migration v5 adds `imports.reexport`. `export … from`, `export *`, `export * as ns`
+and `module.exports = require(...)` are re-export rows (the barrel gets an import
+edge per row but no local binding); `export default x`, `export = x`,
+`export { x as y }` and `module.exports = x` are rows with `module: ''` naming the
+local. The resolver's `exportOf(file, name)` follows own symbols, import bindings
+(so Python `__init__` names and CJS `const x = require()` variables are followed),
+re-export rows and star targets, with a per-chain `seen` set against cycles and a
+memo for top-level lookups only. A consumer importing through a barrel gets edges
+to the defining symbol and to the barrel. Calling a binding whose default is
+unknown (packages, object exports) still resolves to the local require variable,
+as before. Member calls on a function default fall back to its module's exports
+(`exports.m`); class defaults do not. JSX capitalised tags are calls; dynamic
+`import()`/nested `require()` add binding-less imports; Python function-local
+imports bind file-wide; calls to names from a Python star import resolve through
+it, or are weak when a star target is not indexed.
+
