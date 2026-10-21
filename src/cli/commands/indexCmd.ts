@@ -1,6 +1,4 @@
 import type { Command } from 'commander';
-import { resolve } from 'node:path';
-import { existsSync } from 'node:fs';
 import {
   closeDatabase,
   openDatabase,
@@ -8,6 +6,7 @@ import {
 } from '../../core/db/index.js';
 import { indexRepo } from '../../core/ingest/index.js';
 import { loadConfig, resolvePaths, writeDefaultConfig } from '../../core/config.js';
+import { requireRoot } from '../../core/project.js';
 
 interface IndexArgs {
   force?: boolean;
@@ -23,12 +22,7 @@ export function registerIndexCommand(program: Command): void {
     .option('-f, --force', 'Re-parse all files regardless of hash')
     .option('-v, --verbose', 'Log each file as it is processed')
     .action(async (pathArg: string, opts: IndexArgs) => {
-      const root = resolve(pathArg);
-      if (!existsSync(root)) {
-        process.stderr.write(`atlas: path does not exist: ${root}\n`);
-        process.exitCode = 1;
-        return;
-      }
+      const root = requireRoot(pathArg);
       // Auto-init creates only .atlas/ (config + index) inside the target.
       writeDefaultConfig(root);
       const config = loadConfig(root);

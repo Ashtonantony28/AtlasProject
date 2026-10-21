@@ -1,8 +1,8 @@
 import type { Command } from 'commander';
-import { resolve } from 'node:path';
-import { closeDatabase, openDatabase, type SymbolKind } from '../../core/db/index.js';
+import { closeDatabase } from '../../core/db/index.js';
 import { createEmbedder, search } from '../../core/vector/index.js';
-import { loadConfig, resolvePaths } from '../../core/config.js';
+import { listArg, numberArg, parseParams, SearchParamsSchema } from '../../core/params.js';
+import { openProjectIndex } from '../../core/project.js';
 
 interface SearchArgs {
   kind?: string;
@@ -12,16 +12,6 @@ interface SearchArgs {
   cwd?: string;
 }
 
-const VALID_KINDS: SymbolKind[] = [
-  'function',
-  'method',
-  'class',
-  'interface',
-  'type',
-  'variable',
-  'module',
-];
-
 export function registerSearchCommand(program: Command): void {
   program
     .command('search')
@@ -29,35 +19,22 @@ export function registerSearchCommand(program: Command): void {
     .argument('<query>', 'Search query')
     .option('-k, --kind <kind>', 'Filter by symbol kind (comma separated)')
     .option('--file <substring>', 'Filter by file path substring')
-    .option('-n, --limit <n>', 'Max hits to return', '10')
+    .option('-n, --limit <n>', 'Max hits to return (1-100)', '10')
     .option('--json', 'Output JSON instead of human-readable text')
     .option('--cwd <path>', 'Project root', '.')
-    .action(async (query: string, opts: SearchArgs) => {
-      const root = resolve(opts.cwd ?? '.');
-      const config = loadConfig(root);
-      const paths = resolvePaths(root, config);
-      const db = openDatabase(paths.dbPath, { fileMustExist: true });
+    .action(async (rawQuery: string, opts: SearchArgs) => {
+      const { query, kind, file, limit } = parseParams(SearchParamsSchema, {
+        query: rawQuery,
+        kind: listArg(opts.kind),
+        file: opts.file,
+        limit: numberArg(opts.limit),
+      });
+      const { db, config } = openProjectIndex(opts.cwd ?? '.');
       try {
         const embedder = createEmbedder(config);
-        let kinds: SymbolKind[] | undefined;
-        if (opts.kind) {
-          const parts = opts.kind
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean) as SymbolKind[];
-          for (const k of parts) {
-            if (!VALID_KINDS.includes(k)) {
-              process.stderr.write(`atlas: unknown kind '${k}'\n`);
-              process.exitCode = 1;
-              return;
-            }
-          }
-          kinds = parts;
-        }
-        const limit = Number.parseInt(opts.limit ?? '10', 10);
         const hits = await search(db, embedder, query, {
-          ...(kinds ? { kind: kinds } : {}),
-          ...(opts.file ? { file: opts.file } : {}),
+          ...(kind?.length ? { kind } : {}),
+          ...(file ? { file } : {}),
           limit,
         });
         if (opts.json) {

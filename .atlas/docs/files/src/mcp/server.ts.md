@@ -1,31 +1,28 @@
 ---
 kind: file
 target: src/mcp/server.ts
-source_hash: 2700662abbb996d83cf5fdf85919133381ab1f66a86c392397ffdcb419599675
+source_hash: 0f8abcb500a76d90993e26c140ce557c5e88f6729c2c9c252692b9c81f510360
 ---
 # module src/mcp/server.ts
 
 `module src/mcp/server.ts` exposes the following public surface:
 
-- `KINDS` — variable (src/mcp/server.ts:33)
 - `McpContext` — interface (src/mcp/server.ts:35)
 - `McpContext.llm` — method (src/mcp/server.ts:41)
 - `McpContextOptions` — interface (src/mcp/server.ts:44)
 - `createMcpContext` — function (src/mcp/server.ts:52)
-- `budgeted` — function (src/mcp/server.ts:80)
-- `requireIndex` — function (src/mcp/server.ts:99)
-- `handleIndexTool` — function (src/mcp/server.ts:103)
-- `handleSearchTool` — function (src/mcp/server.ts:112)
-- `handleSymbolTool` — function (src/mcp/server.ts:136)
-- `handleGraphTool` — function (src/mcp/server.ts:178)
-- `handleDriftTool` — function (src/mcp/server.ts:183)
-- `allDocs` — function (src/mcp/server.ts:197)
-- `handleDocsTool` — function (src/mcp/server.ts:204)
-- `handleAskTool` — function (src/mcp/server.ts:222)
-- `asText` — function (src/mcp/server.ts:247)
-- `createAtlasMcpServer` — function (src/mcp/server.ts:252)
-- `startMcpServer` — function (src/mcp/server.ts:359)
+- `requireIndex` — function (src/mcp/server.ts:78)
+- `handleIndexTool` — function (src/mcp/server.ts:82)
+- `handleSearchTool` — function (src/mcp/server.ts:91)
+- `handleSymbolTool` — function (src/mcp/server.ts:114)
+- `handleGraphTool` — function (src/mcp/server.ts:156)
+- `handleDriftTool` — function (src/mcp/server.ts:161)
+- `handleDocsTool` — function (src/mcp/server.ts:175)
+- `handleAskTool` — function (src/mcp/server.ts:186)
+- `asText` — function (src/mcp/server.ts:210)
+- `createAtlasMcpServer` — function (src/mcp/server.ts:215)
+- `startMcpServer` — function (src/mcp/server.ts:320)
 
-References: `src/mcp/server.ts:33`, `src/mcp/server.ts:35`, `src/mcp/server.ts:41`, `src/mcp/server.ts:44`, `src/mcp/server.ts:52`.
+References: `src/mcp/server.ts:35`, `src/mcp/server.ts:41`, `src/mcp/server.ts:44`, `src/mcp/server.ts:52`, `src/mcp/server.ts:78`.
 
 _Generated offline (mock client)._

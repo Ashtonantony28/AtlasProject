@@ -1,7 +1,6 @@
 // MCP server: exposes the index (index, search, symbol, graph, drift, docs, ask)
 // as tools over stdio. Additive to the CLI; writes only inside `.atlas/`.
 
-import { join, resolve } from 'node:path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
@@ -12,25 +11,26 @@ import {
   getAllSymbols,
   openDatabase,
   type DB,
-  type SymbolKind,
 } from '../core/db/index.js';
 import { indexRepo } from '../core/ingest/index.js';
 import { buildGraphDot, buildGraphJson } from '../core/graph/index.js';
 import { createEmbedder, readFileFromRoot, search } from '../core/vector/index.js';
-import { detectDrift, formatDriftReport } from '../core/drift/index.js';
+import { formatDriftReport, runDrift } from '../core/drift/index.js';
 import {
+  budgeted,
   createAnthropicClient,
   createOfflineClient,
-  docsFromDb,
-  readPersistedDocs,
+  findDoc,
+  listDocs,
   TokenBudget,
   type LLMClient,
-  type PersistedDoc,
 } from '../core/synth/index.js';
 import { ask, DEFAULT_EXCERPT_LINES } from '../core/qa/index.js';
-import { loadConfig, resolvePaths, type AtlasConfig } from '../core/config.js';
+import type { AtlasConfig } from '../core/config.js';
+import { loadProject } from '../core/project.js';
+import { askParams, AskParamsSchema, parseParams, searchParams, SearchParamsSchema } from '../core/params.js';
 
-const KINDS = ['function', 'method', 'class', 'interface', 'type', 'variable', 'module'] as const;
+export { budgeted };
 
 export interface McpContext {
   db: DB;
@@ -50,9 +50,8 @@ export interface McpContextOptions {
 }
 
 export function createMcpContext(opts: McpContextOptions): McpContext {
-  const root = resolve(opts.root);
-  const config = loadConfig(root);
-  const paths = resolvePaths(root, config);
+  // A missing root is an error (never created); an existing one gets `.atlas/index.db`.
+  const { root, config, paths, docsDir } = loadProject(opts.root);
   const db = openDatabase(paths.dbPath);
   const budget = new TokenBudget(config.tokenBudget);
   let client: Promise<LLMClient> | undefined;
@@ -66,32 +65,12 @@ export function createMcpContext(opts: McpContextOptions): McpContext {
     db,
     root,
     config,
-    docsDir: join(paths.atlasDir, 'docs'),
+    docsDir,
     budget,
     llm: () => {
       client ??= make().then((c) => budgeted(c, budget));
       client.catch(() => (client = undefined));
       return client;
-    },
-  };
-}
-
-/** Refuses any call whose input (~3 chars/token) + max output would exceed the budget. */
-export function budgeted(inner: LLMClient, budget: TokenBudget): LLMClient {
-  return {
-    model: inner.model,
-    async complete(params) {
-      const chars =
-        (params.system?.length ?? 0) + params.messages.reduce((n, m) => n + m.content.length, 0);
-      const reserve = Math.ceil(chars / 3) + params.maxTokens;
-      if (reserve > budget.remaining()) {
-        throw new Error(
-          `token budget exhausted: call needs ~${reserve} tokens, ${budget.remaining()} of ${budget.cap} left`,
-        );
-      }
-      const res = await inner.complete(params);
-      budget.record(res.inputTokens, res.outputTokens);
-      return res;
     },
   };
 }
@@ -111,15 +90,14 @@ export async function handleIndexTool(ctx: McpContext, args: { force?: boolean }
 
 export async function handleSearchTool(
   ctx: McpContext,
-  args: { query: string; kind?: SymbolKind[]; file?: string; limit?: number },
+  args: { query: string; kind?: string[]; file?: string; limit?: number },
 ) {
-  const query = args.query.trim();
-  if (!query) throw new Error('query must not be empty');
+  const { query, kind, file, limit } = parseParams(SearchParamsSchema, args);
   requireIndex(ctx);
   const hits = await search(ctx.db, createEmbedder(ctx.config), query, {
-    ...(args.kind?.length ? { kind: args.kind } : {}),
-    ...(args.file ? { file: args.file } : {}),
-    limit: args.limit ?? 10,
+    ...(kind?.length ? { kind } : {}),
+    ...(file ? { file } : {}),
+    limit,
   });
   return hits.map((h) => ({
     name: h.symbol.qualified_name ?? h.symbol.name,
@@ -182,54 +160,39 @@ export function handleGraphTool(ctx: McpContext, args: { format?: 'json' | 'dot'
 
 export function handleDriftTool(
   ctx: McpContext,
-  args: { persisted?: boolean; skipArchitecture?: boolean },
+  args: { persisted?: boolean; skipArchitecture?: boolean; strict?: boolean },
 ) {
   requireIndex(ctx);
-  const report = detectDrift(ctx.db, {
+  const report = runDrift(ctx.db, {
     root: ctx.root,
     skipArchitecture: args.skipArchitecture ?? false,
-    ...(args.persisted ? { docs: readPersistedDocs(ctx.docsDir) } : {}),
+    strict: args.strict ?? false,
+    ...(args.persisted ? { docsDir: ctx.docsDir } : {}),
   });
   return { ...report, formatted: formatDriftReport(report) };
 }
 
-/** Docs from the index, with `.atlas/docs` filling targets the index lacks. */
-function allDocs(ctx: McpContext): Array<PersistedDoc & { source: 'index' | 'persisted' }> {
-  const out = new Map<string, PersistedDoc & { source: 'index' | 'persisted' }>();
-  for (const d of readPersistedDocs(ctx.docsDir)) out.set(d.target, { ...d, source: 'persisted' });
-  for (const d of docsFromDb(ctx.db)) out.set(d.target, { ...d, source: 'index' });
-  return [...out.values()].sort((a, b) => (a.target < b.target ? -1 : a.target > b.target ? 1 : 0));
-}
-
 export function handleDocsTool(ctx: McpContext, args: { target?: string }) {
-  const docs = allDocs(ctx);
-  if (!args.target) {
-    return docs.map((d) => ({
+  if (args.target) return findDoc(ctx.db, ctx.docsDir, args.target);
+  return listDocs(ctx.db, ctx.docsDir).map((d) => ({
       kind: d.kind,
       target: d.target,
       source: d.source,
       sourceHash: d.sourceHash,
-      chars: d.content.length,
-    }));
-  }
-  const doc = docs.find((d) => d.target === args.target);
-  if (!doc) {
-    throw new Error(`no doc for '${args.target}': run \`atlas docs\` to generate docs`);
-  }
-  return doc;
+    chars: d.content.length,
+  }));
 }
 
 export async function handleAskTool(
   ctx: McpContext,
   args: { question: string; k?: number; expand?: number },
 ) {
-  const question = args.question.trim();
-  if (!question) throw new Error('question must not be empty');
+  const { question, k, expand } = parseParams(AskParamsSchema, args);
   requireIndex(ctx);
   const llm = await ctx.llm();
   const result = await ask(ctx.db, llm, ctx.root, question, {
-    seedLimit: args.k ?? 5,
-    expansionLimit: args.expand ?? 5,
+    seedLimit: k,
+    expansionLimit: expand,
   });
   return {
     question,
@@ -268,10 +231,10 @@ export function createAtlasMcpServer(ctx: McpContext): McpServer {
       description:
         'Hybrid semantic + lexical symbol search. Returns ranked symbols with locations.',
       inputSchema: {
-        query: z.string().min(1).describe('Natural-language or identifier query.'),
-        kind: z.array(z.enum(KINDS)).optional().describe('Only these symbol kinds.'),
-        file: z.string().optional().describe('Only files whose path contains this substring.'),
-        limit: z.number().int().min(1).max(100).optional().describe('Max hits (default 10).'),
+        query: searchParams.query.describe('Natural-language or identifier query.'),
+        kind: searchParams.kind.describe('Only these symbol kinds.'),
+        file: searchParams.file.describe('Only files whose path contains this substring.'),
+        limit: searchParams.limit.describe('Max hits (default 10).'),
       },
     },
     async (args) => asText(await handleSearchTool(ctx, args)),
@@ -305,13 +268,17 @@ export function createAtlasMcpServer(ctx: McpContext): McpServer {
     'atlas_drift',
     {
       description:
-        'Report stale docs (grounding context changed since generation) and undocumented exported symbols.',
+        'Report stale docs (grounding context changed since generation) and undocumented exported symbols. `failing` matches `atlas drift` exiting 2; errors when there are no docs to check.',
       inputSchema: {
         persisted: z
           .boolean()
           .optional()
           .describe('Check the docs persisted in .atlas/docs instead of the index.'),
         skipArchitecture: z.boolean().optional().describe('Skip the architecture doc.'),
+        strict: z
+          .boolean()
+          .optional()
+          .describe('Undocumented exported symbols also set `failing` (like `atlas drift --strict`).'),
       },
     },
     async (args) => asText(handleDriftTool(ctx, args)),
@@ -335,15 +302,9 @@ export function createAtlasMcpServer(ctx: McpContext): McpServer {
       description:
         'Answer a question grounded in retrieved snippets, with citations and checks flagging citations outside them. Spends LLM tokens within the configured budget.',
       inputSchema: {
-        question: z.string().min(1).describe('The question.'),
-        k: z.number().int().min(1).max(20).optional().describe('Seed snippets (default 5).'),
-        expand: z
-          .number()
-          .int()
-          .min(0)
-          .max(20)
-          .optional()
-          .describe('Graph-expanded snippets (default 5).'),
+        question: askParams.question.describe('The question.'),
+        k: askParams.k.describe('Seed snippets (default 5).'),
+        expand: askParams.expand.describe('Graph-expanded snippets (default 5).'),
       },
     },
     async (args) => asText(await handleAskTool(ctx, args)),

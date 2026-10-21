@@ -60,7 +60,9 @@ node ./dist/cli/index.js docs --show architecture        --cwd "$TARGET"
 # 6. Ask a grounded question, with citations.
 node ./dist/cli/index.js ask --offline --cwd "$TARGET" "How is the area of a circle computed?"
 
-# 7. Drift report. Exits 2 if any doc is stale or any public symbol undocumented.
+# 7. Drift report. Exits 2 if any doc is stale (with --strict, also if a public
+#    symbol is undocumented); `--json` sets `failing` exactly when it exits 2.
+#    Exits 1 when there are no docs to check.
 node ./dist/cli/index.js drift --cwd "$TARGET"
 
 # 8. Open the dashboard (graph + doc browser + search).
@@ -109,8 +111,9 @@ node ./dist/cli/index.js docs --cwd "$TARGET"
 node ./dist/cli/index.js ask  --cwd "$TARGET" "How does Counter.increment work?"
 ```
 
-The default synth model is `claude-sonnet-4-6`; override it in `.atlas/config.json`.
-Per-run spend is capped by `tokenBudget` (default 200k).
+The default synth model is `claude-sonnet-4-6`; override it with `synthModel` in
+`.atlas/config.json`. Spend is capped by `tokenBudget` (default 200k) per run of
+`atlas docs` (or `--budget <n>`) and of `atlas ask`, and per `atlas mcp` session.
 
 ### Configuration
 
@@ -123,6 +126,28 @@ if `.atlas/config.json` is absent, but is never written. Walk filters:
   indexed (default `[]` = everything not excluded).
 - `exclude` — globs added to `.gitignore` rules.
 
+Other keys: `tokenBudget` (positive integer, default 200000), `synthModel`,
+`embeddingModel` (default `local-hash-v1`) and `indexPath` (default
+`.atlas/index.db`; it must resolve inside `.atlas/`, or every command fails).
+
+### Command notes
+
+The CLI, the dashboard API and the MCP tools validate parameters with one
+shared schema, so a bad value fails everywhere (CLI exit 1, HTTP 400, MCP
+error) instead of being ignored:
+
+- `search`: `--limit` 1–100 (default 10); `--kind` is a comma-separated list of
+  `function`, `method`, `class`, `interface`, `type`, `variable`; the query must
+  not be blank.
+- `ask`: `--k` 1–20 seed snippets (default 5), `--expand` 0–20 (default 5).
+- `docs`: `--budget` must be a positive integer. `--list` and `--show <path>`
+  read the index, then the committed `.atlas/docs` (as the dashboard and
+  `atlas_docs` do); `--show` exits 1 when there is no doc.
+- `serve`: `--port` 0–65535.
+- Read commands (`search`, `graph`, `docs`, `ask`, `drift`, `serve`) fail with
+  "no index … run `atlas index` first" on an unindexed directory and "directory not found"
+  for a bad `--cwd`, and create nothing.
+
 ### MCP server
 
 `atlas mcp` serves the index over stdio to MCP clients (Claude Code, Cursor, …)
@@ -130,7 +155,10 @@ as tools: `atlas_index`, `atlas_search`, `atlas_symbol`, `atlas_graph`,
 `atlas_drift`, `atlas_docs` (read generated docs) and `atlas_ask` (grounded
 answer with citation checks). It is additive: `atlas docs` and `atlas ask`
 still work. `atlas_ask` spends tokens within `tokenBudget` per server session;
-`--offline` uses the mock LLM. Like the CLI, it writes only under `.atlas/`.
+`--offline` uses the mock LLM. `atlas_drift` returns the same report as
+`atlas drift --json` (plus `formatted`; `strict` sets `failing` like `--strict`)
+and errors when there are no docs to check. `--cwd` must exist; like the CLI,
+the server writes only under `.atlas/`.
 
 ```json
 {
@@ -192,7 +220,7 @@ totals: files=78 symbols=2780 imports=656 edges=1093
 ```bash
 npm run typecheck       # strict TS, zero errors
 npm run lint            # ESLint flat config, zero errors
-npm test                # vitest — 62 tests
+npm test                # vitest — 302 tests
 npm run build           # tsc + copy static assets
 ```
 
@@ -206,8 +234,12 @@ ci-comment produces the exact comment payload).
 docs committed under `.atlas/docs` (not regenerated in CI), then posts a sticky
 comment summarising stale docs and undocumented public symbols. Commit
 `.atlas/docs/` and `.atlas/config.json` (so CI indexes with the same filters).
-The job fails (so PR checks go red) when drift is present; `drift --docs-dir`
-exits 1 when that directory is missing or holds no docs.
+The job fails (so PR checks go red) when a doc is stale: `drift` exits 2 and the
+JSON has `failing: true`, and the comment says "Drift check: failed".
+Undocumented public symbols are listed in the comment but do not fail the job
+(that needs `--strict`). `drift --docs-dir` exits 1 when that directory is
+missing or holds no docs. `hasDrift` in the JSON means "anything to report"
+(stale or undocumented); use `failing` for the gate.
 
 ## Costs and safety
 

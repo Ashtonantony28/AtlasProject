@@ -1,5 +1,5 @@
 export { openDatabase, closeDatabase, runMigrations } from './database.js';
-export type { DB } from './database.js';
+export type { DB, OpenDbOptions } from './database.js';
 export { MIGRATIONS } from './schema.js';
 export * from './repo.js';
 export type {

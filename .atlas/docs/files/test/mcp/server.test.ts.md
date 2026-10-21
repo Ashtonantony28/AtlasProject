@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/mcp/server.test.ts
-source_hash: 8862a11f0cd8b58c2cd314caef58665894d66e14f4562fdb1e93017bc3c6816f
+source_hash: 7ecafa946dd32ae2d7285028efe870dd1f79e92166a9c2eb0475b2444f1c8c8d
 ---
 # module test/mcp/server.test.ts
 
@@ -26,7 +26,7 @@ source_hash: 8862a11f0cd8b58c2cd314caef58665894d66e14f4562fdb1e93017bc3c6816f
 - `inMath` — variable (test/mcp/server.test.ts:128)
 - `adds` — variable (test/mcp/server.test.ts:146)
 - `graph` — variable (test/mcp/server.test.ts:154)
-- `report` — variable (test/mcp/server.test.ts:161)
+- `report` — variable (test/mcp/server.test.ts:172)
 
 References: `test/mcp/server.test.ts:37`, `test/mcp/server.test.ts:38`, `test/mcp/server.test.ts:39`, `test/mcp/server.test.ts:41`, `test/mcp/server.test.ts:51`.
 

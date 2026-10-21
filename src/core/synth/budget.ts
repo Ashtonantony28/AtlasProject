@@ -1,3 +1,5 @@
+import type { LLMClient } from './llmClient.js';
+
 /**
  * Simple, monotonic token budget enforcer. Subsystems call `charge()` before a
  * call; if the total would exceed the cap, `charge` returns false and the
@@ -37,4 +39,24 @@ export class TokenBudget {
     this.input += input;
     this.output += output;
   }
+}
+
+/** Refuses any call whose input (~3 chars/token) + max output would exceed the budget. */
+export function budgeted(inner: LLMClient, budget: TokenBudget): LLMClient {
+  return {
+    model: inner.model,
+    async complete(params) {
+      const chars =
+        (params.system?.length ?? 0) + params.messages.reduce((n, m) => n + m.content.length, 0);
+      const reserve = Math.ceil(chars / 3) + params.maxTokens;
+      if (reserve > budget.remaining()) {
+        throw new Error(
+          `token budget exhausted: call needs ~${reserve} tokens, ${budget.remaining()} of ${budget.cap} left`,
+        );
+      }
+      const res = await inner.complete(params);
+      budget.record(res.inputTokens, res.outputTokens);
+      return res;
+    },
+  };
 }

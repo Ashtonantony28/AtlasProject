@@ -179,7 +179,10 @@ describe('CI workflow against committed docs (git checkout simulation)', () => {
     const { code, report } = await runWorkflow();
     expect(code).toBe(0);
     expect(report.stale).toEqual([]);
+    expect(report.failing).toBe(false);
     expect(renderComment(report)).toMatch(/All docs are in sync/);
+    expect(yml).toMatch(/"\$code" -eq 2 \]; then\n\s*echo "failing=true"/);
+    expect(yml).toMatch(/if: steps\.drift\.outputs\.failing == 'true'/);
   });
 
   it('reports the changed file as stale when a PR changes code without regenerating docs', async () => {
@@ -188,6 +191,7 @@ describe('CI workflow against committed docs (git checkout simulation)', () => {
     git(base, 'commit', '-q', '-am', 'change multiply');
     const { code, report, clone } = await runWorkflow();
     expect(code).toBe(2);
+    expect(report.failing).toBe(true);
     expect(report.stale.map((s) => `${s.kind}:${s.targetPath}`)).toEqual(['file:src/math.ts']);
     const db = openDatabase(join(clone, '.atlas/index.db'), { fileMustExist: true });
     const exported = db
@@ -196,6 +200,7 @@ describe('CI workflow against committed docs (git checkout simulation)', () => {
     closeDatabase(db);
     expect(report.totals.publicSymbols).toBe(exported.c);
     const comment = renderComment(report);
+    expect(comment).toMatch(/\*\*Drift check: failed\*\* \(1 stale doc\(s\)\)/);
     expect(comment).toMatch(/### Stale docs \(1\)/);
     expect(comment).toMatch(/`src\/math\.ts`/);
     expect(comment).toMatch(new RegExp(`${exported.c} public symbols`));

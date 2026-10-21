@@ -153,7 +153,7 @@ describe('AUDIT-3 consistent surfaces (pinned)', () => {
 });
 
 describe('AUDIT-3 findings', () => {
-  it.fails(
+  it(
     'A3-01: atlas_drift {persisted:true} fails like `drift --docs-dir` when .atlas/docs is missing',
     async () => {
       const root = await withDocs();
@@ -166,8 +166,8 @@ describe('AUDIT-3 findings', () => {
     },
   );
 
-  it.fails(
-    'A3-02: drift JSON `hasDrift` agrees with the CLI exit code (undocumented only)',
+  it(
+    'A3-02: drift JSON `failing` agrees with the CLI exit code (undocumented only)',
     async () => {
       const root = await withDocs();
       const db = openDatabase(join(root, '.atlas', 'index.db'));
@@ -178,16 +178,23 @@ describe('AUDIT-3 findings', () => {
       const run = await cli(['drift', '--json', '--cwd', root]);
       const report = JSON.parse(run.out) as {
         hasDrift: boolean;
+        failing: boolean;
         stale: unknown[];
         undocumented: unknown[];
       };
       expect(report.stale).toHaveLength(0);
       expect(report.undocumented.length).toBeGreaterThan(0);
-      expect(report.hasDrift).toBe(run.code !== 0);
+      // SG13: `failing` is the gate and matches the exit code; `hasDrift` keeps
+      // its documented meaning ("anything to report"). See DECISIONS.md.
+      expect(report.failing).toBe(run.code !== 0);
+      expect(report.hasDrift).toBe(true);
+      const strict = await cli(['drift', '--json', '--strict', '--cwd', root]);
+      expect(strict.code).toBe(2);
+      expect((JSON.parse(strict.out) as { failing: boolean }).failing).toBe(true);
     },
   );
 
-  it.fails(
+  it(
     'A3-03: DB-mode drift with no docs at all fails like `--docs-dir` with no docs',
     async () => {
       const root = await indexed();
@@ -199,7 +206,7 @@ describe('AUDIT-3 findings', () => {
     },
   );
 
-  it.fails(
+  it(
     'A3-04: a doc returned by atlas_docs is also shown by `docs --show` and the dashboard',
     async () => {
       const root = await withDocs();
@@ -219,7 +226,7 @@ describe('AUDIT-3 findings', () => {
     },
   );
 
-  it.fails('A3-05: CLI `ask` honours tokenBudget like atlas_ask', async () => {
+  it('A3-05: CLI `ask` honours tokenBudget like atlas_ask', async () => {
     const root = await indexed();
     writeFileSync(
       join(root, '.atlas', 'config.json'),
@@ -231,7 +238,7 @@ describe('AUDIT-3 findings', () => {
     expect(run.code).not.toBe(0);
   });
 
-  it.fails(
+  it(
     'A3-06: `docs --budget` rejects a non-numeric value instead of disabling the cap',
     async () => {
       const root = await indexed();
@@ -241,7 +248,7 @@ describe('AUDIT-3 findings', () => {
     },
   );
 
-  it.fails('A3-07: a negative limit is rejected on CLI and HTTP as it is on MCP', async () => {
+  it('A3-07: a negative limit is rejected on CLI and HTTP as it is on MCP', async () => {
     const root = await indexed();
     // MCP rejects limit < 1 in its zod schema (src/mcp/server.ts:274).
     const run = await cli(['search', 'area', '--limit=-1', '--json', '--cwd', root]);
@@ -253,7 +260,7 @@ describe('AUDIT-3 findings', () => {
     expect(status).toBe(400);
   });
 
-  it.fails(
+  it(
     'A3-07b: a non-numeric limit is a validation error (400), not a 500 "datatype mismatch"',
     async () => {
       const root = await indexed();
@@ -265,7 +272,7 @@ describe('AUDIT-3 findings', () => {
     },
   );
 
-  it.fails(
+  it(
     'A3-08: an unknown kind fails on HTTP as on CLI (exit 1) and MCP (isError)',
     async () => {
       const root = await indexed();
@@ -279,7 +286,7 @@ describe('AUDIT-3 findings', () => {
     },
   );
 
-  it.fails('A3-08b: an empty search query fails on CLI as it does on MCP', async () => {
+  it('A3-08b: an empty search query fails on CLI as it does on MCP', async () => {
     const root = await indexed();
     const ctx = mcp(root);
     await expect(handleSearchTool(ctx, { query: '   ' })).rejects.toThrow(/empty/);
@@ -287,7 +294,7 @@ describe('AUDIT-3 findings', () => {
     expect(run.code).toBe(1);
   });
 
-  it.fails('A3-09: the MCP server does not create a missing project root', () => {
+  it('A3-09: the MCP server does not create a missing project root', () => {
     const root = join(tempDir(), 'missing', 'repo');
     try {
       mcp(root);
@@ -297,7 +304,7 @@ describe('AUDIT-3 findings', () => {
     expect(existsSync(root)).toBe(false);
   });
 
-  it.fails(
+  it(
     'A3-09b: read commands on a missing index do not create .atlas/ in the target',
     async () => {
       const root = join(tempDir(), 'repo');
@@ -308,7 +315,7 @@ describe('AUDIT-3 findings', () => {
     },
   );
 
-  it.fails('A3-10: indexPath cannot place the index outside .atlas/', async () => {
+  it('A3-10: indexPath cannot place the index outside .atlas/', async () => {
     const root = sampleCopy();
     mkdirSync(join(root, '.atlas'), { recursive: true });
     writeFileSync(
@@ -338,14 +345,14 @@ describe('AUDIT-3 findings', () => {
     expect(run.code).toBe(0);
   });
 
-  it.fails('A3-15: `--kind module` is either rejected or returns module symbols', async () => {
+  it('A3-15: `--kind module` is either rejected or returns module symbols', async () => {
     const root = await indexed();
     const run = await cli(['search', 'shapes', '--kind', 'module', '--json', '--cwd', root]);
     const ok = run.code === 1 || (JSON.parse(run.out) as unknown[]).length > 0;
     expect(ok).toBe(true);
   });
 
-  it.fails('A3-16: unknown /api/* paths return a JSON 404, not the HTML shell', async () => {
+  it('A3-16: unknown /api/* paths return a JSON 404, not the HTML shell', async () => {
     const root = await indexed();
     const status = await withServer(root, async (b) => (await fetch(`${b}api/nope`)).status);
     expect(status).toBe(404);

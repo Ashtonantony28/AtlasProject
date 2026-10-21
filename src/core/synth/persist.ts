@@ -151,3 +151,20 @@ export function importPersistedDocs(db: DB, dir: string): number {
   }
   return imported;
 }
+
+export type DocEntry = PersistedDoc & { source: 'index' | 'persisted' };
+
+/** Docs from the index, with `dir` (`.atlas/docs`) filling targets the index lacks. Read-only. */
+export function listDocs(db: DB, dir: string): DocEntry[] {
+  const out = new Map<string, DocEntry>();
+  for (const d of readPersistedDocs(dir)) out.set(d.target, { ...d, source: 'persisted' });
+  for (const d of docsFromDb(db)) out.set(d.target, { ...d, source: 'index' });
+  return [...out.values()].sort((a, b) => (a.target < b.target ? -1 : a.target > b.target ? 1 : 0));
+}
+
+/** The doc for a file path or "architecture"; throws when there is none. */
+export function findDoc(db: DB, dir: string, target: string): DocEntry {
+  const doc = listDocs(db, dir).find((d) => d.target === target);
+  if (!doc) throw new Error(`no doc for '${target}': run \`atlas docs\` to generate docs`);
+  return doc;
+}

@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/cli/commands/serveCmd.ts
-source_hash: f7b05795a951aedd9af0450cf2c4aabcecdaf7c1fcdda2e998b1768a8a7440f3
+source_hash: 45abc957d90f514b350f945404e3b6eddeaf4fbdc3e57e564f58e8c67d3d7ff2
 ---
 # module src/cli/commands/serveCmd.ts
 
