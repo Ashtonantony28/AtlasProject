@@ -32,7 +32,8 @@ export function registerGraphCommand(program: Command): void {
           body = buildGraphDot(db);
         } else {
           process.stderr.write(`atlas: unknown format: ${fmt}\n`);
-          process.exit(1);
+          process.exitCode = 1;
+          return;
         }
         if (opts.out) {
           writeFileSync(opts.out, body, 'utf8');

@@ -43,7 +43,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 | SG5 | True hybrid search | SG0 | Claude (thread) | done: FTS5+KNN RRF, pre-filtered; p95 27.7 ms at 10k |
 | SG6 | Docs + drift + CI that actually detects staleness | SG2, SG3 | unassigned | proposed |
 | SG7 | Grounded Q&A citation checks | SG5 | unassigned | proposed |
-| SG8 | Read-only on target + CLI hygiene | SG0 | unassigned | proposed |
+| SG8 | Read-only on target + CLI hygiene | SG0 | Claude (thread) | done: config in `.atlas/`, exitCode not exit; 104 tests, express git status clean |
 | SG9 | MCP server (additive, keeps `docs`/`ask`) | SG6, SG7 | unassigned | proposed (user chose "keep both", 2026-10-19) |
 
 ### SG0: Shared interfaces + bench harness

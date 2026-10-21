@@ -71,7 +71,8 @@ export function registerDocsCommand(program: Command): void {
           const file = getAllFiles(db).find((f) => f.path === opts.show);
           if (!file) {
             process.stderr.write(`atlas: file not in index: ${opts.show}\n`);
-            process.exit(1);
+            process.exitCode = 1;
+            return;
           }
           const d = getDoc(db, 'file', file.id);
           if (!d) {

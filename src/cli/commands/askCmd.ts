@@ -29,7 +29,8 @@ export function registerAskCommand(program: Command): void {
       const question = questionParts.join(' ').trim();
       if (!question) {
         process.stderr.write('atlas: empty question\n');
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
       const root = resolve(opts.cwd ?? '.');
       const config = loadConfig(root);
