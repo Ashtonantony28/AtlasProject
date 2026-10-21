@@ -57,10 +57,8 @@ describe('contract: migration v3', () => {
       | { sql: string }
       | undefined;
     expect(fts?.sql).toMatch(/fts5/i);
-    const maxVersion = db.prepare('SELECT MAX(version) AS v FROM _migrations').get() as {
-      v: number;
-    };
-    expect(maxVersion.v).toBe(3);
+    const v3 = db.prepare('SELECT version FROM _migrations WHERE version = 3').get();
+    expect(v3).toBeDefined();
     closeDatabase(db);
   });
 

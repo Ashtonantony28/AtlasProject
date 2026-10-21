@@ -348,6 +348,95 @@ def _special(): pass
     expect(q.get('_special')?.exported).toBe(true);
   });
 
+  it('does not extract locals of top-level arrow functions', async () => {
+    const src = `export const f = () => {\n  const inner = 1;\n  return inner;\n};\n`;
+    const names = (await parseSource(src, 'typescript')).symbols.map((s) => s.qualifiedName);
+    expect(names).toEqual(['f']);
+  });
+
+  it('qualifies methods of module.exports and export default object literals', async () => {
+    const cjs = byQName(
+      (await parseSource('module.exports = { a() {}, b: function () {} };\n', 'javascript'))
+        .symbols,
+    );
+    expect([...cjs.keys()]).toEqual(['default.a', 'default.b']);
+    const esm = byQName(
+      (
+        await parseSource(
+          'export default { run() {} };\nexports.util = { go() {} };\n',
+          'javascript',
+        )
+      ).symbols,
+    );
+    expect([...esm.keys()]).toEqual(['default.run', 'util.go']);
+  });
+
+  it('records call and heritage references from the CST, skipping comments and strings', async () => {
+    const src = `
+import * as ns from './ns.js';
+class A extends ns.Base implements I, J<number> {
+  m() {
+    // ignored()
+    const s = "ignored()";
+    this.n();
+    super.o();
+    obj.p();
+    return bare(new K());
+  }
+}
+interface I extends L {}
+top();
+`;
+    const refs = (await parseSource(src, 'typescript')).references.map(
+      (r) =>
+        `${r.fromQualifiedName ?? '<module>'} ${r.kind} ${r.receiver}:${r.object ?? ''}.${r.name}`,
+    );
+    expect(refs.sort()).toEqual(
+      [
+        'A extends member:ns.Base',
+        'A implements none:.I',
+        'A implements none:.J',
+        'A.m calls this:.n',
+        'A.m calls super:.o',
+        'A.m calls member:obj.p',
+        'A.m calls none:.bare',
+        'A.m calls none:.K',
+        'I extends none:.L',
+        '<module> calls none:.top',
+      ].sort(),
+    );
+  });
+
+  it('Python: records self/super/member calls and superclasses', async () => {
+    const src = `
+import pkg.util
+class B(Base, mod.Mixin, metaclass=Meta):
+    def m(self):
+        # skipped()
+        self.n()
+        super().o()
+        pkg.util.helper()
+        return f("g()")
+run()
+`;
+    const refs = (await parseSource(src, 'python')).references.map(
+      (r) =>
+        `${r.fromQualifiedName ?? '<module>'} ${r.kind} ${r.receiver}:${r.object ?? ''}.${r.name}`,
+    );
+    expect(refs.sort()).toEqual(
+      [
+        'B extends none:.Base',
+        'B extends member:mod.Mixin',
+        'B.m calls this:.n',
+        'B.m calls none:.super',
+        'B.m calls super:.o',
+        'B.m calls member:pkg.util.helper',
+        'B.m calls none:.f',
+        '<module> calls none:.run',
+      ].sort(),
+    );
+  });
+
   describe('fixtures/sample via indexRepo', () => {
     let dir: string;
     beforeEach(() => {

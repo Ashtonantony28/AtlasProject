@@ -1,5 +1,6 @@
 import type Parser from 'tree-sitter';
-import type { ParsedImport, ParsedSymbol, ParseResult } from './types.js';
+import type { ParsedImport, ParsedReference, ParsedSymbol, ParseResult, RefKind } from './types.js';
+import { forEachOfType, uniqueRefs } from './refs.js';
 
 type Node = Parser.SyntaxNode;
 
@@ -46,6 +47,47 @@ interface Ctx {
   qualifier: string[];
   all: Set<string> | null; // literal `__all__`, authoritative for top-level names
   scopeExported: boolean; // exported flag of the enclosing class
+  references: ParsedReference[];
+  owner: string | null; // qualified name references are attributed to; null = module
+}
+
+const CALL_NODES = new Set(['call']);
+
+/** `a`, `a.b.c` for identifier chains; null for anything computed. */
+function dotted(node: Node): string | null {
+  if (node.type === 'identifier') return node.text;
+  if (node.type !== 'attribute') return null;
+  const obj = node.childForFieldName('object');
+  const attr = node.childForFieldName('attribute');
+  const head = obj ? dotted(obj) : null;
+  return head && attr ? `${head}.${attr.text}` : null;
+}
+
+function addRef(ctx: Ctx, from: string | null, node: Node | null, kind: RefKind): void {
+  if (!node) return;
+  const base = { fromQualifiedName: from, kind, line: lineOf(node) };
+  if (node.type === 'identifier') {
+    ctx.references.push({ ...base, name: node.text, receiver: 'none', object: null });
+    return;
+  }
+  const obj = node.type === 'attribute' ? node.childForFieldName('object') : null;
+  const attr = node.childForFieldName('attribute');
+  if (!obj || !attr) return;
+  const name = attr.text;
+  if (obj.type === 'identifier' && (obj.text === 'self' || obj.text === 'cls')) {
+    ctx.references.push({ ...base, name, receiver: 'this', object: null });
+  } else if (obj.type === 'call' && obj.childForFieldName('function')?.text === 'super') {
+    ctx.references.push({ ...base, name, receiver: 'super', object: null });
+  } else {
+    ctx.references.push({ ...base, name, receiver: 'member', object: dotted(obj) });
+  }
+}
+
+function collectCalls(ctx: Ctx, node: Node | null, from: string | null): void {
+  if (node)
+    forEachOfType(node, CALL_NODES, (c) =>
+      addRef(ctx, from, c.childForFieldName('function'), 'calls'),
+    );
 }
 
 function isExported(ctx: Ctx, name: string): boolean {
@@ -81,6 +123,8 @@ function visit(node: Node, ctx: Ctx): void {
   if (node.type === 'function_definition') {
     const nameNode = node.childForFieldName('name');
     const body = node.childForFieldName('body');
+    if (nameNode) collectCalls(ctx, node, qualify(ctx, nameNode.text));
+    else collectCalls(ctx, node, ctx.owner);
     if (nameNode) {
       const isMethod = ctx.qualifier.length > 0;
       ctx.symbols.push({
@@ -112,13 +156,18 @@ function visit(node: Node, ctx: Ctx): void {
         qualifiedName: qualify(ctx, nameNode.text),
         exported,
       });
+      const qname = qualify(ctx, nameNode.text);
+      for (const base of node.childForFieldName('superclasses')?.namedChildren ?? []) {
+        addRef(ctx, qname, base, 'extends');
+      }
       if (body) {
-        const saved = ctx.scopeExported;
+        const saved = { scopeExported: ctx.scopeExported, owner: ctx.owner };
         ctx.qualifier.push(nameNode.text);
         ctx.scopeExported = exported;
+        ctx.owner = qname;
         for (const c of body.namedChildren) visit(c, ctx);
         ctx.qualifier.pop();
-        ctx.scopeExported = saved;
+        Object.assign(ctx, saved);
       }
     }
     return;
@@ -138,8 +187,14 @@ function visit(node: Node, ctx: Ctx): void {
         qualifiedName: qualify(ctx, left.text),
         exported: isExported(ctx, left.text),
       });
+      const right = node.childForFieldName('right');
+      if (right?.type === 'assignment') visit(right, ctx);
+      else collectCalls(ctx, right, left.text);
+      return;
     }
   }
+
+  if (node.type === 'call') addRef(ctx, ctx.owner, node.childForFieldName('function'), 'calls');
 
   for (const child of node.namedChildren) {
     visit(child, ctx);
@@ -203,9 +258,16 @@ export function parsePython(root: Node): ParseResult {
     qualifier: [],
     all: literalAll(root),
     scopeExported: false,
+    references: [],
+    owner: null,
   };
   for (const child of root.namedChildren) {
     visit(child, ctx);
   }
-  return { language: 'python', symbols: ctx.symbols, imports: ctx.imports };
+  return {
+    language: 'python',
+    symbols: ctx.symbols,
+    imports: ctx.imports,
+    references: uniqueRefs(ctx.references),
+  };
 }

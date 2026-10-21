@@ -4,8 +4,10 @@ import {
   upsertFile,
   insertSymbol,
   insertImport,
+  insertRefs,
   deleteSymbolsForFile,
   deleteImportsForFile,
+  deleteRefsForFile,
   deleteFile,
   startRun,
   finishRun,
@@ -119,6 +121,7 @@ export async function indexRepo(
         deleteEmbeddingsForFile(db, existing.id);
         deleteSymbolsForFile(db, existing.id);
         deleteImportsForFile(db, existing.id);
+        deleteRefsForFile(db, existing.id);
       }
       const fileId = upsertFile(db, {
         path: file.relativePath,
@@ -148,6 +151,18 @@ export async function indexRepo(
           start_line: imp.line,
         });
       }
+      insertRefs(
+        db,
+        fileId,
+        parsed.references.map((r) => ({
+          src_qualified_name: r.fromQualifiedName,
+          name: r.name,
+          receiver: r.receiver,
+          object: r.object,
+          kind: r.kind,
+          line: r.line,
+        })),
+      );
     })();
     stats.symbols += parsed.symbols.length;
     stats.imports += parsed.imports.length;

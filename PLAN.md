@@ -39,7 +39,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 | SG1 | Reconcile branches | SG0 | Claude (thread) | done: 70 tests, verify-external express+got ok |
 | SG2 | Indexer correctness | SG0, SG1 | Claude (thread) | done: hash-after-parse, pruning; 73 tests |
 | SG3 | Parser correctness | SG0, SG1 | Claude (thread) | done: tsx, qualified members, exported flag; 86 tests |
-| SG4 | Resolver soundness (CST-based) | SG3 | unassigned | proposed |
+| SG4 | Resolver soundness (CST-based) | SG3 | Claude (subagent) | done: refs table (v4), golden fixtures/graph; 95 tests |
 | SG5 | True hybrid search | SG0 | unassigned | proposed |
 | SG6 | Docs + drift + CI that actually detects staleness | SG2, SG3 | unassigned | proposed |
 | SG7 | Grounded Q&A citation checks | SG5 | unassigned | proposed |
