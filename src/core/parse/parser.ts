@@ -11,23 +11,26 @@ interface LangBundle {
   parser: Parser;
 }
 
-const cache = new Map<string, LangBundle>();
+type GrammarId = LanguageId | 'tsx';
 
-async function getBundle(language: LanguageId): Promise<LangBundle> {
+const cache = new Map<GrammarId, LangBundle>();
+
+async function getBundle(language: GrammarId): Promise<LangBundle> {
   const cached = cache.get(language);
   if (cached) return cached;
 
   const parser = new Parser();
   let grammar: unknown;
   switch (language) {
+    case 'tsx':
     case 'typescript': {
       const mod = (await import('tree-sitter-typescript')) as unknown as {
         default?: { typescript: unknown; tsx: unknown };
         typescript?: unknown;
         tsx?: unknown;
       };
-      const root = mod.default ?? mod;
-      grammar = (root as { typescript: unknown }).typescript;
+      const root = (mod.default ?? mod) as { typescript: unknown; tsx: unknown };
+      grammar = language === 'tsx' ? root.tsx : root.typescript;
       break;
     }
     case 'javascript': {
@@ -69,11 +72,17 @@ function parseChunked(parser: Parser, source: string): Parser.Tree {
   });
 }
 
+function grammarFor(language: LanguageId, filename?: string): GrammarId {
+  return language === 'typescript' && filename?.toLowerCase().endsWith('.tsx') ? 'tsx' : language;
+}
+
+/** `filename` (path or basename) selects a grammar variant, e.g. tsx for `.tsx`. */
 export async function parseSource(
   source: string,
   language: LanguageId,
+  filename?: string,
 ): Promise<ParseResult> {
-  const { parser } = await getBundle(language);
+  const { parser } = await getBundle(grammarFor(language, filename));
   const tree = parseChunked(parser, source);
   switch (language) {
     case 'typescript':

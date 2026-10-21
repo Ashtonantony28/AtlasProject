@@ -103,7 +103,7 @@ export async function indexRepo(
     deleteImportsForFile(db, fileId);
 
     try {
-      const parsed = await parseSource(content, file.language as LanguageId);
+      const parsed = await parseSource(content, file.language as LanguageId, file.relativePath);
       const insertAll = db.transaction(() => {
         for (const sym of parsed.symbols) {
           insertSymbol(db, {
