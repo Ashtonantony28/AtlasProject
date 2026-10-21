@@ -44,6 +44,28 @@ interface Ctx {
   symbols: ParsedSymbol[];
   imports: ParsedImport[];
   qualifier: string[];
+  all: Set<string> | null; // literal `__all__`, authoritative for top-level names
+  scopeExported: boolean; // exported flag of the enclosing class
+}
+
+function isExported(ctx: Ctx, name: string): boolean {
+  if (ctx.qualifier.length > 0) return ctx.scopeExported && !name.startsWith('_');
+  return ctx.all ? ctx.all.has(name) : !name.startsWith('_');
+}
+
+/** Names in a top-level `__all__ = [...]` / `(...)` made only of string literals; null otherwise. */
+function literalAll(root: Node): Set<string> | null {
+  let names: Set<string> | null = null;
+  for (const stmt of root.namedChildren) {
+    const assign = stmt.type === 'expression_statement' ? stmt.namedChildren[0] : null;
+    if (assign?.type !== 'assignment' || assign.childForFieldName('left')?.text !== '__all__')
+      continue;
+    const right = assign.childForFieldName('right');
+    if (!right || (right.type !== 'list' && right.type !== 'tuple')) return null;
+    if (right.namedChildren.some((c) => c.type !== 'string')) return null;
+    names = new Set(right.namedChildren.map((c) => cleanPyString(c.text)));
+  }
+  return names;
 }
 
 function qualify(ctx: Ctx, name: string): string {
@@ -69,7 +91,7 @@ function visit(node: Node, ctx: Ctx): void {
         endLine: endLine(node),
         docstring: docstringOf(body),
         qualifiedName: qualify(ctx, nameNode.text),
-        exported: false,
+        exported: isExported(ctx, nameNode.text),
       });
     }
     return; // don't recurse into function bodies
@@ -79,6 +101,7 @@ function visit(node: Node, ctx: Ctx): void {
     const nameNode = node.childForFieldName('name');
     const body = node.childForFieldName('body');
     if (nameNode) {
+      const exported = isExported(ctx, nameNode.text);
       ctx.symbols.push({
         kind: 'class',
         name: nameNode.text,
@@ -87,12 +110,15 @@ function visit(node: Node, ctx: Ctx): void {
         endLine: endLine(node),
         docstring: docstringOf(body),
         qualifiedName: qualify(ctx, nameNode.text),
-        exported: false,
+        exported,
       });
       if (body) {
+        const saved = ctx.scopeExported;
         ctx.qualifier.push(nameNode.text);
+        ctx.scopeExported = exported;
         for (const c of body.namedChildren) visit(c, ctx);
         ctx.qualifier.pop();
+        ctx.scopeExported = saved;
       }
     }
     return;
@@ -110,7 +136,7 @@ function visit(node: Node, ctx: Ctx): void {
         endLine: endLine(node),
         docstring: null,
         qualifiedName: qualify(ctx, left.text),
-        exported: false,
+        exported: isExported(ctx, left.text),
       });
     }
   }
@@ -171,7 +197,13 @@ function collectImports(node: Node, ctx: Ctx): void {
 }
 
 export function parsePython(root: Node): ParseResult {
-  const ctx: Ctx = { symbols: [], imports: [], qualifier: [] };
+  const ctx: Ctx = {
+    symbols: [],
+    imports: [],
+    qualifier: [],
+    all: literalAll(root),
+    scopeExported: false,
+  };
   for (const child of root.namedChildren) {
     visit(child, ctx);
   }

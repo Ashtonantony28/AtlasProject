@@ -38,7 +38,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 | SG0 | Shared interfaces + bench harness | none | Claude (thread) | done: 68 tests, bench baseline in DECISIONS.md |
 | SG1 | Reconcile branches | SG0 | Claude (thread) | done: 70 tests, verify-external express+got ok |
 | SG2 | Indexer correctness | SG0, SG1 | Claude (thread) | done: hash-after-parse, pruning; 73 tests |
-| SG3 | Parser correctness | SG0, SG1 | unassigned | proposed |
+| SG3 | Parser correctness | SG0, SG1 | Claude (thread) | done: tsx, qualified members, exported flag; 86 tests |
 | SG4 | Resolver soundness (CST-based) | SG3 | unassigned | proposed |
 | SG5 | True hybrid search | SG0 | unassigned | proposed |
 | SG6 | Docs + drift + CI that actually detects staleness | SG2, SG3 | unassigned | proposed |
@@ -64,6 +64,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 - Accept: `test/parse/parser.test.ts` covers R4, R5, field arrows, and `exported` on each language.
 
 ### SG4: Resolver soundness
+- Found in SG3: bodies of top-level `const f = () => {}` are still walked, so their inner consts become top-level variables; object literals outside a top-level const (e.g. `module.exports = { foo() {} }`) emit unqualified methods.
 - Replace regex call and heritage detection with CST walks (`call_expression`, `new_expression`, heritage clauses). Resolve `this.m()` to same-class methods. Add Python absolute and multi-dot relative imports (R3).
 - Accept: a golden edge file `fixtures/sample/expected-edges.json` (extended fixture with Python packages, `.tsx`, and calls inside comments and strings) with **no false negatives** and no edges from comments or strings; `verify-external.sh express` edge count does not drop; resolver within budget.
 
