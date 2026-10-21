@@ -1,5 +1,6 @@
 import type { DB } from '../db/index.js';
 import type { LLMClient } from '../synth/index.js';
+import { checkCitations, type CitationCheck } from './citations.js';
 import { retrieveForQuery, type RetrievedSnippet } from './retrieve.js';
 
 const SYSTEM = `You are a careful, code-aware assistant answering questions about a specific codebase.
@@ -11,6 +12,7 @@ You will receive the user's question and a set of grounded snippets in this form
 Rules:
   - Answer ONLY using the snippets provided.
   - Every claim about the code must include a citation in the form (file:line) or [n] referencing a snippet.
+  - Only cite snippet numbers and line ranges that appear in the snippets.
   - If the answer is not derivable from the snippets, say so plainly.
   - Be concise.`;
 
@@ -33,6 +35,10 @@ export interface Citation {
 export interface AskResult {
   answer: string;
   citations: Citation[];
+  /** Every `[n]` / `file:line` reference parsed from the answer, in order of appearance. */
+  checks: CitationCheck[];
+  /** The subset of `checks` that falls outside the retrieved snippets. */
+  flagged: CitationCheck[];
   inputTokens: number;
   outputTokens: number;
   snippets: RetrievedSnippet[];
@@ -67,9 +73,12 @@ export async function ask(
     temperature: 0.1,
   });
 
+  const checks = checkCitations(res.content, citations);
   return {
     answer: res.content,
     citations,
+    checks,
+    flagged: checks.filter((c) => !c.valid),
     inputTokens: res.inputTokens,
     outputTokens: res.outputTokens,
     snippets,

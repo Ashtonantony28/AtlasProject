@@ -191,3 +191,18 @@ never written (and `init` leaves it in charge). `include` defaults to `[]`
 `process.exitCode` and return instead of calling `process.exit` inside
 `try/finally`, so the DB is always closed; the top-level catch still exits 1.
 `buildProgram()` (src/cli/program.ts) lets tests drive commands in-process.
+
+## 2026-10-21 — SG7: grounded Q&A citation checks
+`ask` parses `[n]` and `path:line[-end]` references from the answer
+(`checkCitations`) and returns them as `checks`, with `flagged` holding those
+outside the retrieved snippets (`unknown-snippet`, `unknown-file`, or
+`out-of-range` when no single snippet span covers the lines). A cited path
+matches a snippet file exactly or as a `/`-bounded suffix. Flags are reported,
+not fatal: the CLI prints an "Unverified citations" section and `--json`
+includes `checks`/`flagged`; exit code is unchanged. Excerpts now cover
+`start_line..end_line` (no trailing context) capped at 120 lines per snippet
+(`excerptLines`), with a `… [truncated: N more lines through line L]` marker
+and `truncated: true`; at the default 10 snippets that bounds excerpts to
+~1.2k lines, far below `tokenBudget`. Graph expansion keeps each neighbor's
+best edge and ranks resolved before weak, then extends > implements > calls >
+imports > references, then seed rank, then edge id.
