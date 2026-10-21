@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -103,6 +103,24 @@ describe('indexRepo end-to-end on fixture', () => {
     expect(second.symbols).toBe(0);
     expect(second.imports).toBe(0);
     expect(second.embeddings).toBe(0);
+    closeDatabase(db);
+  });
+
+  it('indexes a >32KB file without failing (chunked tree-sitter input)', async () => {
+    const repo = join(dir, 'repo');
+    mkdirSync(repo);
+    const src = Array.from(
+      { length: 3000 },
+      (_, i) => `export function fn${i}(a: number): number {\n  return a + ${i};\n}\n`,
+    ).join('');
+    expect(src.length).toBeGreaterThan(32 * 1024);
+    writeFileSync(join(repo, 'big.ts'), src);
+
+    const db = openDatabase(join(dir, 'index.db'));
+    const stats = await indexRepo(db, repo);
+    expect(stats.filesFailed).toBe(0);
+    const fns = getAllSymbols(db).filter((s) => s.kind === 'function');
+    expect(fns.length).toBeGreaterThanOrEqual(3000);
     closeDatabase(db);
   });
 });
