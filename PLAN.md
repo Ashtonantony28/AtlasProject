@@ -36,7 +36,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 | ID | Title | Depends | Owner | Status |
 | --- | --- | --- | --- | --- |
 | SG0 | Shared interfaces + bench harness | none | Claude (thread) | done: 68 tests, bench baseline in DECISIONS.md |
-| SG1 | Reconcile branches | SG0 | unassigned | proposed |
+| SG1 | Reconcile branches | SG0 | Claude (thread) | done: 70 tests, verify-external express+got ok |
 | SG2 | Indexer correctness | SG0, SG1 | unassigned | proposed |
 | SG3 | Parser correctness | SG0, SG1 | unassigned | proposed |
 | SG4 | Resolver soundness (CST-based) | SG3 | unassigned | proposed |
@@ -72,6 +72,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 - Accept: tests where (a) an exact name absent from the top-50 KNN is returned first and (b) a selective `--kind` filter returns results on a 10k-symbol synthetic index; search p95 within budget.
 
 ### SG6: Docs, drift and CI
+- Found in SG1: `verify-external.sh` sees `drift` exit 2 right after generating docs on a fresh index; `got` used 199k of the 200k token budget.
 - Cache key = context hash; `buildModuleContext` no longer O(files × all edges); "undocumented" counts only `exported` symbols, with word-boundary matching.
 - CI: persist docs between runs (commit `.atlas/docs/*.md` with hashes in front matter) so a PR that changes code without regenerating docs is reported stale. Fix the trigger branch (`main` does not exist).
 - Accept: a workflow test that runs drift against docs generated from the *base* commit reports the changed file as stale; synthesis on a fully cached 1k-file index ≤ 1 s; the job is green on this repo.
@@ -81,6 +82,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 - Accept: tests with a fake LLM that cites a non-existent snippet (flagged) and a symbol longer than 25 lines (full span).
 
 ### SG8: Read-only on target + CLI hygiene
+- Found in SG1: `verify-external.sh` also writes `atlas.config.json` into the cloned target.
 - Config moves into `.atlas/` (no `atlas.config.json` written to the target root); no `process.exit` inside `try/finally`; remove unused config keys or wire them.
 - Accept: a test that indexes a git repo and asserts `git status --porcelain` lists only `.atlas/`.
 
