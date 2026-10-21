@@ -15,7 +15,7 @@ async function init() {
     fetchJSON('/api/files'),
     fetchJSON('/api/graph'),
   ]);
-  renderStats(stats);
+  renderStats(stats, graph);
   renderFileList(files);
   renderGraph(graph);
 
@@ -32,8 +32,12 @@ async function init() {
   setupSearch();
 }
 
-function renderStats(stats) {
-  $('#stats').textContent = `${stats.files} files · ${stats.symbols} symbols · ${stats.edges} edges · ${stats.docs} docs`;
+function renderStats(stats, graph) {
+  // /api/graph is bounded; say so when the graph shows only part of the index.
+  const shown = graph?.truncated
+    ? ` · graph shows ${graph.nodes.length} of ${graph.totals.nodes} symbols`
+    : '';
+  $('#stats').textContent = `${stats.files} files · ${stats.symbols} symbols · ${stats.edges} edges · ${stats.docs} docs${shown}`;
 }
 
 function renderFileList(files) {

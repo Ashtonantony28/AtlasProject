@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/web/static/app.js
-source_hash: 7d2956375f0a0b58c00c2b14e1b042b28354e13fd978274f7fda244c40077aed
+source_hash: 0fce67edf015e95ed6b4c72b49b314d3fce6d6a6a18c1f543cabb66f44c0fc82
 ---
 # module src/web/static/app.js
 
@@ -11,15 +11,15 @@ source_hash: 7d2956375f0a0b58c00c2b14e1b042b28354e13fd978274f7fda244c40077aed
 - `fetchJSON` — function (src/web/static/app.js:5)
 - `init` — function (src/web/static/app.js:11)
 - `renderStats` — function (src/web/static/app.js:35)
-- `renderFileList` — function (src/web/static/app.js:39)
-- `selectFile` — function (src/web/static/app.js:52)
-- `setupTabs` — function (src/web/static/app.js:65)
-- `showTab` — function (src/web/static/app.js:71)
-- `setupSearch` — function (src/web/static/app.js:87)
-- `renderResults` — function (src/web/static/app.js:102)
-- `renderGraph` — function (src/web/static/app.js:119)
-- `escapeHtml` — function (src/web/static/app.js:193)
+- `renderFileList` — function (src/web/static/app.js:43)
+- `selectFile` — function (src/web/static/app.js:56)
+- `setupTabs` — function (src/web/static/app.js:69)
+- `showTab` — function (src/web/static/app.js:75)
+- `setupSearch` — function (src/web/static/app.js:91)
+- `renderResults` — function (src/web/static/app.js:106)
+- `renderGraph` — function (src/web/static/app.js:123)
+- `escapeHtml` — function (src/web/static/app.js:197)
 
-References: `src/web/static/app.js:3`, `src/web/static/app.js:5`, `src/web/static/app.js:11`, `src/web/static/app.js:35`, `src/web/static/app.js:39`.
+References: `src/web/static/app.js:3`, `src/web/static/app.js:5`, `src/web/static/app.js:11`, `src/web/static/app.js:35`, `src/web/static/app.js:43`.
 
 _Generated offline (mock client)._

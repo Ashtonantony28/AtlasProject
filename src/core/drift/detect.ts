@@ -53,12 +53,16 @@ export interface DriftReport {
     files: number;
     docs: number;
     publicSymbols: number; // exported, non-module symbols
+    stale: number;
+    undocumented: number;
   };
   // Anything to report: stale docs or undocumented symbols.
   hasDrift: boolean;
   // The drift gate failed: stale docs, or undocumented symbols when `strict`.
   failing: boolean;
   strict: boolean;
+  // `stale` or `undocumented` lists only part of the report (see `pageDriftReport`).
+  truncated: boolean;
 }
 
 export interface DetectOptions {
@@ -151,10 +155,31 @@ export function detectDrift(db: DB, opts: DetectOptions): DriftReport {
       files: files.length,
       docs: fileDocs.size + (archDoc ? 1 : 0),
       publicSymbols: publicSymbolCount,
+      stale: stale.length,
+      undocumented: undocumented.length,
     },
     hasDrift: stale.length > 0 || undocumented.length > 0,
     failing: stale.length > 0 || (strict && undocumented.length > 0),
     strict,
+    truncated: false,
+  };
+}
+
+/** Entries `offset`..`offset + limit` of each list; counts and the gate still cover the whole report. */
+export function pageDriftReport(
+  report: DriftReport,
+  page: { offset: number; limit: number },
+): DriftReport {
+  const end = page.offset + page.limit;
+  return {
+    ...report,
+    stale: report.stale.slice(page.offset, end),
+    undocumented: report.undocumented.slice(page.offset, end),
+    truncated:
+      report.truncated ||
+      page.offset > 0 ||
+      end < report.totals.stale ||
+      end < report.totals.undocumented,
   };
 }
 
@@ -178,7 +203,8 @@ function mentions(haystack: string, needle: string): boolean {
 
 export function formatDriftReport(report: DriftReport): string {
   const lines: string[] = [];
-  if (report.stale.length === 0 && report.undocumented.length === 0) {
+  const { stale, undocumented } = report.totals;
+  if (stale === 0 && undocumented === 0) {
     lines.push('no drift: docs are up to date and all public symbols documented.');
     lines.push(
       `totals: files=${report.totals.files} docs=${report.totals.docs} public symbols=${report.totals.publicSymbols}`,
@@ -201,8 +227,14 @@ export function formatDriftReport(report: DriftReport): string {
     }
   }
   lines.push('');
+  if (report.truncated) {
+    lines.push('');
+    lines.push(
+      `showing ${report.stale.length} of ${stale} stale, ${report.undocumented.length} of ${undocumented} undocumented (use offset/limit for more)`,
+    );
+  }
   lines.push(
-    `summary: ${report.stale.length} stale, ${report.undocumented.length} undocumented (of ${report.totals.publicSymbols} public)`,
+    `summary: ${stale} stale, ${undocumented} undocumented (of ${report.totals.publicSymbols} public)`,
   );
   lines.push(
     report.failing

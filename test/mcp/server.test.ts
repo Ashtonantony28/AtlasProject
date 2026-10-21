@@ -173,7 +173,8 @@ describe('MCP tool handlers', () => {
       expect(report.stale).toEqual([]);
       expect(report.undocumented.length).toBeGreaterThan(0);
       expect(report).toMatchObject({ hasDrift: true, failing: false, strict: false });
-      expect(report.formatted).toMatch(/Undocumented/);
+      expect(report).not.toHaveProperty('formatted');
+      expect(handleDriftTool(ctx, { formatted: true }).formatted).toMatch(/Undocumented/);
       expect(handleDriftTool(ctx, { strict: true })).toMatchObject({ failing: true, strict: true });
     });
 

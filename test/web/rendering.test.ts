@@ -37,6 +37,8 @@ const FIXTURE_GRAPH = {
     { src: 101, dst: 100, kind: 'calls', weak: false },
     { src: 102, dst: 100, kind: 'calls', weak: false },
   ],
+  totals: { nodes: 4, edges: 2 },
+  truncated: false,
 };
 
 const FIXTURE_STATS = { files: 2, symbols: 4, edges: 2, docs: 3 };
@@ -64,7 +66,7 @@ const FIXTURE_SEARCH_HITS = [
   { id: 102, name: 'Square', kind: 'class', file: 'src/shapes.ts', line: 27, score: 0.42 },
 ];
 
-function makeFetch() {
+function makeFetch(graph: unknown = FIXTURE_GRAPH) {
   return vi.fn(async (input: string | URL) => {
     const url = typeof input === 'string' ? input : input.toString();
     const path = url.startsWith('/') ? url : new URL(url).pathname + new URL(url).search;
@@ -72,7 +74,7 @@ function makeFetch() {
     let status = 200;
     if (path === '/api/stats') body = FIXTURE_STATS;
     else if (path === '/api/files') body = FIXTURE_FILES;
-    else if (path === '/api/graph') body = FIXTURE_GRAPH;
+    else if (path === '/api/graph') body = graph;
     else if (path === '/api/doc/architecture') body = FIXTURE_ARCH_DOC;
     else if (path === '/api/doc/file/2') body = FIXTURE_SHAPES_DOC;
     else if (path === '/api/doc/file/1') {
@@ -123,6 +125,18 @@ describe('dashboard renders in-browser (JSDOM)', () => {
     await (dom.window as any).init();
   }
 
+  it('says when /api/graph returned only part of the index', async () => {
+    (dom.window as unknown as { fetch: ReturnType<typeof makeFetch> }).fetch = makeFetch({
+      ...FIXTURE_GRAPH,
+      totals: { nodes: 5000, edges: 9000 },
+      truncated: true,
+    });
+    await runApp();
+    const doc = dom.window.document;
+    expect(doc.querySelector('#stats')!.textContent).toMatch(/graph shows 4 of 5000 symbols/);
+    expect(doc.querySelectorAll('#graph g.node').length).toBe(3);
+  });
+
   it('populates the stats, file list, graph, and architecture doc on load', async () => {
     await runApp();
     const doc = dom.window.document;
@@ -131,6 +145,7 @@ describe('dashboard renders in-browser (JSDOM)', () => {
     expect(doc.querySelector('#stats')!.textContent).toMatch(
       /2 files.*4 symbols.*2 edges.*3 docs/,
     );
+    expect(doc.querySelector('#stats')!.textContent).not.toMatch(/graph shows/);
 
     // File list — both fixture files appear.
     const items = [...doc.querySelectorAll('#fileList li')];

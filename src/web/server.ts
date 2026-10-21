@@ -5,12 +5,13 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { dirname, extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
-import { type DB, getAllEdges, getAllFiles, getAllSymbols } from '../core/db/index.js';
+import { counts, type DB, getAllFiles } from '../core/db/index.js';
 import { createEmbedder, search } from '../core/vector/index.js';
 import { loadConfig, resolvePaths } from '../core/config.js';
 import { buildGraphJson } from '../core/graph/index.js';
-import { listDocs } from '../core/synth/index.js';
+import { countDocs, listDocs } from '../core/synth/index.js';
 import {
+  GraphParamsSchema,
   listArg,
   numberArg,
   ParamError,
@@ -87,15 +88,22 @@ export async function startServer(db: DB, root: string, opts: ServeOptions = {})
         return;
       }
       if (path === '/api/stats') {
-        const files = getAllFiles(db).length;
-        const symbols = getAllSymbols(db).length;
-        const edges = getAllEdges(db).length;
-        const docs = listDocs(db, docsDir).length;
+        const { files, symbols, edges } = counts(db);
+        const docs = countDocs(db, docsDir);
         jsonResponse(res, 200, { files, symbols, edges, docs });
         return;
       }
       if (path === '/api/graph') {
-        jsonResponse(res, 200, buildGraphJson(db));
+        const p = url.searchParams;
+        const query = parseParams(GraphParamsSchema, {
+          file: p.get('file') ?? undefined,
+          symbol: p.get('symbol') ?? undefined,
+          depth: numberArg(p.get('depth')),
+          limit: numberArg(p.get('limit')),
+          edgeLimit: numberArg(p.get('edgeLimit')),
+          offset: numberArg(p.get('offset')),
+        });
+        jsonResponse(res, 200, buildGraphJson(db, query));
         return;
       }
       if (path === '/api/files') {
