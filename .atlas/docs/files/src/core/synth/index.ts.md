@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/synth/index.ts
-source_hash: 8c950a65c30d97a36f9ca61f6f6f513ac74a66972e2c3fe0fb3e4925f9280df0
+source_hash: 1d3e766d0e9725a78fe88937079da8c176a81db6595e1f4bf79352cc69a7af45
 ---
 # module src/core/synth/index.ts
 
