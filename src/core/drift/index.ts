@@ -1,4 +1,4 @@
-export { detectDrift, formatDriftReport } from './detect.js';
+export { detectDrift, formatDriftReport, pageDriftReport } from './detect.js';
 export { runDrift } from './run.js';
 export type { RunDriftOptions } from './run.js';
 export type {

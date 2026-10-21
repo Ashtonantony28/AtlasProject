@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/params.ts
-source_hash: 5d81dc11282040c65d832eb6fa036c9b6fbc9ad35283ba29962b86d965f932bb
+source_hash: 1e460bf4cb020a8813153c8f3ced8253251ffdabd7edaae69da20923b26f37be
 ---
 # module src/core/params.ts
 
@@ -18,11 +18,15 @@ source_hash: 5d81dc11282040c65d832eb6fa036c9b6fbc9ad35283ba29962b86d965f932bb
 - `askParams` — variable (src/core/params.ts:41)
 - `AskParamsSchema` — variable (src/core/params.ts:46)
 - `AskParams` — type (src/core/params.ts:47)
-- `budgetSchema` — variable (src/core/params.ts:49)
-- `portSchema` — variable (src/core/params.ts:50)
-- `parseParams` — function (src/core/params.ts:53)
-- `numberArg` — function (src/core/params.ts:60)
-- `listArg` — function (src/core/params.ts:66)
+- `graphParams` — variable (src/core/params.ts:52)
+- `GraphParamsSchema` — variable (src/core/params.ts:60)
+- `GraphParams` — type (src/core/params.ts:61)
+- `driftParams` — variable (src/core/params.ts:63)
+- `DriftParamsSchema` — variable (src/core/params.ts:67)
+- `DriftParams` — type (src/core/params.ts:68)
+- `budgetSchema` — variable (src/core/params.ts:70)
+- `portSchema` — variable (src/core/params.ts:71)
+- `parseParams` — function (src/core/params.ts:74)
 
 References: `src/core/params.ts:7`, `src/core/params.ts:9`, `src/core/params.ts:11`, `src/core/params.ts:19`, `src/core/params.ts:23`.
 

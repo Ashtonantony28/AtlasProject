@@ -17,6 +17,7 @@ export {
   MAX_ARCH_PROMPT_CHARS,
 } from './context.js';
 export {
+  countDocs,
   deletedDocsFromDb,
   docsFromDb,
   exportDocs,

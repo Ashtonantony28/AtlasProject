@@ -15,7 +15,12 @@ import {
 import { indexRepo } from '../core/ingest/index.js';
 import { buildGraphDot, buildGraphJson } from '../core/graph/index.js';
 import { createEmbedder, readFileFromRoot, search } from '../core/vector/index.js';
-import { formatDriftReport, runDrift } from '../core/drift/index.js';
+import {
+  formatDriftReport,
+  pageDriftReport,
+  runDrift,
+  type DriftReport,
+} from '../core/drift/index.js';
 import {
   budgeted,
   createAnthropicClient,
@@ -28,7 +33,17 @@ import {
 import { ask, DEFAULT_EXCERPT_LINES } from '../core/qa/index.js';
 import type { AtlasConfig } from '../core/config.js';
 import { loadProject } from '../core/project.js';
-import { askParams, AskParamsSchema, parseParams, searchParams, SearchParamsSchema } from '../core/params.js';
+import {
+  askParams,
+  AskParamsSchema,
+  driftParams,
+  DriftParamsSchema,
+  graphParams,
+  GraphParamsSchema,
+  parseParams,
+  searchParams,
+  SearchParamsSchema,
+} from '../core/params.js';
 
 export { budgeted };
 
@@ -153,23 +168,47 @@ export function handleSymbolTool(ctx: McpContext, args: { name: string; limit?: 
   });
 }
 
-export function handleGraphTool(ctx: McpContext, args: { format?: 'json' | 'dot' }) {
+export function handleGraphTool(
+  ctx: McpContext,
+  args: {
+    format?: 'json' | 'dot';
+    file?: string;
+    symbol?: string;
+    depth?: number;
+    limit?: number;
+    edgeLimit?: number;
+    offset?: number;
+  },
+) {
+  const { format, ...raw } = args;
+  const query = parseParams(GraphParamsSchema, raw);
   requireIndex(ctx);
-  return args.format === 'dot' ? buildGraphDot(ctx.db) : buildGraphJson(ctx.db);
+  return format === 'dot' ? buildGraphDot(ctx.db, query) : buildGraphJson(ctx.db, query);
 }
 
 export function handleDriftTool(
   ctx: McpContext,
-  args: { persisted?: boolean; skipArchitecture?: boolean; strict?: boolean },
-) {
+  args: {
+    persisted?: boolean;
+    skipArchitecture?: boolean;
+    strict?: boolean;
+    limit?: number;
+    offset?: number;
+    formatted?: boolean;
+  },
+): DriftReport & { formatted?: string } {
+  const page = parseParams(DriftParamsSchema, { limit: args.limit, offset: args.offset });
   requireIndex(ctx);
-  const report = runDrift(ctx.db, {
-    root: ctx.root,
-    skipArchitecture: args.skipArchitecture ?? false,
-    strict: args.strict ?? false,
-    ...(args.persisted ? { docsDir: ctx.docsDir } : {}),
-  });
-  return { ...report, formatted: formatDriftReport(report) };
+  const report = pageDriftReport(
+    runDrift(ctx.db, {
+      root: ctx.root,
+      skipArchitecture: args.skipArchitecture ?? false,
+      strict: args.strict ?? false,
+      ...(args.persisted ? { docsDir: ctx.docsDir } : {}),
+    }),
+    page,
+  );
+  return args.formatted ? { ...report, formatted: formatDriftReport(report) } : report;
 }
 
 export function handleDocsTool(ctx: McpContext, args: { target?: string }) {
@@ -208,7 +247,8 @@ export async function handleAskTool(
 }
 
 function asText(value: unknown): { content: Array<{ type: 'text'; text: string }> } {
-  const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+  // Compact: tool results can be large and the SDK's stdio transport caps a message at 10 MiB.
+  const text = typeof value === 'string' ? value : JSON.stringify(value);
   return { content: [{ type: 'text', text }] };
 }
 
@@ -256,9 +296,18 @@ export function createAtlasMcpServer(ctx: McpContext): McpServer {
   server.registerTool(
     'atlas_graph',
     {
-      description: 'Export the symbol graph (nodes + calls/imports/extends/implements edges).',
+      description:
+        'Export the symbol graph (nodes + calls/imports/extends/implements edges), bounded: nodes ordered by id, edges among them, with `totals` and `truncated`. Scope it with `file` or `symbol`.',
       inputSchema: {
         format: z.enum(['json', 'dot']).optional().describe('json (default) or Graphviz dot.'),
+        file: graphParams.file.describe('Only symbols in files whose path contains this substring.'),
+        symbol: graphParams.symbol.describe(
+          'Only the neighbourhood of symbols with this name or qualified name.',
+        ),
+        depth: graphParams.depth.describe('Neighbourhood hops for `symbol` (default 1).'),
+        limit: graphParams.limit.describe('Max nodes (default 1000).'),
+        edgeLimit: graphParams.edgeLimit.describe('Max edges (default 2000).'),
+        offset: graphParams.offset.describe('Skip this many nodes (paging).'),
       },
     },
     async (args) => asText(handleGraphTool(ctx, args)),
@@ -268,7 +317,7 @@ export function createAtlasMcpServer(ctx: McpContext): McpServer {
     'atlas_drift',
     {
       description:
-        'Report stale docs (grounding context changed since generation) and undocumented exported symbols. `failing` matches `atlas drift` exiting 2; errors when there are no docs to check.',
+        'Report stale docs (grounding context changed since generation) and undocumented exported symbols. `failing` matches `atlas drift` exiting 2; errors when there are no docs to check. Lists are paged (`truncated`, `totals`).',
       inputSchema: {
         persisted: z
           .boolean()
@@ -279,6 +328,11 @@ export function createAtlasMcpServer(ctx: McpContext): McpServer {
           .boolean()
           .optional()
           .describe('Undocumented exported symbols also set `failing` (like `atlas drift --strict`).'),
+        limit: driftParams.limit.describe(
+          'Max stale and max undocumented entries (default 100); `totals` counts all.',
+        ),
+        offset: driftParams.offset.describe('Skip this many entries of each list (paging).'),
+        formatted: z.boolean().optional().describe('Also return the text report (`atlas drift`).'),
       },
     },
     async (args) => asText(handleDriftTool(ctx, args)),

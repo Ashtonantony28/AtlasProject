@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/drift/detect.ts
-source_hash: 068c829088f297d08dd1b24c2a3f6b9d43b755faf7c69f026b8c5e0d7517a4ab
+source_hash: fb9d9a18b16f79582f36dcb2a387d867f55979647b5bfd98a2187b994db068fa
 ---
 # module src/core/drift/detect.ts
 
@@ -11,12 +11,13 @@ source_hash: 068c829088f297d08dd1b24c2a3f6b9d43b755faf7c69f026b8c5e0d7517a4ab
 - `StaleDocReport` — interface (src/core/drift/detect.ts:34)
 - `UndocumentedSymbolReport` — interface (src/core/drift/detect.ts:42)
 - `DriftReport` — interface (src/core/drift/detect.ts:49)
-- `DetectOptions` — interface (src/core/drift/detect.ts:64)
-- `detectDrift` — function (src/core/drift/detect.ts:75)
-- `indexedContentChanged` — function (src/core/drift/detect.ts:162)
-- `mentions` — function (src/core/drift/detect.ts:173)
-- `formatDriftReport` — function (src/core/drift/detect.ts:179)
+- `DetectOptions` — interface (src/core/drift/detect.ts:68)
+- `detectDrift` — function (src/core/drift/detect.ts:79)
+- `pageDriftReport` — function (src/core/drift/detect.ts:169)
+- `indexedContentChanged` — function (src/core/drift/detect.ts:187)
+- `mentions` — function (src/core/drift/detect.ts:198)
+- `formatDriftReport` — function (src/core/drift/detect.ts:204)
 
-References: `src/core/drift/detect.ts:32`, `src/core/drift/detect.ts:34`, `src/core/drift/detect.ts:42`, `src/core/drift/detect.ts:49`, `src/core/drift/detect.ts:64`.
+References: `src/core/drift/detect.ts:32`, `src/core/drift/detect.ts:34`, `src/core/drift/detect.ts:42`, `src/core/drift/detect.ts:49`, `src/core/drift/detect.ts:68`.
 
 _Generated offline (mock client)._

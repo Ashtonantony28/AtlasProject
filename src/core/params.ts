@@ -46,6 +46,27 @@ export const askParams = {
 export const AskParamsSchema = z.object(askParams);
 export type AskParams = z.infer<typeof AskParamsSchema>;
 
+// Graph and drift responses are bounded by default so an RPC reply stays far
+// below the MCP SDK's 10 MiB stdio limit at any repo size (AUDIT-2 A2-04).
+// The CLI exports everything unless `--limit` is given.
+export const graphParams = {
+  file: z.string().optional(),
+  symbol: nonEmpty('symbol').optional(),
+  depth: intParam('depth', 1, 3).default(1),
+  limit: intParam('limit', 1, 5000).default(1000),
+  edgeLimit: intParam('edgeLimit', 1, 10000).default(2000),
+  offset: intParam('offset', 0).default(0),
+};
+export const GraphParamsSchema = z.object(graphParams);
+export type GraphParams = z.infer<typeof GraphParamsSchema>;
+
+export const driftParams = {
+  limit: intParam('limit', 1, 1000).default(100),
+  offset: intParam('offset', 0).default(0),
+};
+export const DriftParamsSchema = z.object(driftParams);
+export type DriftParams = z.infer<typeof DriftParamsSchema>;
+
 export const budgetSchema = intParam('budget', 1);
 export const portSchema = intParam('port', 0, 65535);
 
