@@ -116,16 +116,50 @@ fi
 
 echo
 echo "== atlas docs (offline) =="
-$ATLAS docs --offline --cwd "$REPO_DIR" | tail -3
+DOCS_OUT="$($ATLAS docs --offline --cwd "$REPO_DIR")"
+echo "$DOCS_OUT"
+echo "$DOCS_OUT" | grep -q '^modules: .*skipped 0$' || { echo "  FAIL docs skipped modules (token budget)"; fail=1; }
 
 echo
-echo "== atlas drift =="
+echo "== atlas drift (right after docs: must be clean) =="
 set +e
 $ATLAS drift --cwd "$REPO_DIR" --json > "$REPO_DIR/.atlas/drift.json"
 DRIFT_RC=$?
+$ATLAS drift --cwd "$REPO_DIR" --docs-dir .atlas/docs > /dev/null
+PERSISTED_RC=$?
 set -e
-echo "drift exit: $DRIFT_RC (0 = clean, 2 = drift detected, 1 = error)"
-test "$DRIFT_RC" -eq 0 -o "$DRIFT_RC" -eq 2
+echo "drift exit: $DRIFT_RC, against .atlas/docs: $PERSISTED_RC (0 = no stale docs, 2 = stale, 1 = error)"
+if [ "$DRIFT_RC" -eq 0 ] && [ "$PERSISTED_RC" -eq 0 ]; then
+  echo "  ok   no stale docs after generation"
+else
+  echo "  FAIL drift reported stale docs right after generation"
+  fail=1
+fi
+
+echo
+echo "== drift after a source change (persisted docs, fresh DB) =="
+printf '\n// atlas verify mutation\n' >> "$REPO_DIR/$ASSERT_FILE"
+FRESH_DB="$REPO_DIR/.atlas/fresh.db"
+cp "$REPO_DIR/.atlas/config.json" "$REPO_DIR/.atlas/config.json.bak"
+node --input-type=module -e "
+import { writeFileSync } from 'node:fs';
+writeFileSync('$REPO_DIR/.atlas/config.json', JSON.stringify({ version: 1, indexPath: '.atlas/fresh.db' }));
+"
+$ATLAS index "$REPO_DIR" > /dev/null
+set +e
+STALE_OUT="$($ATLAS drift --cwd "$REPO_DIR" --docs-dir .atlas/docs --json)"
+STALE_RC=$?
+set -e
+git -C "$REPO_DIR" checkout -q -- "$ASSERT_FILE"
+mv "$REPO_DIR/.atlas/config.json.bak" "$REPO_DIR/.atlas/config.json"
+rm -f "$FRESH_DB"*
+STALE_FILES=$(echo "$STALE_OUT" | python3 -c "import json,sys; print(' '.join(s['targetPath'] for s in json.load(sys.stdin)['stale'] if s['kind']=='file'))")
+if [ "$STALE_RC" -eq 2 ] && [ "$STALE_FILES" = "$ASSERT_FILE" ]; then
+  echo "  ok   only $ASSERT_FILE reported stale (exit 2)"
+else
+  echo "  FAIL expected only $ASSERT_FILE stale with exit 2, got exit $STALE_RC: $STALE_FILES"
+  fail=1
+fi
 
 echo
 echo "== ci-comment payload (first 15 lines) =="

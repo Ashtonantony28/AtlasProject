@@ -1,24 +1,21 @@
 // Drift detection: compare the index's current state against stored docs.
 //
 // Two signals:
-//   - stale: a doc exists for a file whose current content_hash differs from
-//     the doc's stored source_hash (the source moved on; the doc didn't).
-//   - undocumented: a public symbol (kind in {function, class, interface,
-//     type, method}) in a file that has no doc at all, OR a top-level
-//     public symbol whose file-level doc is missing.
-//
-// Drift exits non-zero in the CLI; that's the CI signal.
+//   - stale: a doc whose stored source_hash differs from sha256 of the prompt
+//     it would be generated from now (its grounding context moved on), or a
+//     persisted doc whose file no longer exists. Fatal in the CLI.
+//   - undocumented: an exported symbol whose name (qualified or bare) does
+//     not appear as a whole identifier in its file's doc. Reported only;
+//     fatal with `atlas drift --strict`.
 
-import {
-  type DB,
-  getAllFiles,
-  getAllDocs,
-  getSymbolsForFile,
-  type FileRow,
-  type SymbolRow,
-} from '../db/index.js';
+import { type DB, getAllFiles, getSymbolsForFile } from '../db/index.js';
 import { sha256 } from '../ingest/index.js';
-import { buildArchitectureContext, architectureContextToPrompt } from '../synth/index.js';
+import {
+  architecturePrompt,
+  docsFromDb,
+  modulePrompt,
+  type PersistedDoc,
+} from '../synth/index.js';
 
 export type StaleKind = 'file' | 'architecture';
 
@@ -27,7 +24,7 @@ export interface StaleDocReport {
   targetId: number;
   targetPath: string; // file path or "architecture"
   storedHash: string;
-  currentHash: string;
+  currentHash: string; // "missing" when the file no longer exists
 }
 
 export interface UndocumentedSymbolReport {
@@ -43,81 +40,81 @@ export interface DriftReport {
   totals: {
     files: number;
     docs: number;
-    publicSymbols: number;
+    publicSymbols: number; // exported, non-module symbols
   };
   hasDrift: boolean;
 }
 
-const PUBLIC_KINDS = new Set(['function', 'class', 'interface', 'type', 'method']);
-
 export interface DetectOptions {
+  // Project root; needed to rebuild each module's prompt (source excerpts).
+  root: string;
   // Skip the architecture-level drift check.
   skipArchitecture?: boolean;
+  // Check these docs (e.g. read from `.atlas/docs`) instead of the docs table.
+  docs?: PersistedDoc[];
 }
 
-export function detectDrift(db: DB, opts: DetectOptions = {}): DriftReport {
+export function detectDrift(db: DB, opts: DetectOptions): DriftReport {
   const files = getAllFiles(db);
-  const docs = getAllDocs(db);
-  const fileDocByFileId = new Map<number, (typeof docs)[number]>();
-  let archDoc: (typeof docs)[number] | undefined;
+  const docs = opts.docs ?? docsFromDb(db);
+  const fileDocs = new Map<string, PersistedDoc>();
+  let archDoc: PersistedDoc | undefined;
   for (const d of docs) {
-    if (d.target_kind === 'file') fileDocByFileId.set(d.target_id, d);
-    else if (d.target_kind === 'architecture') archDoc = d;
+    if (d.kind === 'file') fileDocs.set(d.target, d);
+    else archDoc = d;
   }
 
   const stale: StaleDocReport[] = [];
   const undocumented: UndocumentedSymbolReport[] = [];
   let publicSymbolCount = 0;
+  const seen = new Set<string>();
 
   for (const file of files) {
-    const doc = fileDocByFileId.get(file.id);
-    if (doc && doc.source_hash !== file.content_hash) {
-      stale.push({
-        kind: 'file',
-        targetId: file.id,
-        targetPath: file.path,
-        storedHash: doc.source_hash,
-        currentHash: file.content_hash,
-      });
-    }
-
-    const symbols = getSymbolsForFile(db, file.id);
-    const publicSyms = symbols.filter((s) => PUBLIC_KINDS.has(s.kind));
-    publicSymbolCount += publicSyms.length;
-    if (publicSyms.length === 0) continue;
-
-    if (!doc) {
-      // The file has public symbols but no module doc — every public symbol is undocumented.
-      for (const sym of publicSyms) {
-        undocumented.push({
-          file: file.path,
-          symbol: sym.qualified_name ?? sym.name,
-          kind: sym.kind,
-          startLine: sym.start_line,
+    seen.add(file.path);
+    const doc = fileDocs.get(file.path);
+    if (doc) {
+      const current = sha256(modulePrompt(db, opts.root, file));
+      if (doc.sourceHash !== current) {
+        stale.push({
+          kind: 'file',
+          targetId: file.id,
+          targetPath: file.path,
+          storedHash: doc.sourceHash,
+          currentHash: current,
         });
       }
-    } else {
-      // Doc exists; surface any public symbol whose name isn't mentioned in the doc.
-      // (Conservative: a name match means the doc at least references the symbol.)
-      const docText = doc.content;
-      for (const sym of publicSyms) {
-        const ref = sym.qualified_name ?? sym.name;
-        if (!mentions(docText, ref) && !mentions(docText, sym.name)) {
-          undocumented.push(buildUndocumented(file, sym));
-        }
-      }
+    }
+
+    const exported = getSymbolsForFile(db, file.id).filter(
+      (s) => s.exported === 1 && s.kind !== 'module',
+    );
+    publicSymbolCount += exported.length;
+    for (const sym of exported) {
+      const ref = sym.qualified_name ?? sym.name;
+      if (doc && (mentions(doc.content, ref) || mentions(doc.content, sym.name))) continue;
+      undocumented.push({ file: file.path, symbol: ref, kind: sym.kind, startLine: sym.start_line });
     }
   }
 
-  if (!opts.skipArchitecture) {
-    const archCtx = buildArchitectureContext(db);
-    const expected = sha256(architectureContextToPrompt(archCtx));
-    if (archDoc && archDoc.source_hash !== expected) {
+  for (const doc of fileDocs.values()) {
+    if (seen.has(doc.target)) continue;
+    stale.push({
+      kind: 'file',
+      targetId: 0,
+      targetPath: doc.target,
+      storedHash: doc.sourceHash,
+      currentHash: 'missing',
+    });
+  }
+
+  if (!opts.skipArchitecture && archDoc) {
+    const expected = sha256(architecturePrompt(db));
+    if (archDoc.sourceHash !== expected) {
       stale.push({
         kind: 'architecture',
         targetId: 0,
         targetPath: 'architecture',
-        storedHash: archDoc.source_hash,
+        storedHash: archDoc.sourceHash,
         currentHash: expected,
       });
     }
@@ -131,18 +128,11 @@ export function detectDrift(db: DB, opts: DetectOptions = {}): DriftReport {
   };
 }
 
+/** Whole-identifier, case-sensitive match (`get` does not match inside `target`). */
 function mentions(haystack: string, needle: string): boolean {
   if (!needle) return false;
-  return haystack.toLowerCase().includes(needle.toLowerCase());
-}
-
-function buildUndocumented(file: FileRow, sym: SymbolRow): UndocumentedSymbolReport {
-  return {
-    file: file.path,
-    symbol: sym.qualified_name ?? sym.name,
-    kind: sym.kind,
-    startLine: sym.start_line,
-  };
+  const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?<![\\w$])${escaped}(?![\\w$])`).test(haystack);
 }
 
 export function formatDriftReport(report: DriftReport): string {

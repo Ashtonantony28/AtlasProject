@@ -11,5 +11,11 @@ export {
   buildArchitectureContext,
   moduleContextToPrompt,
   architectureContextToPrompt,
+  modulePrompt,
+  architecturePrompt,
+  MAX_MODULE_PROMPT_CHARS,
+  MAX_ARCH_PROMPT_CHARS,
 } from './context.js';
+export { docsFromDb, exportDocs, readPersistedDocs, importPersistedDocs } from './persist.js';
+export type { PersistedDoc } from './persist.js';
 export type { ModuleContext, ArchitectureContext } from './context.js';

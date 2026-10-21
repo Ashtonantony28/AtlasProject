@@ -192,6 +192,22 @@ never written (and `init` leaves it in charge). `include` defaults to `[]`
 `try/finally`, so the DB is always closed; the top-level catch still exits 1.
 `buildProgram()` (src/cli/program.ts) lets tests drive commands in-process.
 
+## 2026-10-21 — SG6: prompt-hash docs, persisted docs, non-fatal undocumented
+`docs.source_hash = sha256(prompt)`; the module prompt now carries the file's
+`Content hash:` line, so any source edit *and* any change to the module's call
+neighbourhood marks its doc stale (no false negatives from edits outside the
+source excerpts). Prompts are capped (module 6k chars, architecture 12k) by
+dropping excerpts, then halving the symbol list, exported symbols kept first;
+call edges come from per-file indexed SQL (strongest first, 12 each). Budget
+checks reserve ~3 chars/token of input + `perDocMax` before every call, so
+spend never exceeds the cap. `atlas docs` mirrors docs to `.atlas/docs/`
+(`files/<path>.md`, `architecture.md`, front matter with `source_hash`) and
+seeds its cache from them; `atlas drift --docs-dir .atlas/docs` checks those
+from a fresh index, which is what CI runs (docs are not regenerated in CI).
+Undocumented = exported, non-module symbols not named as a whole identifier
+(case-sensitive) in their doc; they are reported but exit 0 unless `--strict`,
+since Phase 7's DoD makes only stale docs fatal and LLM docs cannot be required
+to name every export. Cached synthesis on 1,002 files: ~0.2 s; got: 98k of 200k.
 ## 2026-10-21 — SG7: grounded Q&A citation checks
 `ask` parses `[n]` and `path:line[-end]` references from the answer
 (`checkCitations`) and returns them as `checks`, with `flagged` holding those

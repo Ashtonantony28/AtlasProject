@@ -57,7 +57,7 @@ describe('Atlas indexes its own source tree (real-codebase smoke)', () => {
 
     // Detect drift wouldn't crash on a real repo; we don't expect docs here,
     // so it should report undocumented symbols and have hasDrift=true.
-    const driftReport = detectDrift(db);
+    const driftReport = detectDrift(db, { root: ATLAS_ROOT });
     expect(driftReport.undocumented.length).toBeGreaterThan(0);
     expect(driftReport.hasDrift).toBe(true);
 

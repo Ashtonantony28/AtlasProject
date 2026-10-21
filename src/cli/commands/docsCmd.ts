@@ -1,5 +1,5 @@
 import type { Command } from 'commander';
-import { resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import {
   closeDatabase,
   openDatabase,
@@ -10,6 +10,8 @@ import {
 import {
   createAnthropicClient,
   createOfflineClient,
+  exportDocs,
+  importPersistedDocs,
   synthesizeDocs,
 } from '../../core/synth/index.js';
 import { loadConfig, resolvePaths } from '../../core/config.js';
@@ -89,6 +91,8 @@ export function registerDocsCommand(program: Command): void {
           ? createOfflineClient()
           : await createAnthropicClient(model);
 
+        const docsDir = join(paths.atlasDir, 'docs');
+        importPersistedDocs(db, docsDir);
         const stats = await synthesizeDocs(db, llm, {
           root,
           tokenBudget: budget,
@@ -99,9 +103,11 @@ export function registerDocsCommand(program: Command): void {
             process.stdout.write(`  [${e.status}] ${tag}${e.reason ? ` (${e.reason})` : ''}\n`);
           },
         });
+        const exported = exportDocs(db, docsDir);
         process.stdout.write(
           [
             `modules: generated ${stats.modulesGenerated}, cached ${stats.modulesCached}, skipped ${stats.modulesSkipped}`,
+            `persisted: ${exported.total} docs in ${relative(root, docsDir)} (${exported.written} written, ${exported.removed} removed)`,
             `architecture: ${stats.architectureGenerated ? 'generated' : 'cached/skipped'}`,
             `tokens: ${stats.inputTokens} in, ${stats.outputTokens} out (budget remaining ${stats.budgetRemaining})`,
             `client: ${llm.model}  duration: ${stats.durationMs}ms`,

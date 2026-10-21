@@ -14,8 +14,9 @@ coverage/
 .env.local
 .env.*.local
 
-# Atlas runtime artifacts
-.atlas/
+# Atlas runtime artifacts (persisted docs are committed for CI drift checks)
+.atlas/*
+!.atlas/docs/
 *.atlas.db
 *.atlas.db-shm
 *.atlas.db-wal

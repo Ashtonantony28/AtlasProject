@@ -9,12 +9,7 @@ import {
 import { sha256 } from '../ingest/index.js';
 import type { LLMClient } from './llmClient.js';
 import { TokenBudget } from './budget.js';
-import {
-  buildModuleContext,
-  buildArchitectureContext,
-  moduleContextToPrompt,
-  architectureContextToPrompt,
-} from './context.js';
+import { modulePrompt, architecturePrompt } from './context.js';
 
 const MODULE_SYSTEM = `You are a senior engineer writing concise, accurate module documentation for a code intelligence tool.
 Given the grounding context (symbols, imports, calls, and source excerpts), produce a short markdown summary that:
@@ -37,7 +32,7 @@ export interface SynthesizeOptions {
   tokenBudget: number;
   // Per-doc output token cap (passed to the LLM as max_tokens).
   perDocMaxTokens?: number;
-  // Skip module docs whose source_hash is still current.
+  // Regenerate even docs whose source_hash (sha256 of the prompt) is unchanged.
   force?: boolean;
   onProgress?: (e: { kind: 'module' | 'architecture'; path?: string; status: 'generated' | 'cached' | 'skipped'; reason?: string }) => void;
 }
@@ -72,32 +67,27 @@ export async function synthesizeDocs(
     durationMs: 0,
   };
 
-  // 1) Module docs
-  const files = getAllFiles(db);
-  for (const file of files) {
-    const ctx = buildModuleContext(db, opts.root, file);
-    const cached = getDoc(db, 'file', file.id);
-    if (!opts.force && cached && cached.source_hash === ctx.contentHash) {
-      stats.modulesCached++;
-      opts.onProgress?.({ kind: 'module', path: file.path, status: 'cached' });
-      continue;
+  // A doc is cached iff sha256(prompt) matches its source_hash. A call runs
+  // only if its worst case (~3 chars/token in, perDocMax out) fits the budget.
+  const generate = async (
+    kind: 'module' | 'architecture',
+    system: string,
+    prompt: string,
+    target: { kind: 'file' | 'architecture'; id: number; path?: string },
+  ): Promise<'generated' | 'cached' | 'skipped'> => {
+    const hash = sha256(prompt);
+    const cached = getDoc(db, target.kind, target.id);
+    const path = target.path !== undefined ? { path: target.path } : {};
+    if (!opts.force && cached?.source_hash === hash) {
+      opts.onProgress?.({ kind, ...path, status: 'cached' });
+      return 'cached';
     }
-
-    const prompt = moduleContextToPrompt(ctx);
-    const estimateIn = Math.ceil(prompt.length / 4);
-    if (budget.remaining() < estimateIn + perDocMax) {
-      stats.modulesSkipped++;
-      opts.onProgress?.({
-        kind: 'module',
-        path: file.path,
-        status: 'skipped',
-        reason: 'token budget exhausted',
-      });
-      continue;
+    if (budget.remaining() < Math.ceil((system.length + prompt.length) / 3) + perDocMax) {
+      opts.onProgress?.({ kind, ...path, status: 'skipped', reason: 'token budget exhausted' });
+      return 'skipped';
     }
-
     const res = await llm.complete({
-      system: MODULE_SYSTEM,
+      system,
       messages: [{ role: 'user', content: prompt }],
       maxTokens: perDocMax,
       temperature: 0.2,
@@ -106,47 +96,30 @@ export async function synthesizeDocs(
     stats.inputTokens += res.inputTokens;
     stats.outputTokens += res.outputTokens;
     upsertDoc(db, {
-      target_kind: 'file',
-      target_id: file.id,
+      target_kind: target.kind,
+      target_id: target.id,
       content: res.content,
-      source_hash: ctx.contentHash,
+      source_hash: hash,
     });
-    stats.modulesGenerated++;
-    opts.onProgress?.({ kind: 'module', path: file.path, status: 'generated' });
+    opts.onProgress?.({ kind, ...path, status: 'generated' });
+    return 'generated';
+  };
+
+  // 1) Module docs
+  for (const file of getAllFiles(db)) {
+    const prompt = modulePrompt(db, opts.root, file);
+    const r = await generate('module', MODULE_SYSTEM, prompt, { kind: 'file', id: file.id, path: file.path });
+    if (r === 'generated') stats.modulesGenerated++;
+    else if (r === 'cached') stats.modulesCached++;
+    else stats.modulesSkipped++;
   }
 
   // 2) Architecture doc — keyed by id=0 under target_kind='architecture'.
-  const archCtx = buildArchitectureContext(db);
-  const archPrompt = architectureContextToPrompt(archCtx);
-  const archHash = sha256(archPrompt);
-  const archCached = getDoc(db, 'architecture', 0);
-  if (!opts.force && archCached && archCached.source_hash === archHash) {
-    opts.onProgress?.({ kind: 'architecture', status: 'cached' });
-  } else if (budget.remaining() < Math.ceil(archPrompt.length / 4) + perDocMax) {
-    opts.onProgress?.({
-      kind: 'architecture',
-      status: 'skipped',
-      reason: 'token budget exhausted',
-    });
-  } else {
-    const res = await llm.complete({
-      system: ARCHITECTURE_SYSTEM,
-      messages: [{ role: 'user', content: archPrompt }],
-      maxTokens: perDocMax,
-      temperature: 0.2,
-    });
-    budget.record(res.inputTokens, res.outputTokens);
-    stats.inputTokens += res.inputTokens;
-    stats.outputTokens += res.outputTokens;
-    upsertDoc(db, {
-      target_kind: 'architecture',
-      target_id: 0,
-      content: res.content,
-      source_hash: archHash,
-    });
-    stats.architectureGenerated = true;
-    opts.onProgress?.({ kind: 'architecture', status: 'generated' });
-  }
+  const arch = await generate('architecture', ARCHITECTURE_SYSTEM, architecturePrompt(db), {
+    kind: 'architecture',
+    id: 0,
+  });
+  stats.architectureGenerated = arch === 'generated';
 
   stats.budgetRemaining = budget.remaining();
   stats.durationMs = Date.now() - t0;

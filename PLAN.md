@@ -41,7 +41,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 | SG3 | Parser correctness | SG0, SG1 | Claude (thread) | done: tsx, qualified members, exported flag; 86 tests |
 | SG4 | Resolver soundness (CST-based) | SG3 | Claude (thread) | done: refs table (v4), golden fixtures/graph, no FN/FP; express 411→1444 edges, got 1937→4850; resolver ~1 s/1k files |
 | SG5 | True hybrid search | SG0 | Claude (thread) | done: FTS5+KNN RRF, pre-filtered; p95 27.7 ms at 10k |
-| SG6 | Docs + drift + CI that actually detects staleness | SG2, SG3 | unassigned | proposed |
+| SG6 | Docs + drift + CI that actually detects staleness | SG2, SG3 | Claude (thread) | done: prompt-hash cache, `.atlas/docs` + CI drift, exported-only undocumented; 132 tests, cached 1k synth 0.2 s, got 98k tokens |
 | SG7 | Grounded Q&A citation checks | SG5 | Claude (thread) | done: `[n]`/`file:line` checks flagged in `ask` result, CLI and `--json`; full-span excerpts capped at 120 lines; expansion ranked resolved-first by kind; 135 tests |
 | SG8 | Read-only on target + CLI hygiene | SG0 | Claude (thread) | done: config in `.atlas/`, exitCode not exit; 104 tests, express git status clean |
 | SG9 | MCP server (additive, keeps `docs`/`ask`) | SG6, SG7 | unassigned | proposed (user chose "keep both", 2026-10-19) |
@@ -77,6 +77,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 - Cache key = context hash; `buildModuleContext` no longer O(files × all edges); "undocumented" counts only `exported` symbols, with word-boundary matching.
 - CI: persist docs between runs (commit `.atlas/docs/*.md` with hashes in front matter) so a PR that changes code without regenerating docs is reported stale. Fix the trigger branch (`main` does not exist).
 - Accept: a workflow test that runs drift against docs generated from the *base* commit reports the changed file as stale; synthesis on a fully cached 1k-file index ≤ 1 s; the job is green on this repo.
+- Follow-up: Atlas's own `.atlas/docs` are not committed yet, so CI here has nothing to check; commit them after SG9 and the audits.
 
 ### SG7: Grounded Q&A
 - Parse `[n]` and `file:line` references in answers and flag any citation that is outside the retrieved snippets. Excerpts respect `end_line`. Rank graph expansion by edge strength.
