@@ -162,6 +162,27 @@ export function listDocs(db: DB, dir: string): DocEntry[] {
   return [...out.values()].sort((a, b) => (a.target < b.target ? -1 : a.target > b.target ? 1 : 0));
 }
 
+/** `listDocs(db, dir).length` without reading any doc content (persisted docs counted by file name). */
+export function countDocs(db: DB, dir: string): number {
+  const targets = new Set(
+    db
+      .prepare(
+        `SELECT f.path FROM docs d JOIN files f ON f.id = d.target_id WHERE d.target_kind = 'file'
+         UNION SELECT 'architecture' FROM docs WHERE target_kind = 'architecture'`,
+      )
+      .pluck()
+      .all() as string[],
+  );
+  const filesDir = join(dir, FILES_DIR);
+  for (const p of walkMarkdown(dir)) {
+    if (p === join(dir, ARCHITECTURE_FILE)) targets.add('architecture');
+    else if (p.startsWith(filesDir + sep)) {
+      targets.add(relative(filesDir, p).slice(0, -'.md'.length).split(sep).join('/'));
+    }
+  }
+  return targets.size;
+}
+
 /** The doc for a file path or "architecture"; throws when there is none. */
 export function findDoc(db: DB, dir: string, target: string): DocEntry {
   const doc = listDocs(db, dir).find((d) => d.target === target);

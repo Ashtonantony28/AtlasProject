@@ -1,6 +1,7 @@
 import type { Command } from 'commander';
 import { closeDatabase } from '../../core/db/index.js';
-import { formatDriftReport, runDrift } from '../../core/drift/index.js';
+import { formatDriftReport, pageDriftReport, runDrift } from '../../core/drift/index.js';
+import { DriftParamsSchema, numberArg, parseParams } from '../../core/params.js';
 import { openProjectIndex } from '../../core/project.js';
 
 interface DriftArgs {
@@ -9,6 +10,8 @@ interface DriftArgs {
   skipArchitecture?: boolean;
   docsDir?: string;
   strict?: boolean;
+  limit?: string;
+  offset?: string;
 }
 
 export function registerDriftCommand(program: Command): void {
@@ -21,13 +24,19 @@ export function registerDriftCommand(program: Command): void {
     .option('--skip-architecture', 'Do not check the architecture-level doc')
     .option('--docs-dir <path>', 'Check persisted docs in this directory (e.g. .atlas/docs) instead of the index')
     .option('--strict', 'Also exit 2 when exported symbols are undocumented')
+    .option('-n, --limit <n>', 'Show at most this many stale and undocumented entries each (1-1000); counts stay complete')
+    .option('--offset <n>', 'Skip this many entries of each list', '0')
     .option('--cwd <path>', 'Project root', '.')
     .action((opts: DriftArgs) => {
+      const page = parseParams(DriftParamsSchema, {
+        limit: numberArg(opts.limit),
+        offset: numberArg(opts.offset),
+      });
       const { db, root } = openProjectIndex(opts.cwd ?? '.');
       try {
-        let report;
+        let full;
         try {
-          report = runDrift(db, {
+          full = runDrift(db, {
             root,
             skipArchitecture: opts.skipArchitecture ?? false,
             strict: opts.strict ?? false,
@@ -38,6 +47,10 @@ export function registerDriftCommand(program: Command): void {
           process.exitCode = 1;
           return;
         }
+        const report = pageDriftReport(full, {
+          offset: page.offset,
+          limit: opts.limit === undefined ? Number.MAX_SAFE_INTEGER : page.limit,
+        });
         if (opts.json) {
           process.stdout.write(JSON.stringify(report, null, 2) + '\n');
         } else {

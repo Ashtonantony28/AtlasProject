@@ -50,10 +50,11 @@ describe('renderComment', () => {
     const report: DriftReport = {
       stale: [],
       undocumented,
-      totals: { files: 1, docs: 0, publicSymbols: 50 },
+      totals: { files: 1, docs: 0, publicSymbols: 50, stale: 0, undocumented: 50 },
       hasDrift: true,
       failing: false,
       strict: false,
+      truncated: false,
     };
     const md = renderComment(report);
     expect(md).toMatch(/…and 20 more\./);

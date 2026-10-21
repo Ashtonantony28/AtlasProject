@@ -156,8 +156,13 @@ as tools: `atlas_index`, `atlas_search`, `atlas_symbol`, `atlas_graph`,
 answer with citation checks). It is additive: `atlas docs` and `atlas ask`
 still work. `atlas_ask` spends tokens within `tokenBudget` per server session;
 `--offline` uses the mock LLM. `atlas_drift` returns the same report as
-`atlas drift --json` (plus `formatted`; `strict` sets `failing` like `--strict`)
-and errors when there are no docs to check. `--cwd` must exist; like the CLI,
+`atlas drift --json`, paged to 100 stale and 100 undocumented entries
+(`limit`/`offset`; `totals` and `truncated` say what was left out; `formatted:
+true` adds the text report; `strict` sets `failing` like `--strict`) and errors
+when there are no docs to check. `atlas_graph` (and the dashboard's
+`/api/graph`) returns at most 1000 nodes and 2000 edges by default, scoped with
+`file` or `symbol` + `depth`; `atlas graph` takes the same flags but exports
+everything unless `--limit` is given. `--cwd` must exist; like the CLI,
 the server writes only under `.atlas/`.
 
 ```json

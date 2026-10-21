@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/ci/comment.test.ts
-source_hash: 41ad950812e68d5cdae117e4dff794dcb9d46ab4918980260deb44dabfffeec8
+source_hash: e60c656b402e11cc3417b7d1cfa72758d4278871fba8d773867fa95b38a6eed4
 ---
 # module test/ci/comment.test.ts
 
@@ -13,8 +13,8 @@ source_hash: 41ad950812e68d5cdae117e4dff794dcb9d46ab4918980260deb44dabfffeec8
 - `md` — variable (test/ci/comment.test.ts:35)
 - `undocumented` — variable (test/ci/comment.test.ts:44)
 - `report` — variable (test/ci/comment.test.ts:50)
-- `md` — variable (test/ci/comment.test.ts:58)
-- `yml` — variable (test/ci/comment.test.ts:66)
+- `md` — variable (test/ci/comment.test.ts:59)
+- `yml` — variable (test/ci/comment.test.ts:67)
 
 References: `test/ci/comment.test.ts:7`, `test/ci/comment.test.ts:15`, `test/ci/comment.test.ts:22`, `test/ci/comment.test.ts:35`, `test/ci/comment.test.ts:44`.
 

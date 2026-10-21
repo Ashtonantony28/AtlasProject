@@ -316,3 +316,21 @@ retried. Partial extraction (a walker bug after a tree exists) is still stored
 with an internal diagnostic, as in SG11: retrying a deterministic bug forever
 would leave the file unindexed. `npm run typecheck` also runs
 `tsconfig.test.json`. `startServer` reports the bound port, so `--port 0` works.
+
+## 2026-10-21 — SG15: RPC responses are bounded, files and pipes are not
+`atlas_graph`, `atlas_drift` and `/api/graph` take shared params
+(`graphParams`, `driftParams` in `core/params.ts`): graph `file` (path
+substring, like search), `symbol` (name or qualified name; `depth` 1–3 hops
+over edges either way), `limit` nodes (default 1000, max 5000), `edgeLimit`
+(2000, max 10000), `offset`; drift `limit` (100, max 1000) and `offset`, applied
+to each of `stale` and `undocumented`. Nodes are ordered by id; edges are those
+whose non-null endpoints are all on the page. Both shapes report `totals`
+(graph `{nodes, edges}` in scope; drift `totals.stale`/`totals.undocumented`)
+and `truncated`, so a client always knows what it is not seeing; `failing`,
+`hasDrift` and counts cover the whole report. MCP results are compact JSON and
+drift's `formatted` text is opt-in (`formatted: true`). The CLI accepts the same
+flags (`--limit`, `--edge-limit`, `--offset`, `--file`, `--symbol`, `--depth`)
+but exports everything when `--limit` is absent: `graph`/`drift --json` write
+to files and pipes, not a 10 MiB RPC frame, and `ci-comment` needs the full
+report. `/api/stats` uses `counts(db)` plus `countDocs` (index targets ∪
+`.atlas/docs` file names) instead of materialising tables and doc bodies.
