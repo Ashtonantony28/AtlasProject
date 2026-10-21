@@ -56,9 +56,35 @@ async function getBundle(language: GrammarId): Promise<LangBundle> {
   // tree-sitter's setLanguage takes a Language; the grammar module exports one.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   parser.setLanguage(grammar as any);
+  cacheNodeTypes(grammar);
   const bundle = { parser };
   cache.set(language, bundle);
   return bundle;
+}
+
+type NodeClass = { prototype: object };
+
+/**
+ * tree-sitter 0.21 gives each named node type its own class (one per symbol id) and means to set
+ * `type` on its prototype, but that write is swallowed by the inherited getter, so every
+ * `node.type` is a native call. The first read per class now stores the value on its prototype.
+ */
+function cacheNodeTypes(grammar: unknown): void {
+  const base = (Parser as unknown as { SyntaxNode?: NodeClass }).SyntaxNode;
+  const classes = (grammar as { nodeSubclasses?: NodeClass[] }).nodeSubclasses;
+  const getType = base && Object.getOwnPropertyDescriptor(base.prototype, 'type')?.get;
+  if (!classes || !getType) return;
+  for (const cls of new Set(classes)) {
+    if (cls === base || Object.hasOwn(cls.prototype, 'type')) continue;
+    Object.defineProperty(cls.prototype, 'type', {
+      configurable: true,
+      get(this: object): unknown {
+        const type: unknown = getType.call(this);
+        Object.defineProperty(cls.prototype, 'type', { value: type });
+        return type;
+      },
+    });
+  }
 }
 
 // tree-sitter's string-input parse path has an internal buffer limit (~32KB on

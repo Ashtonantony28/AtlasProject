@@ -1,7 +1,7 @@
 // Typed query helpers around the SQLite index. Thin wrappers over prepared
 // statements; keep query logic centralized so subsystems don't drift on schema.
 
-import type { DB } from './database.js';
+import { prepareCached, type DB } from './database.js';
 import type {
   FileRow,
   SymbolRow,
@@ -23,12 +23,13 @@ export interface UpsertFileInput {
 
 export function upsertFile(db: DB, input: UpsertFileInput): number {
   const now = new Date().toISOString();
-  const existing = db
-    .prepare('SELECT id, content_hash FROM files WHERE path = ?')
-    .get(input.path) as { id: number; content_hash: string } | undefined;
+  const existing = prepareCached(db, 'SELECT id, content_hash FROM files WHERE path = ?').get(
+    input.path,
+  ) as { id: number; content_hash: string } | undefined;
 
   if (existing) {
-    db.prepare(
+    prepareCached(
+      db,
       `UPDATE files
        SET language = ?, content_hash = ?, loc = ?, indexed_at = ?
        WHERE id = ?`,
@@ -36,12 +37,11 @@ export function upsertFile(db: DB, input: UpsertFileInput): number {
     return existing.id;
   }
 
-  const info = db
-    .prepare(
-      `INSERT INTO files (path, language, content_hash, loc, indexed_at)
+  const info = prepareCached(
+    db,
+    `INSERT INTO files (path, language, content_hash, loc, indexed_at)
        VALUES (?, ?, ?, ?, ?)`,
-    )
-    .run(input.path, input.language, input.content_hash, input.loc, now);
+  ).run(input.path, input.language, input.content_hash, input.loc, now);
   return Number(info.lastInsertRowid);
 }
 
@@ -54,11 +54,11 @@ export function getAllFiles(db: DB): FileRow[] {
 }
 
 export function deleteSymbolsForFile(db: DB, fileId: number): void {
-  db.prepare('DELETE FROM symbols WHERE file_id = ?').run(fileId);
+  prepareCached(db, 'DELETE FROM symbols WHERE file_id = ?').run(fileId);
 }
 
 export function deleteImportsForFile(db: DB, fileId: number): void {
-  db.prepare('DELETE FROM imports WHERE file_id = ?').run(fileId);
+  prepareCached(db, 'DELETE FROM imports WHERE file_id = ?').run(fileId);
 }
 
 export interface InsertSymbolInput {
@@ -74,22 +74,21 @@ export interface InsertSymbolInput {
 }
 
 export function insertSymbol(db: DB, input: InsertSymbolInput): number {
-  const info = db
-    .prepare(
-      `INSERT INTO symbols (file_id, kind, name, signature, start_line, end_line, docstring, qualified_name, exported)
+  const info = prepareCached(
+    db,
+    `INSERT INTO symbols (file_id, kind, name, signature, start_line, end_line, docstring, qualified_name, exported)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      input.file_id,
-      input.kind,
-      input.name,
-      input.signature,
-      input.start_line,
-      input.end_line,
-      input.docstring,
-      input.qualified_name,
-      input.exported ? 1 : 0,
-    );
+  ).run(
+    input.file_id,
+    input.kind,
+    input.name,
+    input.signature,
+    input.start_line,
+    input.end_line,
+    input.docstring,
+    input.qualified_name,
+    input.exported ? 1 : 0,
+  );
   return Number(info.lastInsertRowid);
 }
 
@@ -156,19 +155,18 @@ export interface InsertImportInput {
 }
 
 export function insertImport(db: DB, input: InsertImportInput): number {
-  const info = db
-    .prepare(
-      `INSERT INTO imports (file_id, module, imported, alias, start_line, reexport)
+  const info = prepareCached(
+    db,
+    `INSERT INTO imports (file_id, module, imported, alias, start_line, reexport)
        VALUES (?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      input.file_id,
-      input.module,
-      input.imported,
-      input.alias,
-      input.start_line,
-      input.reexport ? 1 : 0,
-    );
+  ).run(
+    input.file_id,
+    input.module,
+    input.imported,
+    input.alias,
+    input.start_line,
+    input.reexport ? 1 : 0,
+  );
   return Number(info.lastInsertRowid);
 }
 
@@ -185,7 +183,8 @@ export function getAllImports(db: DB): ImportRow[] {
 export type InsertRefInput = Omit<RefRow, 'id' | 'file_id'>;
 
 export function insertRefs(db: DB, fileId: number, refs: InsertRefInput[]): void {
-  const stmt = db.prepare(
+  const stmt = prepareCached(
+    db,
     `INSERT INTO refs (file_id, src_qualified_name, name, receiver, object, kind, line)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
   );
@@ -199,7 +198,7 @@ export function getAllRefs(db: DB): RefRow[] {
 }
 
 export function deleteRefsForFile(db: DB, fileId: number): void {
-  db.prepare('DELETE FROM refs WHERE file_id = ?').run(fileId);
+  prepareCached(db, 'DELETE FROM refs WHERE file_id = ?').run(fileId);
 }
 
 export interface UpsertDocInput {

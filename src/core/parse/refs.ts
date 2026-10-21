@@ -3,6 +3,12 @@ import type { ParseDiagnostic, ParsedReference } from './types.js';
 
 type Node = Parser.SyntaxNode;
 
+/**
+ * Handles the node at the cursor without materialising it, leaving the cursor where it was;
+ * returns false to have the node materialised and handled as usual instead.
+ */
+export type Peek = (cursor: Parser.TreeCursor, type: string) => boolean;
+
 /** A pending CST node, or a scope restore to run once that scope's nodes are done. */
 export type Frame = Node | (() => void);
 
@@ -19,6 +25,58 @@ export function walkFrames(roots: Node[], visit: (node: Node, stack: Frame[]) =>
     if (typeof f === 'function') f();
     else visit(f, stack);
   }
+}
+
+/**
+ * Walks `node`'s named descendants in the order of `pushAll(stack, node.namedChildren)` with a
+ * visitor that walks the children of every node whose type is not in `types`; those nodes are
+ * passed over by one cursor and never materialised. `visit` gets the others and returns true to
+ * have their children walked too.
+ */
+export function pushDescendants(
+  stack: Frame[],
+  node: Node,
+  types: Set<string>,
+  visit: (node: Node, type: string, stack: Frame[]) => boolean,
+  peek?: Peek,
+): void {
+  const cursor = node.walk();
+  if (!cursor.gotoFirstChild()) return;
+  let depth = 1;
+  const advance = (): boolean => {
+    while (!cursor.gotoNextSibling()) {
+      cursor.gotoParent();
+      if (--depth === 0) return false;
+    }
+    return true;
+  };
+  const scan = (): void => {
+    for (;;) {
+      if (cursor.nodeIsNamed) {
+        const type = cursor.nodeType;
+        if (types.has(type) && !peek?.(cursor, type)) {
+          const current = cursor.currentNode;
+          stack.push(resume);
+          if (!visit(current, type, stack)) return;
+          if (stack[stack.length - 1] !== resume) {
+            // `visit` queued frames of its own: its children go first, on a cursor of their own.
+            pushDescendants(stack, current, types, visit, peek);
+            return;
+          }
+          stack.pop();
+        }
+        if (cursor.gotoFirstChild()) {
+          depth++;
+          continue;
+        }
+      }
+      if (!advance()) return;
+    }
+  };
+  const resume = (): void => {
+    if (advance()) scan();
+  };
+  stack.push(scan);
 }
 
 export const MAX_SYNTAX_DIAGNOSTICS = 20;
@@ -79,12 +137,26 @@ export function internalDiagnostic(err: unknown): ParseDiagnostic {
   };
 }
 
-/** Calls `onMatch` for every descendant of `node` (inclusive) whose type is in `types`. Comments and plain strings have no such descendants. */
-export function forEachOfType(node: Node, types: Set<string>, onMatch: (n: Node) => void): void {
+// `descendantsOfType` matches type names against every grammar symbol first (about 20 µs a
+// call); a JS cursor costs about 0.5 µs a node, so small subtrees are walked in JS.
+const NATIVE_MIN_DESCENDANTS = 100;
+
+/** Calls `onMatch` for every descendant of `node` (inclusive) whose type is in `types`, in pre-order. Comments and plain strings have no such descendants. */
+export function forEachOfType(
+  node: Node,
+  types: Set<string>,
+  onMatch: (n: Node) => void,
+  peek?: Peek,
+): void {
+  if (node.descendantCount > NATIVE_MIN_DESCENDANTS) {
+    for (const n of node.descendantsOfType([...types])) onMatch(n);
+    return;
+  }
   const cursor = node.walk();
   let depth = 0;
   for (;;) {
-    if (types.has(cursor.nodeType)) onMatch(cursor.currentNode);
+    const type = cursor.nodeType;
+    if (types.has(type) && !peek?.(cursor, type)) onMatch(cursor.currentNode);
     if (cursor.gotoFirstChild()) {
       depth++;
       continue;
