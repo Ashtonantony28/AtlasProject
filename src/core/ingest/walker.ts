@@ -6,6 +6,10 @@ import { detectLanguage, type LanguageId } from './language.js';
 export interface WalkOptions {
   // Extra exclude globs (added to .gitignore rules).
   exclude?: string[];
+  // Gitignore-style globs; when non-empty only matching files are walked.
+  include?: string[];
+  // Languages to keep; omitted = all supported.
+  languages?: LanguageId[];
   // Hard maximum file size in bytes (skipped if larger). Default 1 MiB.
   maxBytes?: number;
 }
@@ -57,6 +61,8 @@ export function walkRepo(root: string, opts: WalkOptions = {}): WalkedFile[] {
   if (opts.exclude && opts.exclude.length > 0) {
     ig.add(opts.exclude);
   }
+  const inc = opts.include && opts.include.length > 0 ? ignore().add(opts.include) : null;
+  const langs = opts.languages ? new Set(opts.languages) : null;
   const out: WalkedFile[] = [];
 
   const visit = (dir: string): void => {
@@ -76,8 +82,9 @@ export function walkRepo(root: string, opts: WalkOptions = {}): WalkedFile[] {
         visit(abs);
       } else if (e.isFile()) {
         if (ig.ignores(rel)) continue;
+        if (inc && !inc.ignores(rel)) continue;
         const lang = detectLanguage(e.name);
-        if (!lang) continue;
+        if (!lang || (langs && !langs.has(lang))) continue;
         let st;
         try {
           st = statSync(abs);

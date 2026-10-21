@@ -48,7 +48,8 @@ export function registerSearchCommand(program: Command): void {
           for (const k of parts) {
             if (!VALID_KINDS.includes(k)) {
               process.stderr.write(`atlas: unknown kind '${k}'\n`);
-              process.exit(1);
+              process.exitCode = 1;
+              return;
             }
           }
           kinds = parts;

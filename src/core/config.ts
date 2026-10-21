@@ -1,9 +1,11 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { z } from 'zod';
 
-export const CONFIG_FILE = 'atlas.config.json';
 export const ATLAS_DIR = '.atlas';
+export const CONFIG_FILE = `${ATLAS_DIR}/config.json`;
+// Pre-SG8 location; still read if present, never written.
+export const LEGACY_CONFIG_FILE = 'atlas.config.json';
 export const DB_FILE = 'index.db';
 
 export const ConfigSchema = z.object({
@@ -11,13 +13,11 @@ export const ConfigSchema = z.object({
   // Where the SQLite index lives, relative to project root.
   indexPath: z.string().default(`${ATLAS_DIR}/${DB_FILE}`),
   // Languages we attempt to parse. Phase 2 supports ts, js, py.
-  languages: z.array(z.enum(['typescript', 'javascript', 'python'])).default([
-    'typescript',
-    'javascript',
-    'python',
-  ]),
-  // Glob-ish includes/excludes. We honor .gitignore plus these.
-  include: z.array(z.string()).default(['src/**', 'lib/**']),
+  languages: z
+    .array(z.enum(['typescript', 'javascript', 'python']))
+    .default(['typescript', 'javascript', 'python']),
+  // Gitignore-style globs. Empty include = walk everything; exclude adds to .gitignore.
+  include: z.array(z.string()).default([]),
   exclude: z
     .array(z.string())
     .default(['node_modules/**', 'dist/**', 'build/**', '.atlas/**', 'coverage/**']),
@@ -44,15 +44,23 @@ export function resolvePaths(root: string, config: AtlasConfig): ResolvedPaths {
   const abs = resolve(root);
   return {
     root: abs,
-    configPath: join(abs, CONFIG_FILE),
+    configPath: findConfigPath(abs) ?? join(abs, CONFIG_FILE),
     atlasDir: join(abs, ATLAS_DIR),
     dbPath: join(abs, config.indexPath),
   };
 }
 
+function findConfigPath(root: string): string | null {
+  for (const f of [CONFIG_FILE, LEGACY_CONFIG_FILE]) {
+    const p = join(root, f);
+    if (existsSync(p)) return p;
+  }
+  return null;
+}
+
 export function loadConfig(root: string): AtlasConfig {
-  const cfgPath = join(resolve(root), CONFIG_FILE);
-  if (!existsSync(cfgPath)) {
+  const cfgPath = findConfigPath(resolve(root));
+  if (!cfgPath) {
     return DEFAULT_CONFIG;
   }
   const raw = readFileSync(cfgPath, 'utf8');
@@ -85,25 +93,22 @@ export interface InitResult {
 }
 
 /**
- * Idempotent: writes a default config (if missing) and creates an empty index DB.
+ * Idempotent: writes `.atlas/config.json` (if missing) and creates `.atlas/`.
+ * Never writes outside `.atlas/`; a legacy root config is left untouched.
  */
 export function writeDefaultConfig(root: string, opts: InitOptions = {}): InitResult {
   const abs = resolve(root);
-  const configPath = join(abs, CONFIG_FILE);
-  const atlasDir = join(abs, ATLAS_DIR);
-  const dbPath = join(abs, DEFAULT_CONFIG.indexPath);
-
-  const configExisted = existsSync(configPath);
+  const existing = findConfigPath(abs);
+  const configExisted = existing !== null;
+  let configPath = existing ?? join(abs, CONFIG_FILE);
+  mkdirSync(join(abs, ATLAS_DIR), { recursive: true });
   if (!configExisted || opts.force) {
-    mkdirSync(dirname(configPath), { recursive: true });
+    configPath = join(abs, CONFIG_FILE);
     writeFileSync(configPath, JSON.stringify(DEFAULT_CONFIG, null, 2) + '\n', 'utf8');
   }
-
-  mkdirSync(atlasDir, { recursive: true });
-
   return {
     configPath,
-    dbPath,
+    dbPath: resolvePaths(abs, loadConfig(abs)).dbPath,
     created: !configExisted,
     configExisted,
   };

@@ -172,3 +172,12 @@ quoted and OR-ed, so user text never reaches MATCH syntax. Kind/file filters
 are pushed into SQL and into vec0 KNN as `rowid IN (subquery)`, which sqlite-vec
 pre-filters exactly. Bench on `--target synthetic10k` (10,206 symbols): search
 p50 18.8 ms / p95 27.7 ms (KNN ≈ 11 ms + FTS ≈ 9 ms dominate).
+
+## 2026-10-21 — SG8: config inside `.atlas/`, exitCode over exit
+Config moved to `.atlas/config.json` so Atlas writes nothing in the target
+outside `.atlas/`; a root `atlas.config.json` is still read as a fallback but
+never written (and `init` leaves it in charge). `include` defaults to `[]`
+(everything) and, like `languages`, now filters the walk. CLI actions set
+`process.exitCode` and return instead of calling `process.exit` inside
+`try/finally`, so the DB is always closed; the top-level catch still exits 1.
+`buildProgram()` (src/cli/program.ts) lets tests drive commands in-process.

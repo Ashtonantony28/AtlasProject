@@ -14,7 +14,7 @@ ATLAS="node ./dist/cli/index.js"
 
 echo
 echo "== init =="
-rm -rf "$FIXTURE/.atlas" "$FIXTURE/atlas.config.json"
+rm -rf "$FIXTURE/.atlas"
 $ATLAS init --cwd "$FIXTURE"
 
 echo

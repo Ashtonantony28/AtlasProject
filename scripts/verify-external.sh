@@ -136,6 +136,17 @@ echo "== incremental re-index =="
 $ATLAS index "$REPO_DIR" | head -3
 
 echo
+echo "== target untouched outside .atlas/ =="
+DIRTY=$(git -C "$REPO_DIR" status --porcelain --untracked-files=all | grep -v '^?? \.atlas/' || true)
+if [ -z "$DIRTY" ]; then
+  echo "  ok   git status shows only .atlas/"
+else
+  echo "  FAIL target modified outside .atlas/:"
+  echo "$DIRTY"
+  fail=1
+fi
+
+echo
 if [ "$fail" -ne 0 ]; then
   echo "verify-external: FAILED"
   exit 1
