@@ -161,3 +161,14 @@ content, trigger-synced) for SG5's lexical leg. `createEmbedder(config)` is the
 single place an embedder is chosen. `scripts/bench.mjs` baseline on Atlas itself
 (75 files, 690 symbols): index 595 ms, 2.6 ms/file median, no-op re-index 10 ms,
 search p50 1.7 ms / p95 3.7 ms. The 10k-symbol search budget is measured in SG5.
+
+## 2026-10-21 — SG5: hybrid search via weighted RRF
+`search()` unions three candidate sources: vec0 KNN, FTS5 (`symbols_fts`, bm25
+weighted 10/5/1 over name/qualified_name/docstring) and an exact-name lookup on
+`idx_symbols_name`. Rankings are fused with RRF (k=60); `semanticWeight` /
+`structuralWeight` (0.6/0.4) now weight the semantic list vs the lexical +
+structural lists. FTS queries are built only from identifier tokens, each
+quoted and OR-ed, so user text never reaches MATCH syntax. Kind/file filters
+are pushed into SQL and into vec0 KNN as `rowid IN (subquery)`, which sqlite-vec
+pre-filters exactly. Bench on `--target synthetic10k` (10,206 symbols): search
+p50 18.8 ms / p95 27.7 ms (KNN ≈ 11 ms + FTS ≈ 9 ms dominate).

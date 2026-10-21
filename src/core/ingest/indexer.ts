@@ -15,7 +15,8 @@ import { walkRepo, type WalkOptions } from './walker.js';
 import { sha256, countLoc } from './hash.js';
 import { parseSource } from '../parse/parser.js';
 import { resolveGraph } from '../graph/resolver.js';
-import { embedAllSymbols, LocalHashEmbedder, deleteEmbeddingsForFile } from '../vector/index.js';
+import { embedAllSymbols, createEmbedder, deleteEmbeddingsForFile } from '../vector/index.js';
+import { loadConfig } from '../config.js';
 import type { LanguageId } from './language.js';
 
 export interface IndexOptions extends WalkOptions {
@@ -184,7 +185,7 @@ export async function indexRepo(
 
   // Generate embeddings for any new/changed symbols. Local-only, no API spend.
   if (!opts.skipEmbeddings) {
-    const embedder = new LocalHashEmbedder();
+    const embedder = createEmbedder(loadConfig(root));
     const embStats = await embedAllSymbols(db, embedder, root);
     stats.embeddings = embStats.generated;
   }
