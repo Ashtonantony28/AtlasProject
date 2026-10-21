@@ -28,6 +28,7 @@ export interface SymbolRow {
   end_line: number;
   docstring: string | null;
   qualified_name: string | null;
+  exported: number;
 }
 
 export interface EdgeRow {

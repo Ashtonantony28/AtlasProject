@@ -1,5 +1,6 @@
 export {
   LocalHashEmbedder,
+  createEmbedder,
   tokenize,
   cosine,
 } from './embedder.js';

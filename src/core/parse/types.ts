@@ -9,6 +9,7 @@ export interface ParsedSymbol {
   endLine: number; // 1-based, inclusive
   docstring: string | null;
   qualifiedName: string | null;
+  exported: boolean;
 }
 
 export interface ParsedImport {
