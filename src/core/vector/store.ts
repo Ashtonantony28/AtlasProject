@@ -5,7 +5,7 @@
 //   embeddings_meta — symbol_id PK, model, dim (for tracking which model
 //                     produced each row; vec0 doesn't carry metadata of its own)
 
-import type { DB } from '../db/index.js';
+import { prepareCached, type DB } from '../db/index.js';
 import { EMBEDDING_DIM } from '../db/schema.js';
 
 function vecBuffer(vec: Float32Array): Buffer {
@@ -20,9 +20,10 @@ export function upsertEmbedding(db: DB, symbolId: number, model: string, vec: Fl
   const rowid = BigInt(symbolId);
   // vec0 supports INSERT OR REPLACE — clear the slot first to be explicit,
   // then insert. (UPDATE on vec0 requires you to drop the row first.)
-  db.prepare('DELETE FROM embeddings_vec WHERE rowid = ?').run(rowid);
-  db.prepare('INSERT INTO embeddings_vec(rowid, embedding) VALUES (?, ?)').run(rowid, buf);
-  db.prepare(
+  prepareCached(db, 'DELETE FROM embeddings_vec WHERE rowid = ?').run(rowid);
+  prepareCached(db, 'INSERT INTO embeddings_vec(rowid, embedding) VALUES (?, ?)').run(rowid, buf);
+  prepareCached(
+    db,
     `INSERT INTO embeddings_meta(symbol_id, model, dim) VALUES (?, ?, ?)
      ON CONFLICT(symbol_id) DO UPDATE SET model = excluded.model, dim = excluded.dim`,
   ).run(symbolId, model, vec.length);
@@ -56,16 +57,17 @@ export function countEmbeddings(db: DB): number {
 }
 
 export function deleteEmbeddingsForFile(db: DB, fileId: number): void {
-  // Collect symbol ids first so we can delete from both tables atomically.
-  const rows = db.prepare('SELECT id FROM symbols WHERE file_id = ?').all(fileId) as {
+  const rows = prepareCached(db, 'SELECT id FROM symbols WHERE file_id = ?').all(fileId) as {
     id: number;
   }[];
-  const ids = rows.map((r) => r.id);
-  if (ids.length === 0) return;
-  const placeholders = ids.map(() => '?').join(',');
-  const idsBig = ids.map((i) => BigInt(i));
-  db.prepare(`DELETE FROM embeddings_vec WHERE rowid IN (${placeholders})`).run(...idsBig);
-  db.prepare(`DELETE FROM embeddings_meta WHERE symbol_id IN (${placeholders})`).run(...ids);
+  // One point delete per rowid: vec0 scans every chunk for `rowid IN (...)` (A2-03).
+  // Callers run this inside their own transaction.
+  const delVec = prepareCached(db, 'DELETE FROM embeddings_vec WHERE rowid = ?');
+  const delMeta = prepareCached(db, 'DELETE FROM embeddings_meta WHERE symbol_id = ?');
+  for (const { id } of rows) {
+    delVec.run(BigInt(id));
+    delMeta.run(id);
+  }
 }
 
 export function getEmbeddingMeta(
@@ -91,14 +93,13 @@ export function vectorKnn(
 ): Array<{ symbolId: number; distance: number; similarity: number }> {
   const buf = vecBuffer(query);
   // vec0 pre-filters KNN on `rowid IN (subquery)`, so filtered searches stay exact.
-  const rows = db
-    .prepare(
-      `SELECT rowid AS symbol_id, distance
-       FROM embeddings_vec
-       WHERE embedding MATCH ? AND k = ?${rowidFilter ? ` AND rowid IN (${rowidFilter.sql})` : ''}
-       ORDER BY distance`,
-    )
-    .all(buf, k, ...(rowidFilter?.params ?? [])) as KnnRow[];
+  const rows = prepareCached(
+    db,
+    `SELECT rowid AS symbol_id, distance
+     FROM embeddings_vec
+     WHERE embedding MATCH ? AND k = ?${rowidFilter ? ` AND rowid IN (${rowidFilter.sql})` : ''}
+     ORDER BY distance`,
+  ).all(buf, k, ...(rowidFilter?.params ?? [])) as KnnRow[];
   return rows.map(toKnnHit);
 }
 
@@ -110,7 +111,8 @@ export function vectorSimilarities(
 ): Map<number, number> {
   const buf = vecBuffer(query);
   // Point lookups: vec0 scans every chunk for `rowid IN (...)` outside a KNN query.
-  const stmt = db.prepare(
+  const stmt = prepareCached(
+    db,
     'SELECT vec_distance_l2(embedding, ?) AS distance FROM embeddings_vec WHERE rowid = ?',
   );
   const out = new Map<number, number>();

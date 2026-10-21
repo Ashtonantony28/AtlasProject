@@ -7,10 +7,11 @@ describe('renderComment', () => {
     const report: DriftReport = {
       stale: [],
       undocumented: [],
-      totals: { files: 4, docs: 5, publicSymbols: 19 },
+      totals: { files: 4, docs: 5, publicSymbols: 19, stale: 0, undocumented: 0 },
       hasDrift: false,
       failing: false,
       strict: false,
+      truncated: false,
     };
     const md = renderComment(report);
     expect(md).toMatch(/Atlas — documentation report/);
@@ -27,10 +28,11 @@ describe('renderComment', () => {
         { file: 'src/foo.ts', symbol: 'foo', kind: 'function', startLine: 12 },
         { file: 'src/foo.ts', symbol: 'Bar', kind: 'class', startLine: 50 },
       ],
-      totals: { files: 1, docs: 1, publicSymbols: 5 },
+      totals: { files: 1, docs: 1, publicSymbols: 5, stale: 1, undocumented: 2 },
       hasDrift: true,
       failing: true,
       strict: false,
+      truncated: false,
     };
     const md = renderComment(report);
     expect(md).toMatch(/Stale docs/);

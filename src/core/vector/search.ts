@@ -4,7 +4,7 @@
 // with Reciprocal Rank Fusion. --kind / --file filters are pushed into every
 // candidate query, so they apply before truncation.
 
-import { type DB, type SymbolKind, type SymbolRow } from '../db/index.js';
+import { prepareCached, type DB, type SymbolKind, type SymbolRow } from '../db/index.js';
 import { vectorKnn, vectorSimilarities } from './store.js';
 import { tokenize, type Embedder } from './embedder.js';
 
@@ -59,7 +59,7 @@ export async function search(
     poolSize,
     filter
       ? {
-          sql: `SELECT s.id FROM symbols s JOIN files f ON f.id = s.file_id WHERE ${filter.sql}`,
+          sql: `SELECT s.id FROM symbols s WHERE ${filter.sql}`,
           params: filter.params,
         }
       : undefined,
@@ -69,9 +69,6 @@ export async function search(
   ];
 
   const similarity = new Map(knn.map((r) => [r.symbolId, r.similarity]));
-  const missing = lexical.filter((id) => !similarity.has(id));
-  for (const [id, sim] of vectorSimilarities(db, qVec, missing)) similarity.set(id, sim);
-
   const candidateIds = [...new Set([...knn.map((r) => r.symbolId), ...lexical])];
   const symbolById = loadSymbolsByIds(db, candidateIds);
   const qLower = query.toLowerCase();
@@ -108,8 +105,18 @@ export async function search(
   });
 
   for (const h of hits) h.totalScore = fused.get(h.symbol.id) ?? 0;
-  return hits
-    .filter((h) => h.totalScore > 0)
+  const ranked = hits.filter((h) => h.totalScore > 0).sort((a, b) => b.totalScore - a.totalScore);
+  // Similarity only breaks ties and is reported, so look it up (a vec0 point
+  // read each) just for lexical hits that can still reach the top `limit`.
+  const cut = ranked[Math.min(limit, ranked.length) - 1]?.totalScore ?? 0;
+  const contenders = ranked.filter((h) => h.totalScore >= cut && !similarity.has(h.symbol.id));
+  const sims = vectorSimilarities(
+    db,
+    qVec,
+    contenders.map((h) => h.symbol.id),
+  );
+  for (const h of contenders) h.semanticScore = sims.get(h.symbol.id) ?? 0;
+  return ranked
     .sort((a, b) => b.totalScore - a.totalScore || b.semanticScore - a.semanticScore)
     .slice(0, limit);
 }
@@ -124,7 +131,7 @@ function buildFilter(opts: SearchOptions): Filter | null {
     params.push(...kinds);
   }
   if (opts.file) {
-    clauses.push('instr(f.path, ?) > 0');
+    clauses.push('s.file_id IN (SELECT id FROM files WHERE instr(path, ?) > 0)');
     params.push(opts.file);
   }
   return { sql: clauses.join(' AND '), params };
@@ -136,14 +143,13 @@ function rawWords(query: string): string[] {
 
 function exactIds(db: DB, query: string, filter: Filter | null, k: number): number[] {
   const names = [...new Set([query.trim(), ...rawWords(query)])].slice(0, MAX_TERMS);
-  const rows = db
-    .prepare(
-      `SELECT s.id FROM symbols s JOIN files f ON f.id = s.file_id
+  const rows = prepareCached(
+    db,
+    `SELECT s.id FROM symbols s
        WHERE (s.name IN (${names.map(() => '?').join(',')}) OR s.qualified_name = ?)
        ${filter ? `AND ${filter.sql}` : "AND s.kind != 'module'"}
        LIMIT ?`,
-    )
-    .all(...names, query.trim(), ...(filter?.params ?? []), k) as { id: number }[];
+  ).all(...names, query.trim(), ...(filter?.params ?? []), k) as { id: number }[];
   return rows.map((r) => r.id);
 }
 
@@ -166,16 +172,34 @@ function ftsQuery(query: string): string | null {
 function ftsIds(db: DB, query: string, filter: Filter | null, k: number): number[] {
   const match = ftsQuery(query);
   if (!match) return [];
-  const rows = db
-    .prepare(
-      `SELECT s.id FROM symbols_fts
+  // Rank FTS rows on their own first: joining every match before the sort
+  // dominates on large indexes. Fall back to ranking only rows that pass a
+  // selective filter when the over-fetch cannot fill k.
+  const fetch = k * 2;
+  const top = prepareCached(
+    db,
+    `SELECT rowid AS id FROM symbols_fts WHERE symbols_fts MATCH ?
+     ORDER BY bm25(symbols_fts, 10.0, 5.0, 1.0) LIMIT ?`,
+  ).all(match, fetch) as { id: number }[];
+  const keep = new Set(
+    (
+      prepareCached(
+        db,
+        `SELECT s.id FROM symbols s WHERE s.id IN (SELECT value FROM json_each(?))
+         AND ${filter ? filter.sql : "s.kind != 'module'"}`,
+      ).all(JSON.stringify(top.map((r) => r.id)), ...(filter?.params ?? [])) as { id: number }[]
+    ).map((r) => r.id),
+  );
+  const ids = top.map((r) => r.id).filter((id) => keep.has(id));
+  if (ids.length >= k || top.length < fetch) return ids.slice(0, k);
+  const rows = prepareCached(
+    db,
+    `SELECT s.id FROM symbols_fts
        JOIN symbols s ON s.id = symbols_fts.rowid
-       JOIN files f ON f.id = s.file_id
        WHERE symbols_fts MATCH ? AND ${filter ? filter.sql : "s.kind != 'module'"}
        ORDER BY bm25(symbols_fts, 10.0, 5.0, 1.0)
        LIMIT ?`,
-    )
-    .all(match, ...(filter?.params ?? []), k) as { id: number }[];
+  ).all(match, ...(filter?.params ?? []), k) as { id: number }[];
   return rows.map((r) => r.id);
 }
 
@@ -184,14 +208,13 @@ function loadSymbolsByIds(
   ids: number[],
 ): Map<number, { symbol: SymbolRow; filePath: string }> {
   if (ids.length === 0) return new Map();
-  const placeholders = ids.map(() => '?').join(',');
-  const rows = db
-    .prepare(
-      `SELECT s.id, s.file_id, s.kind, s.name, s.signature, s.start_line, s.end_line, s.docstring,
-              s.qualified_name, s.exported, f.path AS file_path
-       FROM symbols s JOIN files f ON f.id = s.file_id WHERE s.id IN (${placeholders})`,
-    )
-    .all(...ids) as Array<SymbolRow & { file_path: string }>;
+  const rows = prepareCached(
+    db,
+    `SELECT s.id, s.file_id, s.kind, s.name, s.signature, s.start_line, s.end_line, s.docstring,
+            s.qualified_name, s.exported, f.path AS file_path
+     FROM symbols s JOIN files f ON f.id = s.file_id
+     WHERE s.id IN (SELECT value FROM json_each(?))`,
+  ).all(JSON.stringify(ids)) as Array<SymbolRow & { file_path: string }>;
   return new Map(
     rows.map(({ file_path, ...symbol }) => [symbol.id, { symbol, filePath: file_path }]),
   );
