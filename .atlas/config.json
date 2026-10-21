@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "indexPath": ".atlas/index.db",
+  "languages": [
+    "typescript",
+    "javascript",
+    "python"
+  ],
+  "include": [],
+  "exclude": [
+    "node_modules/**",
+    "dist/**",
+    "build/**",
+    ".atlas/**",
+    "coverage/**"
+  ],
+  "tokenBudget": 200000,
+  "embeddingModel": "local-hash-v1",
+  "synthModel": "claude-sonnet-4-6"
+}

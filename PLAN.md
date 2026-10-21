@@ -48,7 +48,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 | SG9 | MCP server (additive, keeps `docs`/`ask`) | SG6, SG7 | Claude (thread) | done: `atlas mcp` stdio, 7 tools incl. docs + ask (citation checks, budgeted); 186 tests |
 | SG10 | Resolver: re-exports, default/CJS exports, generic Python bases (A1-01, A1-02, A1-03) | SG4 | Claude (thread) | proposed (from AUDIT-1) |
 | SG11 | Parser never throws; diagnostics; failed parse marks docs stale (A1-04, A1-13) | SG3 | Claude (thread) | done: iterative CST walks (20k-term exprs), `ParseResult.diagnostics` (not stored), drift flags files changed since indexing; 3 A1-04 flipped; 241 tests; express 2052/1444, got 5752/4850 |
-| SG12 | Drift completeness: full neighbourhood hash, `--docs-dir` missing fails, CRLF, commit own docs (A1-05..08) | SG6 | Claude (thread) | proposed (from AUDIT-1) |
+| SG12 | Drift completeness: full neighbourhood hash, `--docs-dir` missing fails, CRLF, commit own docs (A1-05..08) | SG6 | Claude (thread) | done: uncapped neighbourhood digest in prompt, deleted-file tombstones, CRLF, `--docs-dir` missing/empty exits 1, `.atlas/config.json` committable; A1-05/06/07/08/17 flipped; 252 tests; got 97k tokens; own docs still uncommitted |
 
 ### SG0: Shared interfaces + bench harness
 - Migration v3 (`symbols.exported`), `ParsedSymbol.exported`, `createEmbedder`, FTS5 table `symbols_fts` (migration v3), plus contract tests that pin each item in §Interfaces.
@@ -81,7 +81,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 - Cache key = context hash; `buildModuleContext` no longer O(files × all edges); "undocumented" counts only `exported` symbols, with word-boundary matching.
 - CI: persist docs between runs (commit `.atlas/docs/*.md` with hashes in front matter) so a PR that changes code without regenerating docs is reported stale. Fix the trigger branch (`main` does not exist).
 - Accept: a workflow test that runs drift against docs generated from the *base* commit reports the changed file as stale; synthesis on a fully cached 1k-file index ≤ 1 s; the job is green on this repo.
-- Follow-up: Atlas's own `.atlas/docs` are not committed yet, so CI here has nothing to check; commit them after SG9 and the audits.
+- Follow-up done in SG12: `.atlas/docs` and `.atlas/config.json` are committed. Every PR that changes code must run `atlas index . && atlas docs --offline` and commit the result, or CI fails.
 
 ### SG7: Grounded Q&A
 - Parse `[n]` and `file:line` references in answers and flag any citation that is outside the retrieved snippets. Excerpts respect `end_line`. Rank graph expansion by edge strength.

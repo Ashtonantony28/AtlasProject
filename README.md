@@ -202,9 +202,12 @@ ci-comment produces the exact comment payload).
 
 ## CI
 
-`.github/workflows/atlas.yml` runs on every PR: index + docs + drift, then
-posts a sticky comment summarising stale docs and undocumented public symbols.
-The job fails (so PR checks go red) when drift is present.
+`.github/workflows/atlas.yml` runs on every PR: index, then drift against the
+docs committed under `.atlas/docs` (not regenerated in CI), then posts a sticky
+comment summarising stale docs and undocumented public symbols. Commit
+`.atlas/docs/` and `.atlas/config.json` (so CI indexes with the same filters).
+The job fails (so PR checks go red) when drift is present; `drift --docs-dir`
+exits 1 when that directory is missing or holds no docs.
 
 ## Costs and safety
 

@@ -5,9 +5,12 @@
 //     it would be generated from now (its grounding context moved on), or a
 //     persisted doc whose file no longer exists, or a doc whose file on disk no
 //     longer matches its indexed content hash (edited, or failed to re-index).
-//     Fatal in the CLI.
+//     In DB mode a pruned file's doc survives as a tombstone until the next
+//     `atlas docs`, so deletions are stale here too. Fatal in the CLI.
 //   - undocumented: an exported symbol whose name (qualified or bare) does
-//     not appear as a whole identifier in its file's doc. Reported only;
+//     not appear as a whole identifier in its file's doc, or a `module` entry
+//     for a file with no doc and no exported symbols (e.g. added since), so
+//     every undocumented file is listed. Reported only;
 //     fatal with `atlas drift --strict`.
 
 import { readFileSync } from 'node:fs';
@@ -16,6 +19,7 @@ import { type DB, type FileRow, getAllFiles, getSymbolsForFile } from '../db/ind
 import { sha256 } from '../ingest/index.js';
 import {
   architecturePrompt,
+  deletedDocsFromDb,
   docsFromDb,
   modulePrompt,
   type PersistedDoc,
@@ -60,7 +64,7 @@ export interface DetectOptions {
 
 export function detectDrift(db: DB, opts: DetectOptions): DriftReport {
   const files = getAllFiles(db);
-  const docs = opts.docs ?? docsFromDb(db);
+  const docs = opts.docs ?? [...deletedDocsFromDb(db), ...docsFromDb(db)];
   const fileDocs = new Map<string, PersistedDoc>();
   let archDoc: PersistedDoc | undefined;
   for (const d of docs) {
@@ -94,6 +98,9 @@ export function detectDrift(db: DB, opts: DetectOptions): DriftReport {
     const exported = getSymbolsForFile(db, file.id).filter(
       (s) => s.exported === 1 && s.kind !== 'module',
     );
+    if (!doc && exported.length === 0) {
+      undocumented.push({ file: file.path, symbol: file.path, kind: 'module', startLine: 1 });
+    }
     publicSymbolCount += exported.length;
     for (const sym of exported) {
       const ref = sym.qualified_name ?? sym.name;
@@ -129,7 +136,11 @@ export function detectDrift(db: DB, opts: DetectOptions): DriftReport {
   return {
     stale,
     undocumented,
-    totals: { files: files.length, docs: docs.length, publicSymbols: publicSymbolCount },
+    totals: {
+      files: files.length,
+      docs: fileDocs.size + (archDoc ? 1 : 0),
+      publicSymbols: publicSymbolCount,
+    },
     hasDrift: stale.length > 0 || undocumented.length > 0,
   };
 }

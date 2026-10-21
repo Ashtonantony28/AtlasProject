@@ -351,7 +351,7 @@ describe('AUDIT-1 drift', () => {
     return files;
   };
 
-  it.fails(
+  it(
     "A1-05 a change in a hub module's incoming calls beyond the 12-edge cap marks it stale",
     async () => {
       const { db, root, docsDir } = await driftAfter(hub(), (r) =>
@@ -369,7 +369,7 @@ describe('AUDIT-1 drift', () => {
     },
   );
 
-  it.fails(
+  it(
     'A1-06 an incoming-call change cut off by the 6,000-char prompt cap marks the doc stale',
     async () => {
       const D = 'packages/platform-services/src/modules/notifications/internal/handlers';
@@ -404,7 +404,7 @@ describe('AUDIT-1 drift', () => {
     },
   );
 
-  it.fails('A1-07 `drift --docs-dir` on a missing directory fails instead of passing', async () => {
+  it('A1-07 `drift --docs-dir` on a missing directory fails instead of passing', async () => {
     const { db, root } = await driftAfter(BASE, (r) =>
       writeFileSync(join(r, 'a.ts'), 'export function foo(): number { return 42; }\n'),
     );
@@ -416,7 +416,7 @@ describe('AUDIT-1 drift', () => {
     expect(process.exitCode ?? 0).not.toBe(0);
   });
 
-  it.fails('A1-08 persisted docs with CRLF line endings are still checked', async () => {
+  it('A1-08 persisted docs with CRLF line endings are still checked', async () => {
     const { db, root, docsDir } = await driftAfter(BASE, (r) =>
       writeFileSync(join(r, 'a.ts'), 'export function foo(): number { return 42; }\n'),
     );
@@ -431,7 +431,7 @@ describe('AUDIT-1 drift', () => {
     }
   });
 
-  it.fails(
+  it(
     'A1-17 DB-mode drift reports the doc of a deleted file (with --skip-architecture)',
     async () => {
       const { db, root } = await driftAfter(BASE, (r) => rmSync(join(r, 'c.py')));

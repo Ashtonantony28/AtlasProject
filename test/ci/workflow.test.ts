@@ -212,4 +212,34 @@ describe('CI workflow against committed docs (git checkout simulation)', () => {
     expect(code).toBe(0);
     expect(report.stale).toEqual([]);
   });
+
+  it('fails (exit 1) instead of passing when no docs are committed', async () => {
+    git(base, 'rm', '-q', '-r', '.atlas/docs');
+    git(base, 'commit', '-q', '-m', 'drop docs');
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    await expect(runWorkflow()).rejects.toThrow(SyntaxError); // no JSON on stdout
+    expect(process.exitCode).toBe(1);
+  });
+
+  it('indexes with the committed config, so a custom exclude does not cause drift', async () => {
+    cpSync(new URL('../../.gitignore', import.meta.url), join(base, '.gitignore'));
+    const cfgPath = join(base, '.atlas/config.json');
+    const cfg = JSON.parse(readFileSync(cfgPath, 'utf8')) as { exclude: string[] };
+    writeFileSync(cfgPath, JSON.stringify({ ...cfg, exclude: [...cfg.exclude, 'src/shapes.ts'] }));
+    await runCli(['index', base]);
+    await runCli(['docs', '--offline', '--cwd', base]);
+    git(base, 'add', '-A');
+    git(base, 'commit', '-q', '-m', 'exclude shapes');
+    expect(git(base, 'ls-files', '.atlas').split('\n').filter(Boolean).sort()).toEqual([
+      '.atlas/config.json',
+      '.atlas/docs/architecture.md',
+      '.atlas/docs/files/src/app.ts.md',
+      '.atlas/docs/files/src/math.ts.md',
+      '.atlas/docs/files/src/util.py.md',
+    ]);
+    const { code, report } = await runWorkflow();
+    expect(code).toBe(0);
+    expect(report.stale).toEqual([]);
+    expect(report.totals.files).toBe(3);
+  });
 });

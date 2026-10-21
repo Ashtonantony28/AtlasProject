@@ -229,8 +229,37 @@ export function getDoc(db: DB, targetKind: string, targetId: number): DocRow | u
     .get(targetKind, targetId) as DocRow | undefined;
 }
 
+// A pruned file's doc is kept as a tombstone row (target_id = the old file id,
+// content = JSON {path, content}) so DB-mode drift can still report it until
+// docs are regenerated.
+const TOMBSTONE_KIND = 'deleted_file';
+
 export function getAllDocs(db: DB): DocRow[] {
-  return db.prepare('SELECT * FROM docs ORDER BY id').all() as DocRow[];
+  return db
+    .prepare(`SELECT * FROM docs WHERE target_kind != '${TOMBSTONE_KIND}' ORDER BY id`)
+    .all() as DocRow[];
+}
+
+export interface DocTombstone {
+  path: string;
+  content: string;
+  source_hash: string;
+}
+
+export function getDocTombstones(db: DB): DocTombstone[] {
+  const rows = db
+    .prepare(
+      `SELECT content, source_hash FROM docs WHERE target_kind = '${TOMBSTONE_KIND}' ORDER BY id`,
+    )
+    .all() as Array<{ content: string; source_hash: string }>;
+  return rows.map((r) => {
+    const { path, content } = JSON.parse(r.content) as { path: string; content: string };
+    return { path, content, source_hash: r.source_hash };
+  });
+}
+
+export function clearDocTombstones(db: DB): void {
+  db.prepare(`DELETE FROM docs WHERE target_kind = '${TOMBSTONE_KIND}'`).run();
 }
 
 export function startRun(db: DB, commitSha: string | null): number {
@@ -267,14 +296,18 @@ export function counts(db: DB): {
     files: q('SELECT COUNT(*) AS c FROM files'),
     symbols: q('SELECT COUNT(*) AS c FROM symbols'),
     edges: q('SELECT COUNT(*) AS c FROM edges'),
-    docs: q('SELECT COUNT(*) AS c FROM docs'),
+    docs: q(`SELECT COUNT(*) AS c FROM docs WHERE target_kind != '${TOMBSTONE_KIND}'`),
     imports: q('SELECT COUNT(*) AS c FROM imports'),
   };
 }
 
-// Removes a file and its file-level docs; symbols, imports and edges cascade.
-// vec0 embeddings do not cascade: call deleteEmbeddingsForFile first.
+// Removes a file and its file-level doc (leaving a tombstone); symbols, imports
+// and edges cascade. vec0 embeddings do not cascade: call deleteEmbeddingsForFile first.
 export function deleteFile(db: DB, fileId: number): void {
-  db.prepare("DELETE FROM docs WHERE target_kind = 'file' AND target_id = ?").run(fileId);
+  db.prepare(
+    `UPDATE docs SET target_kind = '${TOMBSTONE_KIND}',
+       content = json_object('path', (SELECT path FROM files WHERE id = ?), 'content', content)
+     WHERE target_kind = 'file' AND target_id = ?`,
+  ).run(fileId, fileId);
   db.prepare('DELETE FROM files WHERE id = ?').run(fileId);
 }

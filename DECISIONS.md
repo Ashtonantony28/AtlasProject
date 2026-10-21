@@ -247,3 +247,22 @@ and `atlas index` report the count, `--verbose` the per-file number. Drift now
 also hashes each documented file on disk; if it differs from the indexed
 `content_hash` (edited, or a failed re-index kept the old rows per SG2), the
 doc is stale with `currentHash: "unindexed"`.
+
+## 2026-10-21 — SG12: drift completeness (neighbourhood hash, tombstones, docs-dir)
+`source_hash` is still `sha256(prompt)`, but the module prompt header now has a
+`Neighbourhood hash:` line (sha256 over every resolved cross-file edge, both
+directions, all kinds, as `dir kind weak symbol path#other`, uncapped), and the
+architecture prompt a `Files hash:` (all paths); caps still apply to the rest.
+Neighbour content hashes and signatures are not hashed, so editing a callee's
+body does not stale its callers (no new false positives). Shown calls rank by
+call pairs per counterpart file (the old `ORDER BY COUNT(*)` was always 1).
+All existing docs go stale once after upgrading. Pruning turns a file's doc
+into a `deleted_file` tombstone row (JSON `{path, content}`; hidden from
+`getAllDocs`/`counts`, cleared by `synthesizeDocs`), so DB-mode drift reports
+it `missing`; a file with no doc and no exports is listed as an undocumented
+`module` (non-fatal unless `--strict`). Persisted docs are read with CRLF
+normalised. `drift --docs-dir` exits 1 when the dir is missing or has no docs
+while files are indexed, so CI cannot pass silently (CI is red until Atlas's
+own docs are committed). `.atlas/config.json` is no longer gitignored (it holds
+no secrets) so CI indexes with the committed filters. `atlas index` still
+exits 0 when `filesFailed > 0`: drift reports those files as `unindexed`.

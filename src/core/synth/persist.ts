@@ -14,7 +14,14 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname, join, relative, sep } from 'node:path';
-import { type DB, getAllDocs, getAllFiles, getDoc, upsertDoc } from '../db/index.js';
+import {
+  type DB,
+  getAllDocs,
+  getAllFiles,
+  getDoc,
+  getDocTombstones,
+  upsertDoc,
+} from '../db/index.js';
 
 export interface PersistedDoc {
   kind: 'file' | 'architecture';
@@ -34,7 +41,8 @@ function render(doc: PersistedDoc): string {
   return `---\nkind: ${doc.kind}\ntarget: ${doc.target}\nsource_hash: ${doc.sourceHash}\n---\n${doc.content}\n`;
 }
 
-function parse(text: string): PersistedDoc | null {
+function parse(raw: string): PersistedDoc | null {
+  const text = raw.replace(/\r\n/g, '\n');
   const m = text.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
   if (!m) return null;
   const meta = new Map<string, string>();
@@ -70,6 +78,20 @@ export function docsFromDb(db: DB): PersistedDoc[] {
     out.push({ kind: d.target_kind, target, sourceHash: d.source_hash, content: d.content });
   }
   return out;
+}
+
+/** Docs of files pruned since the last `atlas docs` run, by their old path (newest wins). */
+export function deletedDocsFromDb(db: DB): PersistedDoc[] {
+  const byPath = new Map<string, PersistedDoc>();
+  for (const t of getDocTombstones(db)) {
+    byPath.set(t.path, {
+      kind: 'file',
+      target: t.path,
+      sourceHash: t.source_hash,
+      content: t.content,
+    });
+  }
+  return [...byPath.values()];
 }
 
 /** Mirror the DB's docs into `dir`, rewriting only changed files and pruning orphans. */
