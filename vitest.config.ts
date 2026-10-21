@@ -8,5 +8,11 @@ export default defineConfig({
     hookTimeout: 30_000,
     typecheck: { enabled: false },
     reporters: 'default',
+    coverage: {
+      provider: 'v8',
+      include: ['src/**'],
+      reporter: ['text-summary', 'json-summary', 'json'],
+      reportsDirectory: 'coverage',
+    },
   },
 });

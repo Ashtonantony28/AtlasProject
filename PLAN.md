@@ -54,6 +54,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 | SG14 | Search and embeddings at 150k symbols: bounded KNN latency, indexed embedding deletes (A2-02, A2-03) | SG5 | Claude (thread) | proposed (from AUDIT-2) |
 | SG15 | Bounded MCP and HTTP responses: pagination/limits for drift, graph, docs (A2-04, A2-09) | SG13 | Claude (thread) | proposed (from AUDIT-2) |
 | SG16 | Parse+insert ≤ 5 ms/file on express and got (A2-05) | SG11 | Claude (thread) | proposed (from AUDIT-2) |
+| SG17 | Indexer data safety and untested guarantees: unreadable dirs never prune, real parse failures keep old rows and retry, tests for dashboard read-only, `runDrift` tombstones, ask budget boundary, typecheck `test/` (A4-01..A4-06) | SG13 | Claude (thread) | proposed (from AUDIT-4) |
 
 ### SG0: Shared interfaces + bench harness
 - Migration v3 (`symbols.exported`), `ParsedSymbol.exported`, `createEmbedder`, FTS5 table `symbols_fts` (migration v3), plus contract tests that pin each item in §Interfaces.
@@ -115,3 +116,4 @@ Fresh subagents that wrote none of the code. Each writes `AUDIT-<n>.md`, ranked 
 - AUDIT-1 (graph and drift soundness): 0 critical, 6 high, 7 medium, 7 low. Repros in `test/audit/audit-1.test.ts` as `it.fails`; a fix flips its test to `it`. Highs became SG10–SG12; the cheap mediums on the same code paths (A1-06, A1-08, A1-13) ride along.
 - AUDIT-3 (API consistency): 0 critical, 2 high, 8 medium, 7 low. Repros in `test/audit/audit-3.test.ts`. Highs (A3-01, A3-02) and the mediums on the same code paths (A3-03..A3-10) became SG13.
 - AUDIT-2 (performance): 1 critical (A2-01, downgraded to medium after SG12 re-measurement), 4 high, 5 medium, 2 low. Highs became SG14–SG16.
+- AUDIT-4 (test coverage): `src/core` 96.6% lines (target 85%); 0 critical, 5 high, 7 medium, 5 low; 7 of 10 mutations killed. Repros in `test/audit/audit-4.test.ts`. Highs and A4-06 became SG17.
