@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/config.ts
-source_hash: 83e2ab826a1bcee3ed057cc8599b21ec9334cbdb8f9c7ec7a2436f32e49f6b44
+source_hash: 2bf1ef32fe7993933cd4e24575269074d035eb203f193446dbe53db5793ff215
 ---
 # module src/core/config.ts
 
@@ -16,11 +16,11 @@ source_hash: 83e2ab826a1bcee3ed057cc8599b21ec9334cbdb8f9c7ec7a2436f32e49f6b44
 - `DEFAULT_CONFIG` — variable (src/core/config.ts:34)
 - `ResolvedPaths` — interface (src/core/config.ts:36)
 - `resolvePaths` — function (src/core/config.ts:43)
-- `findConfigPath` — function (src/core/config.ts:53)
-- `loadConfig` — function (src/core/config.ts:61)
-- `InitOptions` — interface (src/core/config.ts:84)
-- `InitResult` — interface (src/core/config.ts:88)
-- `writeDefaultConfig` — function (src/core/config.ts:99)
+- `findConfigPath` — function (src/core/config.ts:59)
+- `loadConfig` — function (src/core/config.ts:67)
+- `InitOptions` — interface (src/core/config.ts:90)
+- `InitResult` — interface (src/core/config.ts:94)
+- `writeDefaultConfig` — function (src/core/config.ts:105)
 
 References: `src/core/config.ts:5`, `src/core/config.ts:6`, `src/core/config.ts:8`, `src/core/config.ts:9`, `src/core/config.ts:11`.
 

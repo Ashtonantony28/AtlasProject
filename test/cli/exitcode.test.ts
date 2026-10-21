@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { closeDatabase, openDatabase } from '../../src/core/db/index.js';
 import { makeGitRepo, runCli } from './helpers.js';
 
 const ROOT = resolve(__dirname, '../..');
@@ -14,6 +15,13 @@ describe('CLI exit codes', () => {
     dir = makeGitRepo('atlas-exit-');
     vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
     await runCli(['index', dir]);
+    // Docs exist (drift with no docs at all exits 1), but one names none of its exports.
+    await runCli(['docs', '--offline', '--cwd', dir]);
+    const db = openDatabase(join(dir, '.atlas', 'index.db'));
+    db.prepare(
+      "UPDATE docs SET content = '# math' WHERE target_kind = 'file' AND target_id = (SELECT id FROM files WHERE path = 'src/math.ts')",
+    ).run();
+    closeDatabase(db);
     vi.restoreAllMocks();
   });
   afterEach(() => {
@@ -35,6 +43,18 @@ describe('CLI exit codes', () => {
     vi.restoreAllMocks();
     expect(process.exitCode ?? 0).toBe(0);
     expect(out.join('')).toMatch(/Undocumented/);
+  });
+
+  it('drift exits 1 when the index has no docs at all, like --docs-dir with none', async () => {
+    const db = openDatabase(join(dir, '.atlas', 'index.db'));
+    db.prepare('DELETE FROM docs').run();
+    closeDatabase(db);
+    const err: string[] = [];
+    vi.spyOn(process.stderr, 'write').mockImplementation((s) => (err.push(String(s)), true));
+    await runCli(['drift', '--cwd', dir]);
+    vi.restoreAllMocks();
+    expect(process.exitCode).toBe(1);
+    expect(err.join('')).toMatch(/no docs found in the index/);
   });
 
   it('drift --strict exits 2 and closes the DB (no lingering WAL)', () => {

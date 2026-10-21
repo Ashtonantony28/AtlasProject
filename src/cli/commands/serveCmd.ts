@@ -1,7 +1,7 @@
 import type { Command } from 'commander';
-import { resolve } from 'node:path';
-import { closeDatabase, openDatabase } from '../../core/db/index.js';
-import { loadConfig, resolvePaths } from '../../core/config.js';
+import { closeDatabase } from '../../core/db/index.js';
+import { numberArg, parseParams, portSchema } from '../../core/params.js';
+import { openProjectIndex } from '../../core/project.js';
 import { startServer } from '../../web/server.js';
 
 interface ServeArgs {
@@ -18,12 +18,10 @@ export function registerServeCommand(program: Command): void {
     .option('-H, --host <host>', 'Host to bind', '127.0.0.1')
     .option('--cwd <path>', 'Project root', '.')
     .action(async (opts: ServeArgs) => {
-      const root = resolve(opts.cwd ?? '.');
-      const config = loadConfig(root);
-      const paths = resolvePaths(root, config);
-      const db = openDatabase(paths.dbPath, { readonly: true, fileMustExist: true });
+      const port = parseParams(portSchema, numberArg(opts.port ?? '4321'));
+      const { db, root } = openProjectIndex(opts.cwd ?? '.', { readonly: true });
       const handle = await startServer(db, root, {
-        port: Number.parseInt(opts.port ?? '4321', 10),
+        port,
         host: opts.host ?? '127.0.0.1',
       });
       process.stdout.write(`atlas: serving ${root} at ${handle.url}\n`);

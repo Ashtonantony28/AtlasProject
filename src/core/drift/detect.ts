@@ -11,7 +11,11 @@
 //     not appear as a whole identifier in its file's doc, or a `module` entry
 //     for a file with no doc and no exported symbols (e.g. added since), so
 //     every undocumented file is listed. Reported only;
-//     fatal with `atlas drift --strict`.
+//     fatal with `strict` (`atlas drift --strict`).
+//
+// `hasDrift` is true when either list is non-empty; `failing` is the gate
+// (stale docs, or undocumented symbols under `strict`) and is exactly when
+// `atlas drift` exits 2.
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -50,7 +54,11 @@ export interface DriftReport {
     docs: number;
     publicSymbols: number; // exported, non-module symbols
   };
+  // Anything to report: stale docs or undocumented symbols.
   hasDrift: boolean;
+  // The drift gate failed: stale docs, or undocumented symbols when `strict`.
+  failing: boolean;
+  strict: boolean;
 }
 
 export interface DetectOptions {
@@ -60,10 +68,13 @@ export interface DetectOptions {
   skipArchitecture?: boolean;
   // Check these docs (e.g. read from `.atlas/docs`) instead of the docs table.
   docs?: PersistedDoc[];
+  // Undocumented symbols also fail the gate (`failing`).
+  strict?: boolean;
 }
 
 export function detectDrift(db: DB, opts: DetectOptions): DriftReport {
   const files = getAllFiles(db);
+  const strict = opts.strict ?? false;
   const docs = opts.docs ?? [...deletedDocsFromDb(db), ...docsFromDb(db)];
   const fileDocs = new Map<string, PersistedDoc>();
   let archDoc: PersistedDoc | undefined;
@@ -142,6 +153,8 @@ export function detectDrift(db: DB, opts: DetectOptions): DriftReport {
       publicSymbols: publicSymbolCount,
     },
     hasDrift: stale.length > 0 || undocumented.length > 0,
+    failing: stale.length > 0 || (strict && undocumented.length > 0),
+    strict,
   };
 }
 
@@ -190,6 +203,11 @@ export function formatDriftReport(report: DriftReport): string {
   lines.push('');
   lines.push(
     `summary: ${report.stale.length} stale, ${report.undocumented.length} undocumented (of ${report.totals.publicSymbols} public)`,
+  );
+  lines.push(
+    report.failing
+      ? 'drift check: failed'
+      : 'drift check: passed (undocumented symbols fail only with --strict)',
   );
   return lines.join('\n');
 }

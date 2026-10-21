@@ -42,8 +42,10 @@ jobs:
       # Drift is checked against the docs committed under .atlas/docs (written
       # by `atlas docs`; .atlas/config.json is committed too, so the index above
       # uses the same filters). Docs are not regenerated here, so a change that
-      # isn't accompanied by refreshed docs shows up as stale. A missing or empty
-      # .atlas/docs exits 1 and fails the job. No API key needed.
+      # isn't accompanied by refreshed docs shows up as stale. Exit 2 (stale docs;
+      # `failing: true` in the JSON) fails the job after the comment is posted;
+      # undocumented symbols are reported but pass (no --strict). A missing or
+      # empty .atlas/docs exits 1 and fails the job at once. No API key needed.
       - name: Run drift against committed docs (capture)
         id: drift
         run: |
@@ -52,9 +54,9 @@ jobs:
           code=$?
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           if [ "$code" -eq 0 ]; then
-            echo "has_drift=false" >> "$GITHUB_OUTPUT"
+            echo "failing=false" >> "$GITHUB_OUTPUT"
           elif [ "$code" -eq 2 ]; then
-            echo "has_drift=true" >> "$GITHUB_OUTPUT"
+            echo "failing=true" >> "$GITHUB_OUTPUT"
           else
             echo "atlas drift failed with code $code" >&2
             exit "$code"
@@ -87,8 +89,8 @@ jobs:
               await github.rest.issues.createComment({ owner, repo, issue_number, body: full });
             }
 
-      - name: Fail job if drift present
-        if: steps.drift.outputs.has_drift == 'true'
+      - name: Fail job if the drift check failed
+        if: steps.drift.outputs.failing == 'true'
         run: |
-          echo "Atlas detected documentation drift. See PR comment for details."
+          echo "Atlas found stale docs. See PR comment for details."
           exit 1

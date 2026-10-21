@@ -1,9 +1,14 @@
 import type { Command } from 'commander';
-import { resolve } from 'node:path';
-import { closeDatabase, openDatabase } from '../../core/db/index.js';
-import { createAnthropicClient, createOfflineClient } from '../../core/synth/index.js';
+import { closeDatabase } from '../../core/db/index.js';
+import {
+  budgeted,
+  createAnthropicClient,
+  createOfflineClient,
+  TokenBudget,
+} from '../../core/synth/index.js';
 import { ask } from '../../core/qa/index.js';
-import { loadConfig, resolvePaths } from '../../core/config.js';
+import { AskParamsSchema, numberArg, parseParams } from '../../core/params.js';
+import { openProjectIndex } from '../../core/project.js';
 
 interface AskArgs {
   offline?: boolean;
@@ -21,27 +26,24 @@ export function registerAskCommand(program: Command): void {
     .argument('<question...>', 'The question to ask (quotes optional)')
     .option('--offline', 'Use the offline/mock LLM (no API spend)')
     .option('-m, --model <model>', 'Override the synth model from config')
-    .option('-k, --k <n>', 'Number of seed snippets to retrieve', '5')
-    .option('--expand <n>', 'Number of additional graph-expanded snippets', '5')
+    .option('-k, --k <n>', 'Number of seed snippets to retrieve (1-20)', '5')
+    .option('--expand <n>', 'Number of additional graph-expanded snippets (0-20)', '5')
     .option('--json', 'Output JSON (answer, citations, citation checks)')
     .option('--cwd <path>', 'Project root', '.')
     .action(async (questionParts: string[], opts: AskArgs) => {
-      const question = questionParts.join(' ').trim();
-      if (!question) {
-        process.stderr.write('atlas: empty question\n');
-        process.exitCode = 1;
-        return;
-      }
-      const root = resolve(opts.cwd ?? '.');
-      const config = loadConfig(root);
-      const paths = resolvePaths(root, config);
-      const db = openDatabase(paths.dbPath, { fileMustExist: true });
+      const { question, k, expand } = parseParams(AskParamsSchema, {
+        question: questionParts.join(' '),
+        k: numberArg(opts.k),
+        expand: numberArg(opts.expand),
+      });
+      const { db, root, config } = openProjectIndex(opts.cwd ?? '.');
       try {
         const model = opts.model ?? config.synthModel;
-        const llm = opts.offline ? createOfflineClient() : await createAnthropicClient(model);
+        const inner = opts.offline ? createOfflineClient() : await createAnthropicClient(model);
+        const llm = budgeted(inner, new TokenBudget(config.tokenBudget));
         const result = await ask(db, llm, root, question, {
-          seedLimit: Number.parseInt(opts.k ?? '5', 10),
-          expansionLimit: Number.parseInt(opts.expand ?? '5', 10),
+          seedLimit: k,
+          expansionLimit: expand,
         });
         if (opts.json) {
           process.stdout.write(

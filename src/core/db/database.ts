@@ -22,7 +22,7 @@ function loadVecExtension(db: DB): void {
  * downstream code can query the embeddings_vec virtual table either way.
  */
 export function openDatabase(dbPath: string, opts: OpenDbOptions = {}): DB {
-  if (!opts.readonly && !existsSync(dbPath)) {
+  if (!opts.readonly && !opts.fileMustExist && !existsSync(dbPath)) {
     mkdirSync(dirname(dbPath), { recursive: true });
   }
 

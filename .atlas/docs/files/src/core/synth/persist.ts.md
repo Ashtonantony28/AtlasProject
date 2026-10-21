@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/synth/persist.ts
-source_hash: 7a242680ede5a1efefdb05b16597be5cae6858396acc47fe3acbaa74c942c745
+source_hash: 6c9608188eb358ab80d2c74588a93abc71c0cd52a3dfcf0cc460c17a123a73b0
 ---
 # module src/core/synth/persist.ts
 
@@ -19,6 +19,9 @@ source_hash: 7a242680ede5a1efefdb05b16597be5cae6858396acc47fe3acbaa74c942c745
 - `exportDocs` — function (src/core/synth/persist.ts:98)
 - `readPersistedDocs` — function (src/core/synth/persist.ts:128)
 - `importPersistedDocs` — function (src/core/synth/persist.ts:138)
+- `DocEntry` — type (src/core/synth/persist.ts:155)
+- `listDocs` — function (src/core/synth/persist.ts:158)
+- `findDoc` — function (src/core/synth/persist.ts:166)
 
 References: `src/core/synth/persist.ts:26`, `src/core/synth/persist.ts:33`, `src/core/synth/persist.ts:34`, `src/core/synth/persist.ts:36`, `src/core/synth/persist.ts:40`.
 

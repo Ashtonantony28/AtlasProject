@@ -284,3 +284,21 @@ as before. Member calls on a function default fall back to its module's exports
 imports bind file-wide; calls to names from a Python star import resolve through
 it, or are weak when a star target is not indexed.
 
+
+## 2026-10-21 — SG13: one contract for drift, params and docs across surfaces
+Drift gate: `DriftReport` gains `failing` (stale docs, or undocumented symbols
+with `strict`) and `strict`; `atlas drift` exits 2 exactly when `failing`, and
+the CI job, README and `ci-comment` ("Drift check: passed/failed") key off it.
+`hasDrift` keeps its meaning ("anything to report"), since tests and JSON
+consumers rely on it; redefining it would silently hide undocumented-only
+reports, so a new field is the least breaking choice (A3-02's test now checks
+`failing`). `runDrift` (core) is the one entry point for the CLI and MCP and
+throws when there is nothing to check: `--docs-dir`/`persisted` missing or
+empty, or no docs in the index (exit 1, MCP `isError`). Shared zod schemas in
+`core/params.ts` validate search/ask/budget/port on the CLI, HTTP (400) and MCP;
+`module` is no longer a search kind. `listDocs`/`findDoc` (index, then
+`.atlas/docs`) back `docs --list/--show`, the dashboard and `atlas_docs`.
+`ask` goes through the same `budgeted` client as MCP. `openProjectIndex` and
+`requireRoot` make read commands fail without creating `.atlas/`; `indexPath`
+must resolve inside `.atlas/`. MCP still creates the index in an existing root
+(it serves `atlas_index`).

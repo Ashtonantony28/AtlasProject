@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import { z } from 'zod';
 
 export const ATLAS_DIR = '.atlas';
@@ -10,7 +10,7 @@ export const DB_FILE = 'index.db';
 
 export const ConfigSchema = z.object({
   version: z.literal(1),
-  // Where the SQLite index lives, relative to project root.
+  // Where the SQLite index lives, relative to project root; must stay inside `.atlas/`.
   indexPath: z.string().default(`${ATLAS_DIR}/${DB_FILE}`),
   // Languages we attempt to parse. Phase 2 supports ts, js, py.
   languages: z
@@ -42,11 +42,17 @@ export interface ResolvedPaths {
 
 export function resolvePaths(root: string, config: AtlasConfig): ResolvedPaths {
   const abs = resolve(root);
+  const atlasDir = join(abs, ATLAS_DIR);
+  const dbPath = resolve(abs, config.indexPath);
+  const rel = relative(atlasDir, dbPath);
+  if (!rel || rel.startsWith('..') || isAbsolute(rel)) {
+    throw new Error(`indexPath must be inside ${ATLAS_DIR}/ (got '${config.indexPath}')`);
+  }
   return {
     root: abs,
     configPath: findConfigPath(abs) ?? join(abs, CONFIG_FILE),
-    atlasDir: join(abs, ATLAS_DIR),
-    dbPath: join(abs, config.indexPath),
+    atlasDir,
+    dbPath,
   };
 }
 

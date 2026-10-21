@@ -1,20 +1,17 @@
 import type { Command } from 'commander';
-import { join, relative, resolve } from 'node:path';
-import {
-  closeDatabase,
-  openDatabase,
-  getAllDocs,
-  getAllFiles,
-  getDoc,
-} from '../../core/db/index.js';
+import { relative } from 'node:path';
+import { closeDatabase } from '../../core/db/index.js';
 import {
   createAnthropicClient,
   createOfflineClient,
   exportDocs,
+  findDoc,
   importPersistedDocs,
+  listDocs,
   synthesizeDocs,
 } from '../../core/synth/index.js';
-import { loadConfig, resolvePaths } from '../../core/config.js';
+import { budgetSchema, numberArg, parseParams } from '../../core/params.js';
+import { openProjectIndex } from '../../core/project.js';
 
 interface DocsArgs {
   offline?: boolean;
@@ -34,68 +31,44 @@ export function registerDocsCommand(program: Command): void {
     .option('--offline', 'Use the offline/mock LLM (no API spend)')
     .option('-f, --force', 'Re-generate even when source_hash is unchanged')
     .option('-m, --model <model>', 'Override the synth model from config')
-    .option('-b, --budget <tokens>', 'Override the token budget from config')
-    .option('--show <path>', 'Print the doc for the given file path (or "architecture")')
-    .option('--list', 'List all stored docs')
+    .option('-b, --budget <tokens>', 'Override the token budget from config (positive integer)')
+    .option('--show <path>', 'Print the doc for the given file path (or "architecture"); exits 1 if none')
+    .option('--list', 'List all docs (index, then .atlas/docs)')
     .option('-v, --verbose', 'Log progress for each module')
     .option('--cwd <path>', 'Project root', '.')
     .action(async (opts: DocsArgs) => {
-      const root = resolve(opts.cwd ?? '.');
-      const config = loadConfig(root);
-      const paths = resolvePaths(root, config);
-      const db = openDatabase(paths.dbPath, { fileMustExist: true });
+      const budget =
+        opts.budget === undefined ? undefined : parseParams(budgetSchema, numberArg(opts.budget));
+      const { db, root, config, docsDir } = openProjectIndex(opts.cwd ?? '.');
       try {
-        // Inspect mode: --show / --list (no synthesis).
+        // Inspect mode: --show / --list (no synthesis). The index first, then `.atlas/docs`.
         if (opts.list) {
-          const docs = getAllDocs(db);
+          const docs = listDocs(db, docsDir);
           if (docs.length === 0) {
             process.stdout.write('no docs yet — run `atlas docs` first\n');
             return;
           }
           for (const d of docs) {
-            const len = d.content.length;
             process.stdout.write(
-              `[${d.target_kind}:${d.target_id}] (${len} chars, hash=${d.source_hash.slice(0, 8)}, ${d.generated_at})\n`,
+              `[${d.kind}] ${d.target} (${d.content.length} chars, hash=${d.sourceHash.slice(0, 8)}, ${d.source})\n`,
             );
           }
           return;
         }
         if (opts.show) {
-          if (opts.show === 'architecture') {
-            const d = getDoc(db, 'architecture', 0);
-            if (!d) {
-              process.stdout.write('no architecture doc — run `atlas docs` first\n');
-              return;
-            }
-            process.stdout.write(d.content + '\n');
-            return;
-          }
-          const file = getAllFiles(db).find((f) => f.path === opts.show);
-          if (!file) {
-            process.stderr.write(`atlas: file not in index: ${opts.show}\n`);
-            process.exitCode = 1;
-            return;
-          }
-          const d = getDoc(db, 'file', file.id);
-          if (!d) {
-            process.stdout.write(`no doc for ${file.path} — run \`atlas docs\` first\n`);
-            return;
-          }
-          process.stdout.write(d.content + '\n');
+          process.stdout.write(findDoc(db, docsDir, opts.show).content + '\n');
           return;
         }
 
         const model = opts.model ?? config.synthModel;
-        const budget = opts.budget ? Number.parseInt(opts.budget, 10) : config.tokenBudget;
         const llm = opts.offline
           ? createOfflineClient()
           : await createAnthropicClient(model);
 
-        const docsDir = join(paths.atlasDir, 'docs');
         importPersistedDocs(db, docsDir);
         const stats = await synthesizeDocs(db, llm, {
           root,
-          tokenBudget: budget,
+          tokenBudget: budget ?? config.tokenBudget,
           force: opts.force ?? false,
           onProgress: (e) => {
             if (!opts.verbose) return;
