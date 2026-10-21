@@ -105,6 +105,7 @@ export function createOfflineClient(model = 'offline-mock-v1'): LLMClient {
       } else {
         const targetMatch = body.match(/^Target:\s*(.+)$/m);
         const target = (targetMatch?.[1]?.trim()) ?? 'this module';
+        const isArchitecture = target.toLowerCase().includes('architecture');
 
         // Extract grounded symbol entries from the "Symbols:" section so the
         // generated doc literally references the real symbol names (not just
@@ -128,6 +129,39 @@ export function createOfflineClient(model = 'offline-mock-v1'): LLMClient {
           }
         }
 
+        // Architecture prompts have a "Files:" + "Top connected files:"
+        // section instead of "Symbols:". Render those into the doc.
+        const fileEntries: Array<{ path: string; language: string; loc: string; symbols: string }> = [];
+        if (isArchitecture) {
+          const filesHeaderIdx = body.indexOf('\nFiles:');
+          if (filesHeaderIdx >= 0) {
+            const tail = body.slice(filesHeaderIdx);
+            const blockEnd = tail.search(/\n[A-Z][A-Za-z ]+(?:\s+\([^)]+\))?:\s*\n/);
+            const block = blockEnd > 0 ? tail.slice(0, blockEnd) : tail;
+            const re = /^\s*-\s+([\S]+)\s+\[(\w+)\]\s+loc=(\d+)\s+symbols=(\d+)/gm;
+            for (let m = re.exec(block); m !== null; m = re.exec(block)) {
+              fileEntries.push({
+                path: m[1] ?? '',
+                language: m[2] ?? '',
+                loc: m[3] ?? '',
+                symbols: m[4] ?? '',
+              });
+            }
+          }
+        }
+        const topConnected: Array<{ file: string; degree: string }> = [];
+        if (isArchitecture) {
+          const topHeader = body.indexOf('Top connected files');
+          if (topHeader >= 0) {
+            const tail = body.slice(topHeader);
+            const re = /^\s*-\s+([\S]+)\s+\(degree=(\d+)\)/gm;
+            for (let m = re.exec(tail); m !== null; m = re.exec(tail)) {
+              topConnected.push({ file: m[1] ?? '', degree: m[2] ?? '' });
+            }
+          }
+        }
+        const totalsMatch = body.match(/^Totals:\s+files=(\d+)\s+symbols=(\d+)\s+edges=(\d+)/m);
+
         const refs = [...body.matchAll(/([\w./-]+\.(?:ts|tsx|js|jsx|py)):(\d+)/g)]
           .slice(0, 5)
           .map((m) => `\`${m[1]}:${m[2]}\``);
@@ -136,23 +170,40 @@ export function createOfflineClient(model = 'offline-mock-v1'): LLMClient {
         // Scale bullets with the token budget: tight budgets produce short
         // docs; generous budgets cover every grounded symbol up to a sane cap.
         const maxBullets = Math.max(1, Math.min(50, Math.floor(params.maxTokens / 40)));
-        const bullets = symbolEntries
-          .slice(0, maxBullets)
-          .map((s) => `- \`${s.name}\` — ${s.kind} (${s.file}:${s.line})`)
-          .join('\n');
 
-        const isArchitecture = target.toLowerCase().includes('architecture');
-        const heading = isArchitecture ? '# Architecture' : `# ${target}`;
-        const lede = isArchitecture
-          ? `This codebase's modules collaborate through the graph above.`
-          : `\`${target}\` exposes the following public surface:`;
-
-        content =
-          `${heading}\n\n` +
-          `${lede}\n\n` +
-          (bullets || '_No symbols extracted._') +
-          (refLine ? `\n\n${refLine}` : '') +
-          `\n\n_Generated offline (mock client)._`;
+        if (isArchitecture) {
+          const totalsLine = totalsMatch
+            ? `**Totals:** ${totalsMatch[1]} files, ${totalsMatch[2]} symbols, ${totalsMatch[3]} edges`
+            : '';
+          const filesBullets = fileEntries
+            .slice(0, maxBullets)
+            .map((f) => `- \`${f.path}\` — ${f.language}, loc=${f.loc}, ${f.symbols} symbols`)
+            .join('\n');
+          const topBullets = topConnected
+            .slice(0, Math.min(10, maxBullets))
+            .map((t) => `- \`${t.file}\` (degree=${t.degree})`)
+            .join('\n');
+          content =
+            `# Architecture\n\n` +
+            `This codebase's modules collaborate through the graph above.\n\n` +
+            (totalsLine ? `${totalsLine}\n\n` : '') +
+            (filesBullets
+              ? `## Modules\n\n${filesBullets}\n\n`
+              : '_No modules extracted._\n\n') +
+            (topBullets ? `## Key collaborations\n\n${topBullets}\n\n` : '') +
+            `_Generated offline (mock client)._`;
+        } else {
+          const bullets = symbolEntries
+            .slice(0, maxBullets)
+            .map((s) => `- \`${s.name}\` — ${s.kind} (${s.file}:${s.line})`)
+            .join('\n');
+          content =
+            `# ${target}\n\n` +
+            `\`${target}\` exposes the following public surface:\n\n` +
+            (bullets || '_No symbols extracted._') +
+            (refLine ? `\n\n${refLine}` : '') +
+            `\n\n_Generated offline (mock client)._`;
+        }
       }
 
       const tokens = Math.ceil(body.length / 4);

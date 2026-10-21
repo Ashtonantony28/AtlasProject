@@ -57,12 +57,24 @@ async function getBundle(language: LanguageId): Promise<LangBundle> {
   return bundle;
 }
 
+// tree-sitter's string-input parse path has an internal buffer limit (~32KB on
+// the Node bindings) that throws "Invalid argument" on larger files. The
+// callback-input path has no such limit, so we always feed chunks instead.
+const CHUNK = 8192;
+
+function parseChunked(parser: Parser, source: string): Parser.Tree {
+  return parser.parse((index: number) => {
+    if (index >= source.length) return '';
+    return source.slice(index, index + CHUNK);
+  });
+}
+
 export async function parseSource(
   source: string,
   language: LanguageId,
 ): Promise<ParseResult> {
   const { parser } = await getBundle(language);
-  const tree = parser.parse(source);
+  const tree = parseChunked(parser, source);
   switch (language) {
     case 'typescript':
     case 'javascript':

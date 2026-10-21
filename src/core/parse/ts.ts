@@ -81,9 +81,18 @@ function qualify(ctx: Ctx, name: string): string {
 }
 
 function visit(node: Node, ctx: Ctx): void {
-  // Imports
+  // ESM imports
   if (node.type === 'import_statement') {
     collectImports(node, ctx);
+  }
+
+  // CommonJS require() — only at top level to avoid noise from dynamic requires
+  // inside functions. Express, older Node libs, etc.
+  if (
+    (node.type === 'lexical_declaration' || node.type === 'variable_declaration') &&
+    ctx.qualifier.length === 0
+  ) {
+    collectRequires(node, ctx);
   }
 
   // Functions — do not descend into function bodies, locals are not symbols.
@@ -262,6 +271,85 @@ function collectImports(node: Node, ctx: Ctx): void {
           line,
         });
       }
+    }
+  }
+}
+
+function unwrapCallExpression(node: Node): Node | null {
+  // require('x') is a call_expression; require('x').y is a member_expression
+  // whose object is a call_expression; sometimes there's parenthesized_expression.
+  let cur: Node | null = node;
+  while (cur) {
+    if (cur.type === 'call_expression') return cur;
+    if (cur.type === 'member_expression') {
+      cur = cur.childForFieldName('object');
+      continue;
+    }
+    if (cur.type === 'parenthesized_expression') {
+      cur = cur.namedChildren[0] ?? null;
+      continue;
+    }
+    return null;
+  }
+  return null;
+}
+
+function requireSource(callExpr: Node): string | null {
+  const fn = callExpr.childForFieldName('function');
+  if (!fn || fn.type !== 'identifier' || fn.text !== 'require') return null;
+  const args = callExpr.childForFieldName('arguments');
+  if (!args) return null;
+  const arg = args.namedChildren[0];
+  if (!arg) return null;
+  if (arg.type !== 'string') return null;
+  // The string node's text includes quotes; trimQuotes handles it.
+  return trimQuotes(arg.text);
+}
+
+function collectRequires(decl: Node, ctx: Ctx): void {
+  for (const declarator of decl.namedChildren) {
+    if (declarator.type !== 'variable_declarator') continue;
+    const value = declarator.childForFieldName('value');
+    if (!value) continue;
+    const call = unwrapCallExpression(value);
+    if (!call) continue;
+    const moduleStr = requireSource(call);
+    if (!moduleStr) continue;
+    const line = lineOf(declarator);
+    const nameNode = declarator.childForFieldName('name');
+    if (!nameNode) {
+      ctx.imports.push({ module: moduleStr, imported: null, alias: null, line });
+      continue;
+    }
+    if (nameNode.type === 'identifier') {
+      // const x = require('foo')        → default
+      // const x = require('foo').y      → named y, aliased x
+      let imported: string = 'default';
+      if (value.type === 'member_expression') {
+        const prop = value.childForFieldName('property');
+        if (prop && prop.type === 'property_identifier') imported = prop.text;
+      }
+      ctx.imports.push({ module: moduleStr, imported, alias: nameNode.text, line });
+    } else if (nameNode.type === 'object_pattern') {
+      // const { x, y: z } = require('foo')
+      for (const prop of nameNode.namedChildren) {
+        if (prop.type === 'shorthand_property_identifier_pattern') {
+          ctx.imports.push({ module: moduleStr, imported: prop.text, alias: null, line });
+        } else if (prop.type === 'pair_pattern') {
+          const keyNode = prop.childForFieldName('key');
+          const valNode = prop.childForFieldName('value');
+          if (keyNode && valNode) {
+            ctx.imports.push({
+              module: moduleStr,
+              imported: keyNode.text,
+              alias: valNode.type === 'identifier' ? valNode.text : null,
+              line,
+            });
+          }
+        }
+      }
+    } else {
+      ctx.imports.push({ module: moduleStr, imported: 'default', alias: null, line });
     }
   }
 }

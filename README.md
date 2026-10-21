@@ -1,9 +1,14 @@
 # Atlas
 
-> Local-first codebase intelligence engine. Point it at any repository and get
-> a symbol + dependency graph, self-maintaining docs, hybrid (semantic +
+> Local-first codebase intelligence engine. Point it at any Git repository and
+> get a symbol + dependency graph, self-maintaining docs, hybrid (semantic +
 > structural) search, grounded Q&A, and doc-drift detection — with a CLI and a
 > local dashboard.
+
+Atlas runs **offline by default**. The local-hash embeddings, SQLite-vec
+KNN store, and a deterministic mock LLM mean you can index, search, document,
+and run drift over a repo without any API keys. Drop in `ANTHROPIC_API_KEY` to
+swap in real Claude-backed synthesis and Q&A.
 
 ## Status
 
@@ -20,88 +25,169 @@
 | 9     | CI                     | done   |
 | 10    | Polish                 | done   |
 
-## Quickstart
+Languages: TypeScript, JavaScript (ESM + CommonJS `require()`), and Python.
+
+## Quickstart — fresh clone, end to end
+
+You'll have a fully indexed repo with semantic search, docs, and Q&A in about
+a minute. No API key required.
 
 ```bash
-# clone + install
+# 1. Clone Atlas and build the CLI.
+git clone https://github.com/ashtonantony28/atlasproject atlas && cd atlas
 npm install
 npm run build
 
-# initialize Atlas in a target repo (or use the bundled fixture)
-node ./dist/cli/index.js init --cwd ./fixtures/sample
+# 2. Point it at *any* repo on disk. We use the bundled fixture here; swap
+#    in any other path you like (your own project, a clone of express, etc.).
+TARGET=./fixtures/sample
+node ./dist/cli/index.js init  --cwd "$TARGET"
+node ./dist/cli/index.js index "$TARGET"
 
-# index it: walks, parses, builds the graph, embeds symbols
-node ./dist/cli/index.js index ./fixtures/sample
+# 3. Hybrid (semantic + structural) search.
+node ./dist/cli/index.js search "circle area"            --cwd "$TARGET" --limit 5
+node ./dist/cli/index.js search "shape" --kind class     --cwd "$TARGET"
 
-# semantic + structural search
-node ./dist/cli/index.js search "circle area" --cwd ./fixtures/sample
-node ./dist/cli/index.js search "shape" --kind class --cwd ./fixtures/sample
+# 4. Export the dependency graph.
+node ./dist/cli/index.js graph --format dot  --cwd "$TARGET" > graph.dot
+node ./dist/cli/index.js graph --format json --cwd "$TARGET" | jq '.nodes | length'
 
-# export the graph
-node ./dist/cli/index.js graph --format dot --cwd ./fixtures/sample > graph.dot
-node ./dist/cli/index.js graph --format json --cwd ./fixtures/sample | jq '.nodes | length'
+# 5. Generate module + architecture docs (offline mock — no spend).
+node ./dist/cli/index.js docs --offline                  --cwd "$TARGET"
+node ./dist/cli/index.js docs --show src/shapes.ts       --cwd "$TARGET"
+node ./dist/cli/index.js docs --show architecture        --cwd "$TARGET"
 
-# generate module + architecture docs (offline mock — no API spend)
-node ./dist/cli/index.js docs --offline --cwd ./fixtures/sample
-node ./dist/cli/index.js docs --show src/shapes.ts --cwd ./fixtures/sample
-node ./dist/cli/index.js docs --show architecture --cwd ./fixtures/sample
+# 6. Ask a grounded question, with citations.
+node ./dist/cli/index.js ask --offline --cwd "$TARGET" "How is the area of a circle computed?"
 
-# ask a grounded question (offline mock cites the snippets it received)
-node ./dist/cli/index.js ask --offline --cwd ./fixtures/sample "How is the area of a circle computed?"
+# 7. Drift report. Exits 2 if any doc is stale or any public symbol undocumented.
+node ./dist/cli/index.js drift --cwd "$TARGET"
 
-# drift report (exits non-zero if any doc is stale or any public symbol is undocumented)
-node ./dist/cli/index.js drift --cwd ./fixtures/sample
-
-# open the dashboard (graph + doc browser + search)
-node ./dist/cli/index.js serve --cwd ./fixtures/sample
-# then open http://127.0.0.1:4321/
+# 8. Open the dashboard (graph + doc browser + search).
+node ./dist/cli/index.js serve --cwd "$TARGET"
+# then visit http://127.0.0.1:4321/
 ```
 
-For the real LLM-backed synthesis and Q&A, set `ANTHROPIC_API_KEY` and drop
-`--offline`:
+The `scripts/demo.sh` script runs steps 2-7 end-to-end against the fixture in
+one go.
+
+## Using it on your own project
+
+Once Atlas is built, run it against any repo. The first run does the full
+walk → parse → graph → embed pass; subsequent runs are incremental and finish
+in ~50ms when nothing has changed.
+
+```bash
+# Anywhere outside the Atlas repo:
+ATLAS=/path/to/atlas/dist/cli/index.js
+node "$ATLAS" init  --cwd ~/projects/my-app
+node "$ATLAS" index ~/projects/my-app
+node "$ATLAS" search "auth token refresh" --cwd ~/projects/my-app
+node "$ATLAS" docs   --offline             --cwd ~/projects/my-app
+node "$ATLAS" serve                        --cwd ~/projects/my-app
+```
+
+### With `npx` / once published
+
+```bash
+# As a one-shot, no global install:
+npx atlas index ~/projects/my-app
+npx atlas search "auth token refresh" --cwd ~/projects/my-app
+```
+
+(Until Atlas is published to npm, build locally and use `node ./dist/cli/index.js`
+or `npm link` it into your `PATH`.)
+
+### Real Claude-backed synthesis and Q&A
+
+The `--offline` flag is for the deterministic mock. To use the real Anthropic
+API, export your key and drop `--offline`:
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-…
-node ./dist/cli/index.js docs --cwd ./fixtures/sample
-node ./dist/cli/index.js ask --cwd ./fixtures/sample "How does Counter.increment work?"
+node ./dist/cli/index.js docs --cwd "$TARGET"
+node ./dist/cli/index.js ask  --cwd "$TARGET" "How does Counter.increment work?"
 ```
 
-## What's in here
+The default synth model is `claude-sonnet-4-6`; override it in `atlas.config.json`.
+Per-run spend is capped by `tokenBudget` (default 200k).
+
+## Verified on real third-party repos
+
+The `scripts/verify-external.sh` script clones a public repo into a temp dir,
+runs the full pipeline, and asserts that known symbols/edges/search results
+show up. It works against two checked-in targets:
+
+```bash
+npm run build
+bash scripts/verify-external.sh got       # sindresorhus/got (ESM TS)
+bash scripts/verify-external.sh express   # expressjs/express (CommonJS JS)
+```
+
+Representative output (got, May 2026):
+
+```
+totals: files=78 symbols=2780 imports=656 edges=1093
+  ok   files: 78 (>= 70)
+  ok   symbols: 2780 (>= 2000)
+  ok   edges: 1093 (>= 900)
+  ok   known symbol: source/index.ts :: got = variable
+  ok   search 'retry delay' surfaces source/core/options.ts in top 5
+```
+
+## Repository layout
 
 | Path | Purpose |
 | --- | --- |
 | `src/cli/`        | `commander` commands; thin — all logic in `core/` |
 | `src/core/db/`    | SQLite schema + migrations + typed query helpers |
-| `src/core/ingest/`| repo walker, language detect, content hashing, indexer |
-| `src/core/parse/` | tree-sitter symbol extractors (TS/JS/Python) |
+| `src/core/ingest/`| repo walker (respects `.gitignore`), language detect, content hashing, indexer |
+| `src/core/parse/` | tree-sitter symbol extractors (TS/JS/Python; ESM + CJS) |
 | `src/core/graph/` | reference resolution + JSON/DOT export |
-| `src/core/vector/`| local-hash embeddings + hybrid search |
-| `src/core/synth/` | LLM client interface (Anthropic + offline) + doc synthesis |
+| `src/core/vector/`| `sqlite-vec` vec0 store + local-hash embedder + hybrid search |
+| `src/core/synth/` | LLM client interface (Anthropic + offline mock) + doc synthesis |
 | `src/core/qa/`    | retrieval + grounded ask |
-| `src/core/drift/` | stale-doc + undocumented detection |
-| `src/web/`        | dashboard HTTP server + static UI |
+| `src/core/drift/` | stale-doc + undocumented-symbol detection |
+| `src/web/`        | dashboard HTTP API + static UI |
 | `fixtures/sample/`| tiny multi-language repo used by tests |
-| `.github/workflows/atlas.yml` | PR action that runs index + drift + posts a comment |
+| `.github/workflows/atlas.yml` | PR action that runs index + drift + posts a sticky comment |
+| `scripts/demo.sh` | full pipeline against the bundled fixture |
+| `scripts/verify-external.sh` | full pipeline against a freshly cloned public repo |
 
 ## Development
 
 ```bash
-npm run typecheck
-npm run lint
-npm test
-npm run build
+npm run typecheck       # strict TS, zero errors
+npm run lint            # ESLint flat config, zero errors
+npm test                # vitest — 62 tests
+npm run build           # tsc + copy static assets
 ```
+
+`npm test` includes a self-index integration test (Atlas indexes its own
+source tree) and an end-to-end CI workflow test (index → docs → drift →
+ci-comment produces the exact comment payload).
+
+## CI
+
+`.github/workflows/atlas.yml` runs on every PR: index + docs + drift, then
+posts a sticky comment summarising stale docs and undocumented public symbols.
+The job fails (so PR checks go red) when drift is present.
 
 ## Costs and safety
 
 - **Secrets:** `ANTHROPIC_API_KEY` is read from the environment; `.env` is
-  gitignored.
-- **Spend cap:** per-run token budget from config (`tokenBudget`); the
-  synthesizer skips work rather than overrunning.
-- **Offline mode:** `--offline` swaps in a deterministic mock LLM so synthesis
-  and Q&A can run in tests / CI / on planes.
-- **Read-only on inputs:** Atlas never modifies the target repository; it only
-  writes to its own index under `.atlas/`.
+  gitignored. Atlas fails loudly if it's missing and `--offline` wasn't
+  passed.
+- **Spend cap:** per-run token budget in `tokenBudget`; the synthesizer
+  skips work rather than overrunning.
+- **Offline mode:** `--offline` swaps in the deterministic mock LLM so
+  synthesis and Q&A run in tests / CI / on planes.
+- **Read-only on inputs:** Atlas never modifies the target repository; it
+  only writes to its own index under `.atlas/`.
 
-See `DECISIONS.md` for non-obvious choices and `CLAUDE.md` for the operating
-manual that drove the build.
+See `DECISIONS.md` for non-obvious architectural choices and `CLAUDE.md`
+for the operating manual that drove the build.
+
+## License
+
+MIT — see `LICENSE`.

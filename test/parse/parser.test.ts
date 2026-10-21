@@ -67,6 +67,32 @@ function outer() {
     expect(result.symbols.find((s) => s.name === 'outer')?.kind).toBe('function');
   });
 
+  it('extracts CommonJS require() imports', async () => {
+    const src = `
+const express = require('express');
+const { Router, json } = require('express');
+const renamed = require('foo').bar;
+const { x: y } = require('baz');
+`;
+    const result = await parseSource(src, 'javascript');
+    const def = result.imports.find(
+      (i) => i.module === 'express' && i.alias === 'express',
+    );
+    expect(def?.imported).toBe('default');
+    const router = result.imports.find(
+      (i) => i.module === 'express' && i.imported === 'Router',
+    );
+    expect(router).toBeDefined();
+    const renamed = result.imports.find(
+      (i) => i.module === 'foo' && i.alias === 'renamed',
+    );
+    expect(renamed?.imported).toBe('bar');
+    const aliased = result.imports.find(
+      (i) => i.module === 'baz' && i.imported === 'x',
+    );
+    expect(aliased?.alias).toBe('y');
+  });
+
   it('extracts interfaces and type aliases', async () => {
     const src = `
 export interface Drawable { area(): number; }
