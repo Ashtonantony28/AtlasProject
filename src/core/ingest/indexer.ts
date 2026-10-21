@@ -13,9 +13,9 @@ import {
   finishRun,
   counts,
 } from '../db/index.js';
-import { walkRepo, type WalkOptions } from './walker.js';
+import { walkRepoReport, type WalkOptions } from './walker.js';
 import { sha256, countLoc } from './hash.js';
-import { parseSource } from '../parse/parser.js';
+import { parseSourceOrThrow } from '../parse/parser.js';
 import { resolveGraph } from '../graph/resolver.js';
 import { embedAllSymbols, createEmbedder, deleteEmbeddingsForFile } from '../vector/index.js';
 import { loadConfig } from '../config.js';
@@ -67,7 +67,7 @@ export async function indexRepo(
     durationMs: 0,
   };
 
-  const files = walkRepo(root, opts);
+  const { files, unreadable } = walkRepoReport(root, opts);
   stats.filesScanned = files.length;
 
   const existingByPath = new Map(
@@ -79,6 +79,16 @@ export async function indexRepo(
       }[]
     ).map((f) => [f.path, f]),
   );
+
+  // An unreadable directory or file is a failure, not a deletion: keep its rows.
+  for (const { path, reason } of unreadable) {
+    const isDir = path === '' || path.endsWith('/');
+    for (const indexed of [...existingByPath.keys()]) {
+      if (isDir ? indexed.startsWith(path) : indexed === path) existingByPath.delete(indexed);
+    }
+    stats.filesFailed++;
+    opts.onFile?.({ path: path || '.', status: 'failed', reason: `unreadable: ${reason}` });
+  }
 
   for (const file of files) {
     const existing = existingByPath.get(file.relativePath);
@@ -106,9 +116,9 @@ export async function indexRepo(
 
     // Parse before touching the DB: a failure leaves the previous rows and
     // hash in place so the next run retries.
-    let parsed: Awaited<ReturnType<typeof parseSource>>;
+    let parsed: Awaited<ReturnType<typeof parseSourceOrThrow>>;
     try {
-      parsed = await parseSource(content, file.language as LanguageId, file.relativePath);
+      parsed = await parseSourceOrThrow(content, file.language as LanguageId, file.relativePath);
     } catch (err) {
       stats.filesFailed++;
       opts.onFile?.({

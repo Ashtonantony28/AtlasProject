@@ -302,3 +302,17 @@ empty, or no docs in the index (exit 1, MCP `isError`). Shared zod schemas in
 `requireRoot` make read commands fail without creating `.atlas/`; `indexPath`
 must resolve inside `.atlas/`. MCP still creates the index in an existing root
 (it serves `atlas_index`).
+
+
+## 2026-10-21 — SG17: a read or parse failure is never a deletion
+`walkRepoReport` returns the files plus the directories (`lib/`, root `''`) and
+files it could not read or stat; `walkRepo` keeps its old shape. `indexRepo`
+keeps every indexed row under an unreadable path (no prune, no doc tombstone)
+and counts each unreadable entry once in `filesFailed` with an `onFile` failure,
+so it heals on the next readable run. For parsing, `parseSource` still never
+throws (§Interfaces); the indexer calls `parseSourceOrThrow`, which throws only
+when tree-sitter yields no tree, so the old rows and hash stay and the file is
+retried. Partial extraction (a walker bug after a tree exists) is still stored
+with an internal diagnostic, as in SG11: retrying a deterministic bug forever
+would leave the file unindexed. `npm run typecheck` also runs
+`tsconfig.test.json`. `startServer` reports the bound port, so `--port 0` works.

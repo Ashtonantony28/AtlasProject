@@ -10,11 +10,26 @@ import {
   getSymbolsForFile,
 } from '../../src/core/db/index.js';
 import { indexRepo } from '../../src/core/ingest/index.js';
-import * as parser from '../../src/core/parse/parser.js';
+import { parseSource, parseSourceOrThrow } from '../../src/core/parse/parser.js';
 
-vi.mock('../../src/core/parse/parser.js', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../src/core/parse/parser.js')>();
-  return { ...actual, parseSource: vi.fn(actual.parseSource) };
+// tree-sitter fails (as with R1's `Invalid argument`) on any source containing `fault.on`.
+const fault = vi.hoisted(() => ({ on: null as string | null }));
+
+vi.mock('tree-sitter', async (importOriginal) => {
+  const real = await importOriginal<{
+    default: new () => { parse(...a: unknown[]): unknown };
+  }>();
+  class FaultyParser extends real.default {
+    parse(input: unknown, ...rest: unknown[]): unknown {
+      if (fault.on !== null && typeof input === 'function') {
+        if (String((input as (i: number) => string)(0)).includes(fault.on)) {
+          throw new Error('Invalid argument');
+        }
+      }
+      return super.parse(input, ...rest);
+    }
+  }
+  return { ...real, default: FaultyParser };
 });
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -30,7 +45,7 @@ describe('indexRepo parse failure', () => {
     cpSync(FIXTURE, root, { recursive: true });
   });
   afterEach(() => {
-    vi.mocked(parser.parseSource).mockReset();
+    fault.on = null;
     rmSync(dir, { recursive: true, force: true });
   });
 
@@ -47,10 +62,7 @@ describe('indexRepo parse failure', () => {
         join(root, MATH),
         'export function subtract(a: number, b: number): number {\n  return a - b;\n}\n',
       );
-      const real = vi.mocked(parser.parseSource).getMockImplementation()!;
-      vi.mocked(parser.parseSource).mockImplementationOnce(() => {
-        throw new Error('boom');
-      });
+      fault.on = 'subtract';
 
       const failed = await indexRepo(db, root, { skipEmbeddings: true });
       expect(failed.filesFailed).toBe(1);
@@ -58,7 +70,7 @@ describe('indexRepo parse failure', () => {
       expect(after?.content_hash).toBe(before!.content_hash);
       expect(getSymbolsForFile(db, before!.id).map((s) => s.qualified_name)).toEqual(oldSymbols);
 
-      vi.mocked(parser.parseSource).mockImplementation(real);
+      fault.on = null;
       const retried = await indexRepo(db, root, { skipEmbeddings: true });
       expect(retried.filesFailed).toBe(0);
       expect(retried.filesIndexed).toBe(1);
@@ -69,5 +81,17 @@ describe('indexRepo parse failure', () => {
     } finally {
       closeDatabase(db);
     }
+  });
+
+  it('parseSource reports the failure as a diagnostic; parseSourceOrThrow throws', async () => {
+    fault.on = 'x';
+    const r = await parseSource('const x = 1;\n', 'typescript', 'x.ts');
+    expect(r.symbols).toEqual([]);
+    expect(r.diagnostics).toEqual([
+      { line: 1, message: expect.stringContaining('Invalid argument'), severity: 'error' },
+    ]);
+    await expect(parseSourceOrThrow('const x = 1;\n', 'typescript', 'x.ts')).rejects.toThrow(
+      'Invalid argument',
+    );
   });
 });

@@ -214,8 +214,9 @@ export async function startServer(db: DB, root: string, opts: ServeOptions = {})
     server.listen(port, host, res);
   });
 
+  const addr = server.address();
   return {
-    url: `http://${host}:${port}/`,
+    url: `http://${host}:${typeof addr === 'object' && addr ? addr.port : port}/`,
     close: () =>
       new Promise<void>((res, rej) => {
         server.close((err) => (err ? rej(err) : res()));
