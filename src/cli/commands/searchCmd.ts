@@ -1,7 +1,7 @@
 import type { Command } from 'commander';
 import { resolve } from 'node:path';
 import { closeDatabase, openDatabase, type SymbolKind } from '../../core/db/index.js';
-import { LocalHashEmbedder, search } from '../../core/vector/index.js';
+import { createEmbedder, search } from '../../core/vector/index.js';
 import { loadConfig, resolvePaths } from '../../core/config.js';
 
 interface SearchArgs {
@@ -38,7 +38,7 @@ export function registerSearchCommand(program: Command): void {
       const paths = resolvePaths(root, config);
       const db = openDatabase(paths.dbPath, { fileMustExist: true });
       try {
-        const embedder = new LocalHashEmbedder();
+        const embedder = createEmbedder(config);
         let kinds: SymbolKind[] | undefined;
         if (opts.kind) {
           const parts = opts.kind
@@ -48,7 +48,8 @@ export function registerSearchCommand(program: Command): void {
           for (const k of parts) {
             if (!VALID_KINDS.includes(k)) {
               process.stderr.write(`atlas: unknown kind '${k}'\n`);
-              process.exit(1);
+              process.exitCode = 1;
+              return;
             }
           }
           kinds = parts;

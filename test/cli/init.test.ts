@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, readFileSync, rmSync, existsSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, existsSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { writeDefaultConfig, loadConfig, DEFAULT_CONFIG } from '../../src/core/config.js';
@@ -37,7 +37,7 @@ describe('atlas init (core)', () => {
   it('does not overwrite an existing config unless force', () => {
     writeDefaultConfig(dir);
     // Mutate a field via direct write to detect overwrite.
-    const cfgPath = join(dir, 'atlas.config.json');
+    const cfgPath = join(dir, '.atlas', 'config.json');
     const before = readFileSync(cfgPath, 'utf8');
     const r2 = writeDefaultConfig(dir);
     expect(r2.created).toBe(false);
@@ -48,7 +48,8 @@ describe('atlas init (core)', () => {
   });
 
   it('rejects invalid config', () => {
-    const cfgPath = join(dir, 'atlas.config.json');
+    const cfgPath = join(dir, '.atlas', 'config.json');
+    mkdirSync(join(dir, '.atlas'));
     // Write invalid config manually.
     const bad = JSON.stringify({ version: 2, languages: ['rust'] });
     writeFileSync(cfgPath, bad);

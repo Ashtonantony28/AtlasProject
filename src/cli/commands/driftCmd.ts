@@ -31,9 +31,7 @@ export function registerDriftCommand(program: Command): void {
         } else {
           process.stdout.write(formatDriftReport(report) + '\n');
         }
-        if (report.hasDrift) {
-          process.exit(2);
-        }
+        if (report.hasDrift) process.exitCode = 2;
       } finally {
         closeDatabase(db);
       }

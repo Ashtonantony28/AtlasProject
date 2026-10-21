@@ -172,3 +172,22 @@ edges. Weak policy: unresolved calls through an import binding and unresolved
 locals, parameters) produce no edge. Methods of `module.exports = {...}` and
 `export default {...}` are qualified as `default.<name>` and importable by name.
 Golden edges for the resolver live in `fixtures/graph/expected-edges.json`.
+## 2026-10-21 — SG5: hybrid search via weighted RRF
+`search()` unions three candidate sources: vec0 KNN, FTS5 (`symbols_fts`, bm25
+weighted 10/5/1 over name/qualified_name/docstring) and an exact-name lookup on
+`idx_symbols_name`. Rankings are fused with RRF (k=60); `semanticWeight` /
+`structuralWeight` (0.6/0.4) now weight the semantic list vs the lexical +
+structural lists. FTS queries are built only from identifier tokens, each
+quoted and OR-ed, so user text never reaches MATCH syntax. Kind/file filters
+are pushed into SQL and into vec0 KNN as `rowid IN (subquery)`, which sqlite-vec
+pre-filters exactly. Bench on `--target synthetic10k` (10,206 symbols): search
+p50 18.8 ms / p95 27.7 ms (KNN ≈ 11 ms + FTS ≈ 9 ms dominate).
+
+## 2026-10-21 — SG8: config inside `.atlas/`, exitCode over exit
+Config moved to `.atlas/config.json` so Atlas writes nothing in the target
+outside `.atlas/`; a root `atlas.config.json` is still read as a fallback but
+never written (and `init` leaves it in charge). `include` defaults to `[]`
+(everything) and, like `languages`, now filters the walk. CLI actions set
+`process.exitCode` and return instead of calling `process.exit` inside
+`try/finally`, so the DB is always closed; the top-level catch still exits 1.
+`buildProgram()` (src/cli/program.ts) lets tests drive commands in-process.

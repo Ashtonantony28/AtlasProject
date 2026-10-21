@@ -109,8 +109,19 @@ node ./dist/cli/index.js docs --cwd "$TARGET"
 node ./dist/cli/index.js ask  --cwd "$TARGET" "How does Counter.increment work?"
 ```
 
-The default synth model is `claude-sonnet-4-6`; override it in `atlas.config.json`.
+The default synth model is `claude-sonnet-4-6`; override it in `.atlas/config.json`.
 Per-run spend is capped by `tokenBudget` (default 200k).
+
+### Configuration
+
+`atlas init` (or the first `atlas index`) writes `.atlas/config.json`; nothing
+else is created in the target. A legacy root `atlas.config.json` is still read
+if `.atlas/config.json` is absent, but is never written. Walk filters:
+
+- `languages` — subset of `typescript`, `javascript`, `python` (default: all).
+- `include` — gitignore-style globs; when non-empty only matching files are
+  indexed (default `[]` = everything not excluded).
+- `exclude` — globs added to `.gitignore` rules.
 
 ## Verified on real third-party repos
 

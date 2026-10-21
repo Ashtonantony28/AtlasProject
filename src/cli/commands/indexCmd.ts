@@ -26,9 +26,10 @@ export function registerIndexCommand(program: Command): void {
       const root = resolve(pathArg);
       if (!existsSync(root)) {
         process.stderr.write(`atlas: path does not exist: ${root}\n`);
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
-      // Auto-init if missing — phase 1 already supports it.
+      // Auto-init creates only .atlas/ (config + index) inside the target.
       writeDefaultConfig(root);
       const config = loadConfig(root);
       const paths = resolvePaths(root, config);
@@ -37,6 +38,8 @@ export function registerIndexCommand(program: Command): void {
         const stats = await indexRepo(db, root, {
           force: opts.force ?? false,
           exclude: config.exclude,
+          include: config.include,
+          languages: config.languages,
           onFile: (e) => {
             if (opts.verbose) {
               process.stdout.write(`  [${e.status}] ${e.path}${e.reason ? ` (${e.reason})` : ''}\n`);
