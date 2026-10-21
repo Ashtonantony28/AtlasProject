@@ -32,9 +32,16 @@ export interface ParsedReference {
   line: number;
 }
 
+export interface ParseDiagnostic {
+  line: number; // 1-based
+  message: string;
+  severity: 'error' | 'warning';
+}
+
 export interface ParseResult {
   language: LanguageId;
   symbols: ParsedSymbol[];
   imports: ParsedImport[];
   references: ParsedReference[];
+  diagnostics: ParseDiagnostic[]; // syntax errors (capped) and internal failures; empty for a clean parse
 }

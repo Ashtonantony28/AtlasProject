@@ -234,3 +234,16 @@ Handlers throw and the SDK turns errors, including zod validation failures, into
 `tokenBudget` that refuses a call when ~chars/3 input + `maxTokens` exceeds
 what is left; the Anthropic client is created lazily so the server starts
 without a key. The DB is closed on process exit, after in-flight calls finish.
+
+## 2026-10-21 — SG11: parser never throws; diagnostics; unindexed edits are stale
+CST walks are iterative: `visit` pushes children (and a scope-restore closure)
+onto an explicit stack via `walkFrames`, preserving pre-order, so a 20k-term
+expression parses. `dotted` and CJS `a = b = c` chains are loops too.
+`ParseResult.diagnostics` lists ERROR/MISSING nodes (first 20, then one
+`warning` with the remainder; error-free subtrees are skipped) and, as a last
+resort, a caught walker or tree-sitter failure (partial results + `error`).
+Diagnostics are not stored (no migration): `IndexStats.filesWithDiagnostics`
+and `atlas index` report the count, `--verbose` the per-file number. Drift now
+also hashes each documented file on disk; if it differs from the indexed
+`content_hash` (edited, or a failed re-index kept the old rows per SG2), the
+doc is stale with `currentHash: "unindexed"`.

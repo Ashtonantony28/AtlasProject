@@ -26,6 +26,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 
 - `ParsedSymbol` gains `exported: boolean`; `symbols.exported INTEGER NOT NULL DEFAULT 0` (migration v3).
 - `docs.source_hash` = `sha256(prompt)`, i.e. a hash of the full grounding context, not the file hash. `detectDrift` recomputes it the same way.
+- `ParseResult` gains `diagnostics: { line; message; severity: 'error' | 'warning' }[]` (additive, SG11); `parseSource` never throws on input.
 - `indexRepo` contract: a file's `content_hash` is written in the same transaction as its symbols and imports, only after a successful parse. Paths not seen by the walk are deleted (with cascades to symbols, imports, edges, embeddings and docs).
 - `Embedder` is chosen by `config.embeddingModel` through `createEmbedder(config)`; `local-hash-v1` stays the default.
 - `search()` signature is unchanged. Candidates are the union of vec0 KNN and an FTS5 index over `name`, `qualified_name` and `docstring`, fused by RRF. Filters apply before truncation.
@@ -46,7 +47,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 | SG8 | Read-only on target + CLI hygiene | SG0 | Claude (thread) | done: config in `.atlas/`, exitCode not exit; 104 tests, express git status clean |
 | SG9 | MCP server (additive, keeps `docs`/`ask`) | SG6, SG7 | Claude (thread) | done: `atlas mcp` stdio, 7 tools incl. docs + ask (citation checks, budgeted); 186 tests |
 | SG10 | Resolver: re-exports, default/CJS exports, generic Python bases (A1-01, A1-02, A1-03) | SG4 | Claude (thread) | proposed (from AUDIT-1) |
-| SG11 | Parser never throws; diagnostics; failed parse marks docs stale (A1-04, A1-13) | SG3 | Claude (thread) | proposed (from AUDIT-1) |
+| SG11 | Parser never throws; diagnostics; failed parse marks docs stale (A1-04, A1-13) | SG3 | Claude (thread) | done: iterative CST walks (20k-term exprs), `ParseResult.diagnostics` (not stored), drift flags files changed since indexing; 3 A1-04 flipped; 241 tests; express 2052/1444, got 5752/4850 |
 | SG12 | Drift completeness: full neighbourhood hash, `--docs-dir` missing fails, CRLF, commit own docs (A1-05..08) | SG6 | Claude (thread) | proposed (from AUDIT-1) |
 
 ### SG0: Shared interfaces + bench harness

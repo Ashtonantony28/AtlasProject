@@ -2,6 +2,7 @@ import type Parser from 'tree-sitter';
 import type { LanguageId } from '../ingest/language.js';
 import type { SymbolKind } from '../db/index.js';
 import type {
+  ParseDiagnostic,
   ParsedImport,
   ParsedReference,
   ParsedSymbol,
@@ -9,7 +10,14 @@ import type {
   RefKind,
   RefReceiver,
 } from './types.js';
-import { forEachOfType, uniqueRefs } from './refs.js';
+import {
+  forEachOfType,
+  internalDiagnostic,
+  pushAll,
+  uniqueRefs,
+  walkFrames,
+  type Frame,
+} from './refs.js';
 
 type Node = Parser.SyntaxNode;
 
@@ -127,15 +135,24 @@ function push(
   return sym;
 }
 
-function visitScope(ctx: Ctx, name: string, exported: boolean, body: Node | null): void {
+/** Enters the scope now; its members are walked next, then the scope is left. */
+function visitScope(
+  ctx: Ctx,
+  stack: Frame[],
+  name: string,
+  exported: boolean,
+  body: Node | null,
+): void {
   if (!body) return;
   const saved = { scopeExported: ctx.scopeExported, owner: ctx.owner };
   ctx.owner = qualify(ctx, name);
   ctx.qualifier.push(name);
   ctx.scopeExported = exported;
-  for (const c of body.namedChildren) visit(c, ctx);
-  ctx.qualifier.pop();
-  Object.assign(ctx, saved);
+  stack.push(() => {
+    ctx.qualifier.pop();
+    Object.assign(ctx, saved);
+  });
+  pushAll(stack, body.namedChildren);
 }
 
 interface Target {
@@ -155,12 +172,17 @@ const NAME_NODES = new Set([
 
 /** `a`, `a.b.c` for identifier chains; null for anything computed. */
 function dotted(node: Node): string | null {
-  if (NAME_NODES.has(node.type)) return node.text;
-  if (node.type !== 'member_expression') return null;
-  const obj = node.childForFieldName('object');
-  const prop = node.childForFieldName('property');
-  const head = obj ? dotted(obj) : null;
-  return head && prop ? `${head}.${prop.text}` : null;
+  const parts: string[] = [];
+  let cur: Node | null = node;
+  while (cur?.type === 'member_expression') {
+    const prop = cur.childForFieldName('property');
+    if (!prop) return null;
+    parts.push(prop.text);
+    cur = cur.childForFieldName('object');
+  }
+  if (!cur || !NAME_NODES.has(cur.type)) return null;
+  parts.push(cur.text);
+  return parts.reverse().join('.');
 }
 
 function targetOf(node: Node | null): Target | null {
@@ -237,7 +259,7 @@ function cjsObjectScope(assign: Node): string | null {
   return isExports ? (left.childForFieldName('property')?.text ?? null) : null;
 }
 
-function visit(node: Node, ctx: Ctx): void {
+function visit(node: Node, ctx: Ctx, stack: Frame[]): void {
   // ESM imports
   if (node.type === 'import_statement') {
     collectImports(node, ctx);
@@ -265,7 +287,7 @@ function visit(node: Node, ctx: Ctx): void {
     if (name) {
       const sym = push(ctx, CLASS_NODES.has(node.type) ? 'class' : 'interface', name, node);
       collectHeritage(ctx, node, sym.qualifiedName ?? name);
-      visitScope(ctx, name, sym.exported, node.childForFieldName('body'));
+      visitScope(ctx, stack, name, sym.exported, node.childForFieldName('body'));
       return;
     }
   }
@@ -283,7 +305,7 @@ function visit(node: Node, ctx: Ctx): void {
           ? cjsObjectScope(node)
           : null;
     if (scope) {
-      visitScope(ctx, scope, true, value ?? node.childForFieldName('right'));
+      visitScope(ctx, stack, scope, true, value ?? node.childForFieldName('right'));
       return;
     }
   }
@@ -294,7 +316,7 @@ function visit(node: Node, ctx: Ctx): void {
     if (name) {
       const sym = push(ctx, 'type', name, node);
       const value = node.childForFieldName('value');
-      if (value?.type === 'object_type') visitScope(ctx, name, sym.exported, value);
+      if (value?.type === 'object_type') visitScope(ctx, stack, name, sym.exported, value);
     }
     return;
   }
@@ -343,27 +365,31 @@ function visit(node: Node, ctx: Ctx): void {
     (node.type === 'lexical_declaration' || node.type === 'variable_declaration') &&
     ctx.qualifier.length === 0
   ) {
-    for (const decl of node.namedChildren) {
-      if (decl.type !== 'variable_declarator') continue;
-      const nameNode = decl.childForFieldName('name');
-      const valueNode = decl.childForFieldName('value');
-      if (!nameNode || nameNode.type !== 'identifier') {
-        collectCalls(ctx, valueNode, ctx.owner);
-        continue;
-      }
-      const isFn = valueNode !== null && FN_VALUES.has(valueNode.type);
-      const sym = push(ctx, isFn ? 'function' : 'variable', nameNode.text, decl, node);
-      // Values are not walked for symbols: locals of `const f = () => {...}` are not top-level.
-      if (valueNode?.type === 'object') visitScope(ctx, sym.name, sym.exported, valueNode);
-      else collectCalls(ctx, valueNode, sym.qualifiedName);
+    // Declarators are deferred so each object scope is walked before the next declarator.
+    const decls = node.namedChildren.filter((d) => d.type === 'variable_declarator');
+    for (let i = decls.length - 1; i >= 0; i--) {
+      const decl = decls[i] as Node;
+      stack.push(() => visitDeclarator(ctx, stack, node, decl));
     }
     return;
   }
 
   // Recurse for children unless we already short-circuited.
-  for (const child of node.namedChildren) {
-    visit(child, ctx);
+  pushAll(stack, node.namedChildren);
+}
+
+function visitDeclarator(ctx: Ctx, stack: Frame[], node: Node, decl: Node): void {
+  const nameNode = decl.childForFieldName('name');
+  const valueNode = decl.childForFieldName('value');
+  if (!nameNode || nameNode.type !== 'identifier') {
+    collectCalls(ctx, valueNode, ctx.owner);
+    return;
   }
+  const isFn = valueNode !== null && FN_VALUES.has(valueNode.type);
+  const sym = push(ctx, isFn ? 'function' : 'variable', nameNode.text, decl, node);
+  // Values are not walked for symbols: locals of `const f = () => {...}` are not top-level.
+  if (valueNode?.type === 'object') visitScope(ctx, stack, sym.name, sym.exported, valueNode);
+  else collectCalls(ctx, valueNode, sym.qualifiedName);
 }
 
 function isModuleExports(node: Node | null): boolean {
@@ -374,10 +400,18 @@ function isModuleExports(node: Node | null): boolean {
   );
 }
 
-function collectCjsExports(assign: Node, names: Set<string>): void {
+function collectCjsExports(first: Node, names: Set<string>): void {
+  // `a = b = c` chains nest to the right; walked as a loop.
+  for (let assign: Node | null = first; assign; ) {
+    assign = collectCjsExport(assign, names);
+  }
+}
+
+/** Records one assignment's export names; returns the chained right-hand assignment, if any. */
+function collectCjsExport(assign: Node, names: Set<string>): Node | null {
   const left = assign.childForFieldName('left');
   const right = assign.childForFieldName('right');
-  if (!left || !right) return;
+  if (!left || !right) return null;
   if (isModuleExports(left)) {
     if (right.type === 'identifier') names.add(right.text);
     if (right.type === 'object') {
@@ -395,7 +429,7 @@ function collectCjsExports(assign: Node, names: Set<string>): void {
       if (right.type === 'identifier') names.add(right.text);
     }
   }
-  if (right.type === 'assignment_expression') collectCjsExports(right, names);
+  return right.type === 'assignment_expression' ? right : null;
 }
 
 function collectExportNames(root: Node): Set<string> {
@@ -556,13 +590,23 @@ export function parseTsLike(root: Node, language: LanguageId): ParseResult {
     symbols: [],
     imports: [],
     qualifier: [],
-    exportNames: collectExportNames(root),
+    exportNames: new Set(),
     scopeExported: false,
     references: [],
     owner: null,
   };
-  for (const child of root.namedChildren) {
-    visit(child, ctx);
+  const diagnostics: ParseDiagnostic[] = [];
+  try {
+    ctx.exportNames = collectExportNames(root);
+    walkFrames(root.namedChildren, (node, stack) => visit(node, ctx, stack));
+  } catch (err) {
+    diagnostics.push(internalDiagnostic(err));
   }
-  return { language, symbols: ctx.symbols, imports: ctx.imports, references: uniqueRefs(ctx.references) };
+  return {
+    language,
+    symbols: ctx.symbols,
+    imports: ctx.imports,
+    references: uniqueRefs(ctx.references),
+    diagnostics,
+  };
 }
