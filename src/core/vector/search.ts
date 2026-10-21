@@ -96,7 +96,7 @@ function loadSymbolsByIds(db: DB, ids: number[]): Map<number, SymbolRow> {
   const placeholders = ids.map(() => '?').join(',');
   const rows = db
     .prepare(
-      `SELECT id, file_id, kind, name, signature, start_line, end_line, docstring, qualified_name
+      `SELECT id, file_id, kind, name, signature, start_line, end_line, docstring, qualified_name, exported
        FROM symbols WHERE id IN (${placeholders})`,
     )
     .all(...ids) as SymbolRow[];

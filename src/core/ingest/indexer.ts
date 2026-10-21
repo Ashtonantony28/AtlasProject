@@ -115,6 +115,7 @@ export async function indexRepo(
             end_line: sym.endLine,
             docstring: sym.docstring,
             qualified_name: sym.qualifiedName,
+            exported: sym.exported,
           });
           stats.symbols++;
         }

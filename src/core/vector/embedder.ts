@@ -3,6 +3,8 @@
 // quota. A real provider (Voyage / Anthropic) can be plugged in behind the
 // same interface in a later phase.
 
+import type { AtlasConfig } from '../config.js';
+
 export interface Embedder {
   /** Friendly model id stored alongside vectors. */
   readonly model: string;
@@ -96,4 +98,16 @@ export function cosine(a: Float32Array, b: Float32Array): number {
   let sum = 0;
   for (let i = 0; i < n; i++) sum += (a[i] ?? 0) * (b[i] ?? 0);
   return sum;
+}
+
+/** Pick the embedder named by `config.embeddingModel`. */
+export function createEmbedder(config: Pick<AtlasConfig, 'embeddingModel'>): Embedder {
+  switch (config.embeddingModel) {
+    case 'local-hash-v1':
+      return new LocalHashEmbedder();
+    default:
+      throw new Error(
+        `Unknown embeddingModel "${config.embeddingModel}". Supported: local-hash-v1.`,
+      );
+  }
 }

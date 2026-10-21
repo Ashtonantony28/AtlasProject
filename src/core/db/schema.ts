@@ -119,4 +119,35 @@ export const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    version: 3,
+    name: 'symbols_exported_fts',
+    sql: `
+      ALTER TABLE symbols ADD COLUMN exported INTEGER NOT NULL DEFAULT 0;
+
+      CREATE VIRTUAL TABLE IF NOT EXISTS symbols_fts USING fts5(
+        name, qualified_name, docstring,
+        content='symbols', content_rowid='id'
+      );
+
+      CREATE TRIGGER IF NOT EXISTS symbols_fts_ai AFTER INSERT ON symbols BEGIN
+        INSERT INTO symbols_fts (rowid, name, qualified_name, docstring)
+        VALUES (new.id, new.name, new.qualified_name, new.docstring);
+      END;
+
+      CREATE TRIGGER IF NOT EXISTS symbols_fts_ad AFTER DELETE ON symbols BEGIN
+        INSERT INTO symbols_fts (symbols_fts, rowid, name, qualified_name, docstring)
+        VALUES ('delete', old.id, old.name, old.qualified_name, old.docstring);
+      END;
+
+      CREATE TRIGGER IF NOT EXISTS symbols_fts_au AFTER UPDATE ON symbols BEGIN
+        INSERT INTO symbols_fts (symbols_fts, rowid, name, qualified_name, docstring)
+        VALUES ('delete', old.id, old.name, old.qualified_name, old.docstring);
+        INSERT INTO symbols_fts (rowid, name, qualified_name, docstring)
+        VALUES (new.id, new.name, new.qualified_name, new.docstring);
+      END;
+
+      INSERT INTO symbols_fts (symbols_fts) VALUES ('rebuild');
+    `,
+  },
 ];

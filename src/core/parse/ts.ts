@@ -98,6 +98,7 @@ function visit(node: Node, ctx: Ctx): void {
         endLine: endLine(node),
         docstring: extractLeadingComment(node),
         qualifiedName: qualify(ctx, name),
+        exported: false,
       });
     }
     return;
@@ -115,6 +116,7 @@ function visit(node: Node, ctx: Ctx): void {
         endLine: endLine(node),
         docstring: extractLeadingComment(node),
         qualifiedName: qualify(ctx, name),
+        exported: false,
       });
       // Descend into the body with the class as qualifier so methods get a path.
       const body = node.childForFieldName('body');
@@ -139,6 +141,7 @@ function visit(node: Node, ctx: Ctx): void {
         endLine: endLine(node),
         docstring: extractLeadingComment(node),
         qualifiedName: qualify(ctx, name),
+        exported: false,
       });
     }
   }
@@ -155,6 +158,7 @@ function visit(node: Node, ctx: Ctx): void {
         endLine: endLine(node),
         docstring: extractLeadingComment(node),
         qualifiedName: qualify(ctx, name),
+        exported: false,
       });
     }
   }
@@ -171,6 +175,7 @@ function visit(node: Node, ctx: Ctx): void {
         endLine: endLine(node),
         docstring: extractLeadingComment(node),
         qualifiedName: qualify(ctx, name),
+        exported: false,
       });
     }
     return;
@@ -202,6 +207,7 @@ function visit(node: Node, ctx: Ctx): void {
         endLine: endLine(decl),
         docstring: extractLeadingComment(node),
         qualifiedName: qualify(ctx, nameNode.text),
+        exported: false,
       });
     }
   }

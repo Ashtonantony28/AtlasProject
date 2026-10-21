@@ -29,6 +29,7 @@ describe('migrations', () => {
       'docs',
       'runs',
       'imports',
+      'symbols_fts', // migration v3
     ]) {
       expect(names.has(expected)).toBe(true);
     }

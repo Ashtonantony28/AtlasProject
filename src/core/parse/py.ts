@@ -69,6 +69,7 @@ function visit(node: Node, ctx: Ctx): void {
         endLine: endLine(node),
         docstring: docstringOf(body),
         qualifiedName: qualify(ctx, nameNode.text),
+        exported: false,
       });
     }
     return; // don't recurse into function bodies
@@ -86,6 +87,7 @@ function visit(node: Node, ctx: Ctx): void {
         endLine: endLine(node),
         docstring: docstringOf(body),
         qualifiedName: qualify(ctx, nameNode.text),
+        exported: false,
       });
       if (body) {
         ctx.qualifier.push(nameNode.text);
@@ -108,6 +110,7 @@ function visit(node: Node, ctx: Ctx): void {
         endLine: endLine(node),
         docstring: null,
         qualifiedName: qualify(ctx, left.text),
+        exported: false,
       });
     }
   }

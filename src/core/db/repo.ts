@@ -69,13 +69,14 @@ export interface InsertSymbolInput {
   end_line: number;
   docstring: string | null;
   qualified_name: string | null;
+  exported: boolean;
 }
 
 export function insertSymbol(db: DB, input: InsertSymbolInput): number {
   const info = db
     .prepare(
-      `INSERT INTO symbols (file_id, kind, name, signature, start_line, end_line, docstring, qualified_name)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO symbols (file_id, kind, name, signature, start_line, end_line, docstring, qualified_name, exported)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       input.file_id,
@@ -86,6 +87,7 @@ export function insertSymbol(db: DB, input: InsertSymbolInput): number {
       input.end_line,
       input.docstring,
       input.qualified_name,
+      input.exported ? 1 : 0,
     );
   return Number(info.lastInsertRowid);
 }

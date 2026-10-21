@@ -45,6 +45,7 @@ describe('repo helpers', () => {
       end_line: 3,
       docstring: 'does foo',
       qualified_name: 'a.foo',
+      exported: false,
     });
     const sid2 = insertSymbol(db, {
       file_id: fid,
@@ -55,6 +56,7 @@ describe('repo helpers', () => {
       end_line: 7,
       docstring: null,
       qualified_name: 'a.bar',
+      exported: false,
     });
     insertEdge(db, { src_symbol: sid1, dst_symbol: sid2, kind: 'calls', weak: false });
 
@@ -75,6 +77,7 @@ describe('repo helpers', () => {
       end_line: 1,
       docstring: null,
       qualified_name: null,
+      exported: false,
     });
     upsertDoc(db, { target_kind: 'symbol', target_id: sid, content: 'v1', source_hash: 'h1' });
     upsertDoc(db, { target_kind: 'symbol', target_id: sid, content: 'v2', source_hash: 'h2' });

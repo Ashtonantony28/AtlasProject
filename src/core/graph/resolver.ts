@@ -70,6 +70,7 @@ export function resolveGraph(db: DB, opts: ResolveOptions): ResolveStats {
         end_line: 1,
         docstring: null,
         qualified_name: file.path,
+        exported: false,
       });
       symbols = getSymbolsForFile(db, file.id);
     }

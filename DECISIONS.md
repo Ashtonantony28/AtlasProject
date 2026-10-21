@@ -102,3 +102,10 @@ and KNN, mock LLM) and switches to the real Anthropic API by exporting
 resolution via tree-sitter queries rather than a regex heuristic, language
 coverage beyond TS/JS/Python, and a real Vite/React dashboard if/when the
 vanilla one's limits start to bite.
+
+## 2026-10-21 — SG0: shared interfaces + bench baseline
+Migration v3 adds `symbols.exported` and an FTS5 `symbols_fts` (external
+content, trigger-synced) for SG5's lexical leg. `createEmbedder(config)` is the
+single place an embedder is chosen. `scripts/bench.mjs` baseline on Atlas itself
+(75 files, 690 symbols): index 595 ms, 2.6 ms/file median, no-op re-index 10 ms,
+search p50 1.7 ms / p95 3.7 ms. The 10k-symbol search budget is measured in SG5.

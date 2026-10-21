@@ -35,7 +35,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 
 | ID | Title | Depends | Owner | Status |
 | --- | --- | --- | --- | --- |
-| SG0 | Shared interfaces + bench harness | none | unassigned | proposed |
+| SG0 | Shared interfaces + bench harness | none | Claude (thread) | done: 68 tests, bench baseline in DECISIONS.md |
 | SG1 | Reconcile branches | SG0 | unassigned | proposed |
 | SG2 | Indexer correctness | SG0, SG1 | unassigned | proposed |
 | SG3 | Parser correctness | SG0, SG1 | unassigned | proposed |
