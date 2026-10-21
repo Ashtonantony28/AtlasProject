@@ -2,6 +2,7 @@
 
 import {
   type DB,
+  clearDocTombstones,
   getAllFiles,
   upsertDoc,
   getDoc,
@@ -120,6 +121,8 @@ export async function synthesizeDocs(
     id: 0,
   });
   stats.architectureGenerated = arch === 'generated';
+  // Pruned files' docs are now gone from the doc set too.
+  clearDocTombstones(db);
 
   stats.budgetRemaining = budget.remaining();
   stats.durationMs = Date.now() - t0;

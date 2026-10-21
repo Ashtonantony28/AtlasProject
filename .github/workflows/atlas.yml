@@ -40,8 +40,10 @@ jobs:
         run: node ./dist/cli/index.js index .
 
       # Drift is checked against the docs committed under .atlas/docs (written
-      # by `atlas docs`). Docs are not regenerated here, so a change that
-      # isn't accompanied by refreshed docs shows up as stale. No API key needed.
+      # by `atlas docs`; .atlas/config.json is committed too, so the index above
+      # uses the same filters). Docs are not regenerated here, so a change that
+      # isn't accompanied by refreshed docs shows up as stale. A missing or empty
+      # .atlas/docs exits 1 and fails the job. No API key needed.
       - name: Run drift against committed docs (capture)
         id: drift
         run: |
