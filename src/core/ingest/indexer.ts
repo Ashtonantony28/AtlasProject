@@ -6,6 +6,7 @@ import {
   insertImport,
   deleteSymbolsForFile,
   deleteImportsForFile,
+  deleteFile,
   startRun,
   finishRun,
   counts,
@@ -31,6 +32,7 @@ export interface IndexStats {
   filesIndexed: number;
   filesSkipped: number;
   filesFailed: number;
+  filesRemoved: number;
   symbols: number;
   imports: number;
   edges: number;
@@ -51,6 +53,7 @@ export async function indexRepo(
     filesIndexed: 0,
     filesSkipped: 0,
     filesFailed: 0,
+    filesRemoved: 0,
     symbols: 0,
     imports: 0,
     edges: 0,
@@ -62,7 +65,20 @@ export async function indexRepo(
   const files = walkRepo(root, opts);
   stats.filesScanned = files.length;
 
+  const existingByPath = new Map(
+    (
+      db.prepare('SELECT id, path, content_hash FROM files').all() as {
+        id: number;
+        path: string;
+        content_hash: string;
+      }[]
+    ).map((f) => [f.path, f]),
+  );
+
   for (const file of files) {
+    const existing = existingByPath.get(file.relativePath);
+    existingByPath.delete(file.relativePath);
+
     let content: string;
     try {
       content = readFileSync(file.absolutePath, 'utf8');
@@ -77,62 +93,17 @@ export async function indexRepo(
     }
 
     const hash = sha256(content);
-
-    // Hash-based skip: only when not forcing AND the file exists with the
-    // same hash. Cheaper than re-parsing on every run.
-    const existing = db
-      .prepare('SELECT id, content_hash FROM files WHERE path = ?')
-      .get(file.relativePath) as { id: number; content_hash: string } | undefined;
-
     if (!opts.force && existing && existing.content_hash === hash) {
       stats.filesSkipped++;
       opts.onFile?.({ path: file.relativePath, status: 'skipped', reason: 'unchanged' });
       continue;
     }
 
-    const fileId = upsertFile(db, {
-      path: file.relativePath,
-      language: file.language,
-      content_hash: hash,
-      loc: countLoc(content),
-    });
-
-    // Reparse: clear stale symbols/imports/embeddings for this file.
-    deleteEmbeddingsForFile(db, fileId);
-    deleteSymbolsForFile(db, fileId);
-    deleteImportsForFile(db, fileId);
-
+    // Parse before touching the DB: a failure leaves the previous rows and
+    // hash in place so the next run retries.
+    let parsed: Awaited<ReturnType<typeof parseSource>>;
     try {
-      const parsed = await parseSource(content, file.language as LanguageId);
-      const insertAll = db.transaction(() => {
-        for (const sym of parsed.symbols) {
-          insertSymbol(db, {
-            file_id: fileId,
-            kind: sym.kind,
-            name: sym.name,
-            signature: sym.signature,
-            start_line: sym.startLine,
-            end_line: sym.endLine,
-            docstring: sym.docstring,
-            qualified_name: sym.qualifiedName,
-            exported: sym.exported,
-          });
-          stats.symbols++;
-        }
-        for (const imp of parsed.imports) {
-          insertImport(db, {
-            file_id: fileId,
-            module: imp.module,
-            imported: imp.imported,
-            alias: imp.alias,
-            start_line: imp.line,
-          });
-          stats.imports++;
-        }
-      });
-      insertAll();
-      stats.filesIndexed++;
-      opts.onFile?.({ path: file.relativePath, status: 'parsed' });
+      parsed = await parseSource(content, file.language as LanguageId);
     } catch (err) {
       stats.filesFailed++;
       opts.onFile?.({
@@ -140,13 +111,69 @@ export async function indexRepo(
         status: 'failed',
         reason: (err as Error).message,
       });
+      continue;
     }
+
+    db.transaction(() => {
+      if (existing) {
+        deleteEmbeddingsForFile(db, existing.id);
+        deleteSymbolsForFile(db, existing.id);
+        deleteImportsForFile(db, existing.id);
+      }
+      const fileId = upsertFile(db, {
+        path: file.relativePath,
+        language: file.language,
+        content_hash: hash,
+        loc: countLoc(content),
+      });
+      for (const sym of parsed.symbols) {
+        insertSymbol(db, {
+          file_id: fileId,
+          kind: sym.kind,
+          name: sym.name,
+          signature: sym.signature,
+          start_line: sym.startLine,
+          end_line: sym.endLine,
+          docstring: sym.docstring,
+          qualified_name: sym.qualifiedName,
+          exported: sym.exported,
+        });
+      }
+      for (const imp of parsed.imports) {
+        insertImport(db, {
+          file_id: fileId,
+          module: imp.module,
+          imported: imp.imported,
+          alias: imp.alias,
+          start_line: imp.line,
+        });
+      }
+    })();
+    stats.symbols += parsed.symbols.length;
+    stats.imports += parsed.imports.length;
+    stats.filesIndexed++;
+    opts.onFile?.({ path: file.relativePath, status: 'parsed' });
+  }
+
+  // Prune paths the walk no longer returns (deleted, renamed or now ignored).
+  if (existingByPath.size > 0) {
+    db.transaction(() => {
+      for (const { id } of existingByPath.values()) {
+        deleteEmbeddingsForFile(db, id);
+        deleteFile(db, id);
+      }
+    })();
+    stats.filesRemoved = existingByPath.size;
   }
 
   // Resolve cross-file references and rebuild the edges table — only if
   // something actually changed (or the edges table is empty).
   const currentTotals = counts(db);
-  const needsResolve = stats.filesIndexed > 0 || currentTotals.edges === 0 || opts.force === true;
+  const needsResolve =
+    stats.filesIndexed > 0 ||
+    stats.filesRemoved > 0 ||
+    currentTotals.edges === 0 ||
+    opts.force === true;
   if (needsResolve) {
     const resolveStats = resolveGraph(db, { root });
     stats.edges = resolveStats.edges;
