@@ -45,6 +45,9 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 | SG7 | Grounded Q&A citation checks | SG5 | Claude (thread) | done: `[n]`/`file:line` checks flagged in `ask` result, CLI and `--json`; full-span excerpts capped at 120 lines; expansion ranked resolved-first by kind; 135 tests |
 | SG8 | Read-only on target + CLI hygiene | SG0 | Claude (thread) | done: config in `.atlas/`, exitCode not exit; 104 tests, express git status clean |
 | SG9 | MCP server (additive, keeps `docs`/`ask`) | SG6, SG7 | Claude (thread) | done: `atlas mcp` stdio, 7 tools incl. docs + ask (citation checks, budgeted); 186 tests |
+| SG10 | Resolver: re-exports, default/CJS exports, generic Python bases (A1-01, A1-02, A1-03) | SG4 | Claude (thread) | proposed (from AUDIT-1) |
+| SG11 | Parser never throws; diagnostics; failed parse marks docs stale (A1-04, A1-13) | SG3 | Claude (thread) | proposed (from AUDIT-1) |
+| SG12 | Drift completeness: full neighbourhood hash, `--docs-dir` missing fails, CRLF, commit own docs (A1-05..08) | SG6 | Claude (thread) | proposed (from AUDIT-1) |
 
 ### SG0: Shared interfaces + bench harness
 - Migration v3 (`symbols.exported`), `ParsedSymbol.exported`, `createEmbedder`, FTS5 table `symbols_fts` (migration v3), plus contract tests that pin each item in §Interfaces.
@@ -100,3 +103,7 @@ Fresh subagents that wrote none of the code. Each writes `AUDIT-<n>.md`, ranked 
 2. Performance under load: every §Interfaces budget on a 10k-file synthetic repo.
 3. API consistency: CLI flags, HTTP API, dashboard and `--json` outputs agree.
 4. Test coverage: `vitest --coverage` with lines ≥ 85% in `src/core`, plus untested branches listed.
+
+### Audit round 1
+
+- AUDIT-1 (graph and drift soundness): 0 critical, 6 high, 7 medium, 7 low. Repros in `test/audit/audit-1.test.ts` as `it.fails`; a fix flips its test to `it`. Highs became SG10–SG12; the cheap mediums on the same code paths (A1-06, A1-08, A1-13) ride along.
