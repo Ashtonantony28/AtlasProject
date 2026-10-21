@@ -8,6 +8,7 @@ import { registerAskCommand } from './commands/askCmd.js';
 import { registerDriftCommand } from './commands/driftCmd.js';
 import { registerServeCommand } from './commands/serveCmd.js';
 import { registerCiCommentCommand } from './commands/ciCommentCmd.js';
+import { registerMcpCommand } from './commands/mcpCmd.js';
 
 export function buildProgram(): Command {
   const program = new Command();
@@ -21,5 +22,6 @@ export function buildProgram(): Command {
   registerDriftCommand(program);
   registerServeCommand(program);
   registerCiCommentCommand(program);
+  registerMcpCommand(program);
   return program;
 }
