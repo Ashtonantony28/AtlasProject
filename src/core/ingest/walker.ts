@@ -21,6 +21,17 @@ export interface WalkedFile {
   sizeBytes: number;
 }
 
+// A directory (path ends in `/`; the root is `''`) or file the walk could not read.
+export interface UnreadableEntry {
+  path: string;
+  reason: string;
+}
+
+export interface WalkResult {
+  files: WalkedFile[];
+  unreadable: UnreadableEntry[];
+}
+
 const DEFAULT_MAX_BYTES = 1024 * 1024;
 
 // Common always-skip directories. Lightweight defensive defaults.
@@ -56,6 +67,11 @@ function loadGitignore(root: string): ReturnType<typeof ignore> {
  * Returns relative POSIX paths (with `/` separators) for portability.
  */
 export function walkRepo(root: string, opts: WalkOptions = {}): WalkedFile[] {
+  return walkRepoReport(root, opts).files;
+}
+
+/** Like `walkRepo`, but also reports what could not be read, so callers never mistake it for a deletion. */
+export function walkRepoReport(root: string, opts: WalkOptions = {}): WalkResult {
   const max = opts.maxBytes ?? DEFAULT_MAX_BYTES;
   const ig = loadGitignore(root);
   if (opts.exclude && opts.exclude.length > 0) {
@@ -64,17 +80,21 @@ export function walkRepo(root: string, opts: WalkOptions = {}): WalkedFile[] {
   const inc = opts.include && opts.include.length > 0 ? ignore().add(opts.include) : null;
   const langs = opts.languages ? new Set(opts.languages) : null;
   const out: WalkedFile[] = [];
+  const unreadable: UnreadableEntry[] = [];
+  const toRel = (abs: string): string => relative(root, abs).split(sep).join('/');
 
   const visit = (dir: string): void => {
     let entries: import('node:fs').Dirent[];
     try {
       entries = readdirSync(dir, { withFileTypes: true });
-    } catch {
+    } catch (err) {
+      const rel = toRel(dir);
+      unreadable.push({ path: rel ? `${rel}/` : '', reason: (err as Error).message });
       return;
     }
     for (const e of entries) {
       const abs = join(dir, e.name);
-      const rel = relative(root, abs).split(sep).join('/');
+      const rel = toRel(abs);
       if (!rel) continue;
       if (e.isDirectory()) {
         if (ALWAYS_SKIP.has(e.name)) continue;
@@ -88,7 +108,8 @@ export function walkRepo(root: string, opts: WalkOptions = {}): WalkedFile[] {
         let st;
         try {
           st = statSync(abs);
-        } catch {
+        } catch (err) {
+          unreadable.push({ path: rel, reason: (err as Error).message });
           continue;
         }
         if (st.size > max) continue;
@@ -104,5 +125,5 @@ export function walkRepo(root: string, opts: WalkOptions = {}): WalkedFile[] {
 
   visit(root);
   out.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
-  return out;
+  return { files: out, unreadable };
 }

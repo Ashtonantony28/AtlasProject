@@ -4,7 +4,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { closeDatabase, openDatabase, type DB } from '../../src/core/db/index.js';
 import { indexRepo } from '../../src/core/ingest/index.js';
-import * as parser from '../../src/core/parse/parser.js';
 import {
   createOfflineClient,
   exportDocs,
@@ -14,9 +13,24 @@ import {
 import { detectDrift } from '../../src/core/drift/index.js';
 import { SAMPLE } from '../cli/helpers.js';
 
-vi.mock('../../src/core/parse/parser.js', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../src/core/parse/parser.js')>();
-  return { ...actual, parseSource: vi.fn(actual.parseSource) };
+// tree-sitter fails (as with R1's `Invalid argument`) on any source containing `fault.on`.
+const fault = vi.hoisted(() => ({ on: null as string | null }));
+
+vi.mock('tree-sitter', async (importOriginal) => {
+  const real = await importOriginal<{
+    default: new () => { parse(...a: unknown[]): unknown };
+  }>();
+  class FaultyParser extends real.default {
+    parse(input: unknown, ...rest: unknown[]): unknown {
+      if (fault.on !== null && typeof input === 'function') {
+        if (String((input as (i: number) => string)(0)).includes(fault.on)) {
+          throw new Error('Invalid argument');
+        }
+      }
+      return super.parse(input, ...rest);
+    }
+  }
+  return { ...real, default: FaultyParser };
 });
 
 const MATH = 'src/math.ts';
@@ -37,7 +51,7 @@ describe('drift when the index is behind the file', () => {
     exportDocs(db, docsDir);
   });
   afterEach(() => {
-    vi.mocked(parser.parseSource).mockRestore();
+    fault.on = null;
     closeDatabase(db);
     rmSync(dir, { recursive: true, force: true });
   });
@@ -56,9 +70,7 @@ describe('drift when the index is behind the file', () => {
 
   it('marks the doc stale when the changed file fails to re-index', async () => {
     appendFileSync(join(root, MATH), 'export function added(): void {}\n');
-    vi.mocked(parser.parseSource).mockImplementationOnce(() => {
-      throw new Error('boom');
-    });
+    fault.on = 'added';
     const st = await indexRepo(db, root, { skipEmbeddings: true });
     expect(st.filesFailed).toBe(1);
     for (const report of [stale(), stale(docsDir)]) {
@@ -76,10 +88,9 @@ describe('drift when the index is behind the file', () => {
 
   it('recovers once the file re-indexes', async () => {
     appendFileSync(join(root, MATH), 'export function added(): void {}\n');
-    vi.mocked(parser.parseSource).mockImplementationOnce(() => {
-      throw new Error('boom');
-    });
+    fault.on = 'added';
     await indexRepo(db, root, { skipEmbeddings: true });
+    fault.on = null;
     await indexRepo(db, root, { skipEmbeddings: true });
     const report = stale();
     expect(report.map((s) => s.targetPath)).toEqual([MATH]);

@@ -1,4 +1,4 @@
-export { parseSource } from './parser.js';
+export { parseSource, parseSourceOrThrow } from './parser.js';
 export type {
   ParseResult,
   ParseDiagnostic,

@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/parse/parser.ts
-source_hash: 7d1e523b861818279342c9135a510f4d4c37d27a3113910919729eea4de64d60
+source_hash: 7293e72d0cd477d888aa88495d1d8ce46c0ab2a5d2f4a6f410119d033aa116cf
 ---
 # module src/core/parse/parser.ts
 
@@ -16,6 +16,7 @@ source_hash: 7d1e523b861818279342c9135a510f4d4c37d27a3113910919729eea4de64d60
 - `grammarFor` — function (src/core/parse/parser.ts:76)
 - `extract` — function (src/core/parse/parser.ts:80)
 - `parseSource` — function (src/core/parse/parser.ts:98)
+- `parseSourceOrThrow` — function (src/core/parse/parser.ts:120)
 
 References: `src/core/parse/parser.ts:11`, `src/core/parse/parser.ts:15`, `src/core/parse/parser.ts:17`, `src/core/parse/parser.ts:19`, `src/core/parse/parser.ts:67`.
 

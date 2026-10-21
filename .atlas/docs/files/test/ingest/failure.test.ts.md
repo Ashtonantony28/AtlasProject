@@ -1,27 +1,30 @@
 ---
 kind: file
 target: test/ingest/failure.test.ts
-source_hash: 19673d2074597736f0caf2701d9e3515749290c4aa9d53ffaf3c6d7eb5cc1f7c
+source_hash: d3036271a3cde64e12629612b139296a4476a5813d3cc1bbbcd924abef6afdeb
 ---
 # module test/ingest/failure.test.ts
 
 `module test/ingest/failure.test.ts` exposes the following public surface:
 
-- `actual` — variable (test/ingest/failure.test.ts:16)
-- `__dirname` — variable (test/ingest/failure.test.ts:20)
-- `FIXTURE` — variable (test/ingest/failure.test.ts:21)
-- `MATH` — variable (test/ingest/failure.test.ts:22)
-- `dir` — variable (test/ingest/failure.test.ts:25)
-- `root` — variable (test/ingest/failure.test.ts:26)
-- `db` — variable (test/ingest/failure.test.ts:38)
-- `before` — variable (test/ingest/failure.test.ts:41)
-- `oldSymbols` — variable (test/ingest/failure.test.ts:43)
-- `real` — variable (test/ingest/failure.test.ts:50)
-- `failed` — variable (test/ingest/failure.test.ts:55)
-- `after` — variable (test/ingest/failure.test.ts:57)
-- `retried` — variable (test/ingest/failure.test.ts:62)
-- `names` — variable (test/ingest/failure.test.ts:65)
+- `fault` — variable (test/ingest/failure.test.ts:16)
+- `real` — variable (test/ingest/failure.test.ts:19)
+- `FaultyParser` — class (test/ingest/failure.test.ts:22)
+- `FaultyParser.parse` — method (test/ingest/failure.test.ts:23)
+- `__dirname` — variable (test/ingest/failure.test.ts:35)
+- `FIXTURE` — variable (test/ingest/failure.test.ts:36)
+- `MATH` — variable (test/ingest/failure.test.ts:37)
+- `dir` — variable (test/ingest/failure.test.ts:40)
+- `root` — variable (test/ingest/failure.test.ts:41)
+- `db` — variable (test/ingest/failure.test.ts:53)
+- `before` — variable (test/ingest/failure.test.ts:56)
+- `oldSymbols` — variable (test/ingest/failure.test.ts:58)
+- `failed` — variable (test/ingest/failure.test.ts:67)
+- `after` — variable (test/ingest/failure.test.ts:69)
+- `retried` — variable (test/ingest/failure.test.ts:74)
+- `names` — variable (test/ingest/failure.test.ts:77)
+- `r` — variable (test/ingest/failure.test.ts:88)
 
-References: `test/ingest/failure.test.ts:16`, `test/ingest/failure.test.ts:20`, `test/ingest/failure.test.ts:21`, `test/ingest/failure.test.ts:22`, `test/ingest/failure.test.ts:25`.
+References: `test/ingest/failure.test.ts:16`, `test/ingest/failure.test.ts:19`, `test/ingest/failure.test.ts:22`, `test/ingest/failure.test.ts:23`, `test/ingest/failure.test.ts:35`.
 
 _Generated offline (mock client)._

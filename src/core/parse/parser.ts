@@ -100,10 +100,8 @@ export async function parseSource(
   language: LanguageId,
   filename?: string,
 ): Promise<ParseResult> {
-  const { parser } = await getBundle(grammarFor(language, filename));
-  let tree: Parser.Tree;
   try {
-    tree = parseChunked(parser, source);
+    return await parseSourceOrThrow(source, language, filename);
   } catch (err) {
     return {
       language,
@@ -113,6 +111,19 @@ export async function parseSource(
       diagnostics: [internalDiagnostic(err)],
     };
   }
+}
+
+/**
+ * Like `parseSource`, but throws when tree-sitter produces no tree, so the indexer can keep
+ * the previous rows and retry. Syntax errors and partial extraction still become `diagnostics`.
+ */
+export async function parseSourceOrThrow(
+  source: string,
+  language: LanguageId,
+  filename?: string,
+): Promise<ParseResult> {
+  const { parser } = await getBundle(grammarFor(language, filename));
+  const tree = parseChunked(parser, source);
   const result = extract(tree.rootNode, language);
   try {
     result.diagnostics.unshift(...syntaxDiagnostics(tree.rootNode));

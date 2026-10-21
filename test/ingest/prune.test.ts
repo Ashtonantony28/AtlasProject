@@ -16,7 +16,7 @@ import { synthesizeDocs, createOfflineClient } from '../../src/core/synth/index.
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURE = join(__dirname, '..', '..', 'fixtures', 'sample');
 
-function rowsFor(db: DB, fileId: number, symbolIds: number[]): Record<string, number> {
+function rowsFor(db: DB, fileId: number, symbolIds: number[]) {
   const n = (sql: string, ...args: unknown[]) => (db.prepare(sql).get(...args) as { c: number }).c;
   const ids = symbolIds.join(',') || '-1';
   return {
@@ -63,7 +63,7 @@ describe('indexRepo pruning', () => {
       'embeddings_vec',
       'docs',
       'fts',
-    ]) {
+    ] as const) {
       expect(before[k], k).toBeGreaterThan(0);
     }
 
