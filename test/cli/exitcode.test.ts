@@ -21,16 +21,25 @@ describe('CLI exit codes', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it('drift sets exit code 2 in-process without exiting', async () => {
+  it('drift --strict sets exit code 2 in-process without exiting', async () => {
     vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
-    await runCli(['drift', '--cwd', dir]);
+    await runCli(['drift', '--strict', '--cwd', dir]);
     vi.restoreAllMocks();
     expect(process.exitCode).toBe(2);
   });
 
-  it('drift exits 2 and closes the DB (no lingering WAL)', () => {
+  it('drift reports undocumented symbols but exits 0 when no doc is stale', async () => {
+    const out: string[] = [];
+    vi.spyOn(process.stdout, 'write').mockImplementation((s) => (out.push(String(s)), true));
+    await runCli(['drift', '--cwd', dir]);
+    vi.restoreAllMocks();
+    expect(process.exitCode ?? 0).toBe(0);
+    expect(out.join('')).toMatch(/Undocumented/);
+  });
+
+  it('drift --strict exits 2 and closes the DB (no lingering WAL)', () => {
     const wal = join(dir, '.atlas/index.db-wal');
-    const r = spawnSync(TSX, [CLI, 'drift', '--cwd', dir], { encoding: 'utf8' });
+    const r = spawnSync(TSX, [CLI, 'drift', '--strict', '--cwd', dir], { encoding: 'utf8' });
     expect(r.status).toBe(2);
     expect(r.stdout).toMatch(/drift|undocumented|stale/i);
     expect(existsSync(wal)).toBe(false);

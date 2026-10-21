@@ -1,8 +1,9 @@
 name: atlas
 on:
   pull_request:
-    branches: [main]
     types: [opened, synchronize, reopened]
+  push:
+    branches: [claude/build-atlas-phase-1-f3WUm]
   workflow_dispatch:
 
 permissions:
@@ -38,14 +39,14 @@ jobs:
       - name: Index repository
         run: node ./dist/cli/index.js index .
 
-      - name: Generate docs (offline)
-        run: node ./dist/cli/index.js docs --offline
-
-      - name: Run drift (capture)
+      # Drift is checked against the docs committed under .atlas/docs (written
+      # by `atlas docs`). Docs are not regenerated here, so a change that
+      # isn't accompanied by refreshed docs shows up as stale. No API key needed.
+      - name: Run drift against committed docs (capture)
         id: drift
         run: |
           set +e
-          node ./dist/cli/index.js drift --json > .atlas/drift.json
+          node ./dist/cli/index.js drift --json --docs-dir .atlas/docs > .atlas/drift.json
           code=$?
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           if [ "$code" -eq 0 ]; then
