@@ -209,3 +209,14 @@ Prompt and token growth: none. The largest module prompt plus system prompt is 9
 - `test/audit/query-plan.test.ts`: `it.fails` pin for A2-01, under 0.2 s.
 
 All scripts require `npm run build`. Use `W=$(mktemp -d)` for work dirs; nothing is written to `fixtures/` or to `--target` repos, except that `audit-load.mjs` needs `atlas index` (and optionally `atlas docs`) in the target.
+
+## Re-measurement after SG10–SG13 (2026-10-21, thread lead)
+
+This audit ran against `f25ab12`. SG12 later rewrote the module neighbourhood query in `synth/context.ts`. Re-run on the merged base with `node scripts/audit-perf.mjs --gen N --runs 1 --slow-runs 1`:
+
+| Files | Cached docs | Drift |
+|---|---|---|
+| 1k (1,051) | 0.50 s | 0.95 s |
+| 3k (3,151) | 1.52 s | 3.13 s |
+
+Growth is now linear (about 0.48 s per 1k files for cached docs, about 1 s per 1k for drift), so **A2-01 is downgraded from Critical to Medium**: the 1 s/1k-file budget holds for docs and is borderline for drift. The `idx_edges_kind` plan in `test/audit/query-plan.test.ts` is still chosen, so that `it.fails` stays. A2-02 to A2-05 remain High and become SG14–SG16 in PLAN.md.
