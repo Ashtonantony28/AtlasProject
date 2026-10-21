@@ -103,7 +103,7 @@ export async function indexRepo(
     // hash in place so the next run retries.
     let parsed: Awaited<ReturnType<typeof parseSource>>;
     try {
-      parsed = await parseSource(content, file.language as LanguageId);
+      parsed = await parseSource(content, file.language as LanguageId, file.relativePath);
     } catch (err) {
       stats.filesFailed++;
       opts.onFile?.({
