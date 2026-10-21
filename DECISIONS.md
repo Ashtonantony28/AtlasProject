@@ -103,6 +103,58 @@ resolution via tree-sitter queries rather than a regex heuristic, language
 coverage beyond TS/JS/Python, and a real Vite/React dashboard if/when the
 vanilla one's limits start to bite.
 
+## 2026-05-22 — Tree-sitter chunked input (large-file fix)
+`Parser.parse(string)` on the node-tree-sitter bindings throws
+"Invalid argument" once the input exceeds an internal buffer threshold
+(~32KB in practice). This silently killed 6/78 files when indexing
+`sindresorhus/got` (`source/core/index.ts`, `options.ts`, `test/hooks.ts`,
+etc. — all in the 33KB-106KB range). Switched `parseSource` to always feed
+input through the callback path (`parser.parse((index) => source.slice(...))`)
+in 8KB chunks, which has no such limit. Result on got: 78/78 files parse, no
+"failed" rows. No effect on small files. The chunk size is internal only.
+
+## 2026-05-22 — CommonJS require() in the JS parser
+The original parser only handled ESM `import` declarations, so CommonJS
+projects (Express et al.) produced `imports=0` and a near-empty graph.
+Added `collectRequires` to the JS/TS visitor: when a top-level
+`const/let/var x = require('m')` is seen, emit an import. Four forms
+supported:
+  - `const x = require('m')`            → default
+  - `const x = require('m').y`          → named `y`, aliased `x`
+  - `const { a, b: c } = require('m')`  → named `a`, named `b` aliased `c`
+  - bare destructure / fallback         → default
+Scoped to top-level declarations (`ctx.qualifier.length === 0`) to avoid
+noise from dynamic requires inside function bodies. Effect on Express:
+imports go from 0 → 387, edges 3 → 407. Test: `parser.test.ts` covers all
+four forms.
+
+## 2026-05-22 — Architecture-doc mock now uses the Files: section
+The offline mock for synthesis was matching only the "Symbols:" block, which
+exists in module prompts but not architecture prompts (those have "Files:"
+and "Top connected files:"). Architecture docs were rendering as
+"_No symbols extracted._" — a real DoD regression on Phase 5.
+Updated `createOfflineClient` to detect `Target: architecture overview`,
+parse the Files + Top connected sections, and emit a structured doc with a
+totals header, a "Modules" list, and a "Key collaborations" list. The
+synthesize test now asserts the architecture doc references real module
+paths and the correct totals. Module-doc behavior is unchanged.
+
+## 2026-05-22 — External-repo verification
+Ran the full pipeline against two real third-party repos (no fixture) via
+`scripts/verify-external.sh`:
+  - `sindresorhus/got` @ HEAD — 78 files, 2702 symbols, 656 imports,
+    1093 edges (614 weak). `source/index.ts::got` resolves to a variable;
+    search for "retry delay" surfaces `source/core/options.ts` in the top 5.
+  - `expressjs/express` @ HEAD — 141 files, 1897 symbols, 387 imports,
+    407 edges. `lib/express.js::createApplication` resolves to a function;
+    search for "create application" returns it as the #1 hit.
+The packaged tarball (`npm pack`) installs cleanly into a fresh
+`npm init -y` directory; `node_modules/.bin/atlas` exposes the full CLI.
+Workflow comment payload verified by `test/ci/workflow.test.ts` for both
+the clean and drift cases (stands in for `act --dry-run`, which isn't
+available in this environment); also smoke-tested end-to-end by running
+the workflow steps manually against a temp checkout.
+
 ## 2026-10-21 — SG0: shared interfaces + bench baseline
 Migration v3 adds `symbols.exported` and an FTS5 `symbols_fts` (external
 content, trigger-synced) for SG5's lexical leg. `createEmbedder(config)` is the
