@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/db/migrations.test.ts
-source_hash: 5e00cc7d70885c31cc1fbf65ad59635c69503b9ab3c4a814d906e3fc4df4aae3
+source_hash: 58bea904bdd7cdead8c022d69755b36e22da3495e4d266ef6fbb414376336300
 ---
 # module test/db/migrations.test.ts
 

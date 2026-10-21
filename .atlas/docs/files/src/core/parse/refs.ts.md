@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/parse/refs.ts
-source_hash: f4412f4af8c1000bf0fea2b41acab5bab5316f3d77503ea4fd86d940c6b05bf3
+source_hash: 4e71a57a2a09787739555062852b1ddecd832f088eda932b49b41d784d789fa3
 ---
 # module src/core/parse/refs.ts
 

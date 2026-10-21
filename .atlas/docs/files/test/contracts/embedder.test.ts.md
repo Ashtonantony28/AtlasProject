@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/contracts/embedder.test.ts
-source_hash: 8076085ebb26cac18a12a5c243fb3f5fe40dedec1751f3f94c76ae0955b0dccd
+source_hash: 8623ddec82631796630536a024c259b7af46c365c8bd8fe9117482d4522feb7c
 ---
 # module test/contracts/embedder.test.ts
 

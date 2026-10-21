@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/contracts/schema-v3.test.ts
-source_hash: 538fb2a4d97632b5c2eacd6ebbbafec27ab4dd93b3fec45e4dcc4da8bbded657
+source_hash: 45b92d5b1c57ceb1143b20f8cbeb55e67a8025c9e84e0513eed1e28e9048f8c7
 ---
 # module test/contracts/schema-v3.test.ts
 

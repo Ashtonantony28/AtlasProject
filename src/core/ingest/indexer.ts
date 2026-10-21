@@ -152,6 +152,7 @@ export async function indexRepo(
           imported: imp.imported,
           alias: imp.alias,
           start_line: imp.line,
+          reexport: imp.reexport ?? false,
         });
       }
       insertRefs(

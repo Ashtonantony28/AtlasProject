@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/drift/persisted.test.ts
-source_hash: f66601f32412d8b19b39a60a286a52f02a3416baf04200b74e76fbbc13f17786
+source_hash: 124b79a823184beb0c44e097e5556f69fa9784f21df063454ce622fe9bd307dc
 ---
 # module test/drift/persisted.test.ts
 

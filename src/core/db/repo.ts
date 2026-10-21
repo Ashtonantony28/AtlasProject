@@ -152,15 +152,23 @@ export interface InsertImportInput {
   imported: string | null;
   alias: string | null;
   start_line: number;
+  reexport?: boolean;
 }
 
 export function insertImport(db: DB, input: InsertImportInput): number {
   const info = db
     .prepare(
-      `INSERT INTO imports (file_id, module, imported, alias, start_line)
-       VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO imports (file_id, module, imported, alias, start_line, reexport)
+       VALUES (?, ?, ?, ?, ?, ?)`,
     )
-    .run(input.file_id, input.module, input.imported, input.alias, input.start_line);
+    .run(
+      input.file_id,
+      input.module,
+      input.imported,
+      input.alias,
+      input.start_line,
+      input.reexport ? 1 : 0,
+    );
   return Number(info.lastInsertRowid);
 }
 
@@ -208,9 +216,12 @@ export function upsertDoc(db: DB, input: UpsertDocInput): number {
     .get(input.target_kind, input.target_id) as { id: number } | undefined;
 
   if (existing) {
-    db.prepare(
-      'UPDATE docs SET content = ?, source_hash = ?, generated_at = ? WHERE id = ?',
-    ).run(input.content, input.source_hash, now, existing.id);
+    db.prepare('UPDATE docs SET content = ?, source_hash = ?, generated_at = ? WHERE id = ?').run(
+      input.content,
+      input.source_hash,
+      now,
+      existing.id,
+    );
     return existing.id;
   }
 
@@ -278,9 +289,7 @@ export function finishRun(db: DB, runId: number, stats: Record<string, unknown>)
 }
 
 export function getLastRun(db: DB): RunRow | undefined {
-  return db
-    .prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 1')
-    .get() as RunRow | undefined;
+  return db.prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 1').get() as RunRow | undefined;
 }
 
 export function counts(db: DB): {
@@ -290,8 +299,7 @@ export function counts(db: DB): {
   docs: number;
   imports: number;
 } {
-  const q = (sql: string) =>
-    (db.prepare(sql).get() as { c: number } | undefined)?.c ?? 0;
+  const q = (sql: string) => (db.prepare(sql).get() as { c: number } | undefined)?.c ?? 0;
   return {
     files: q('SELECT COUNT(*) AS c FROM files'),
     symbols: q('SELECT COUNT(*) AS c FROM symbols'),

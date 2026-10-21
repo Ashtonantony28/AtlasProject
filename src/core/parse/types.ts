@@ -15,8 +15,10 @@ export interface ParsedSymbol {
 export interface ParsedImport {
   module: string;
   imported: string | null; // specific binding (e.g. 'Foo' from `import { Foo }`)
-  alias: string | null;
+  alias: string | null; // local name; for a re-export, the exported name
   line: number;
+  // Re-export (`export … from`), or with module '' a local name exported under `alias`.
+  reexport?: boolean;
 }
 
 export type RefReceiver = 'none' | 'this' | 'super' | 'member';

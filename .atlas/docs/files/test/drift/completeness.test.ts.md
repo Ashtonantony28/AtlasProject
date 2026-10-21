@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/drift/completeness.test.ts
-source_hash: 8dc5f0afd42a6c4a76cbf367f57139c79012aa1341492292208a656f14483855
+source_hash: f857a7a7f794724a44d644ddd36c7f8cc53054cbf1bf8da5affa6a839c5c039b
 ---
 # module test/drift/completeness.test.ts
 

@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/ci/workflow.test.ts
-source_hash: 42a61c9ca01922fa414042fafac60017aaefcf050252046d8e7ab3e99f7b1b4d
+source_hash: 38f71ba1683997e2ba1c40f41e15a3330df19c6ff4b2f410c2910171fe9cc97f
 ---
 # module test/ci/workflow.test.ts
 

@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/db/types.ts
-source_hash: cc73f13d3b216e391efd5293fbda8c67ce62c7743287b8262522c6874bd7452f
+source_hash: b47ec1e33648c54a53d2559177617d862c4f201545876480506c8d20f8b4e369
 ---
 # module src/core/db/types.ts
 
@@ -13,9 +13,9 @@ source_hash: cc73f13d3b216e391efd5293fbda8c67ce62c7743287b8262522c6874bd7452f
 - `SymbolRow` — interface (src/core/db/types.ts:21)
 - `EdgeRow` — interface (src/core/db/types.ts:34)
 - `ImportRow` — interface (src/core/db/types.ts:43)
-- `RefRow` — interface (src/core/db/types.ts:52)
-- `DocRow` — interface (src/core/db/types.ts:63)
-- `RunRow` — interface (src/core/db/types.ts:72)
+- `RefRow` — interface (src/core/db/types.ts:53)
+- `DocRow` — interface (src/core/db/types.ts:64)
+- `RunRow` — interface (src/core/db/types.ts:73)
 
 References: `src/core/db/types.ts:1`, `src/core/db/types.ts:10`, `src/core/db/types.ts:12`, `src/core/db/types.ts:21`, `src/core/db/types.ts:34`.
 

@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/synth/bounded.test.ts
-source_hash: 314ffcd2b0626249a992d95cc9f353f1dc5ce203b17af206a8956d041c3e5341
+source_hash: b9367c8155c1d779fe11b7ead129cb9421fa6422f75dbf227c03aae533b8bddd
 ---
 # module test/synth/bounded.test.ts
 

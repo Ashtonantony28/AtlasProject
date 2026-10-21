@@ -1,13 +1,15 @@
 import { slugify, shout } from './strings.js';
 
 // slugify('top-level comment')
+// export * from './widget';
 
 export function decoy(): string {
   // slugify('in a comment')
   /* shout('in a block comment') */
   const s = "slugify('in a string')";
   const t = `shout('in a template')`;
-  return s + t;
+  const u = "require('./widget') import('./widget')";
+  return s + t + u;
 }
 
 export const banner = 'shout(nothing)';

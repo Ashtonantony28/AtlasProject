@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/graph/golden.test.ts
-source_hash: 020cdb34442c01d6b8eb65dae59c323bee29047f7025934c0a7691a258f9cb71
+source_hash: b49f56a4118956bd97fb2c6bb5f4e54411ae1398d207a989000925d29dbb1565
 ---
 # module test/graph/golden.test.ts
 

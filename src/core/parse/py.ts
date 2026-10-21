@@ -66,6 +66,7 @@ interface Ctx {
 }
 
 const CALL_NODES = new Set(['call']);
+const IMPORT_NODES = new Set(['import_statement', 'import_from_statement']);
 
 /** `a`, `a.b.c` for identifier chains; null for anything computed. */
 function dotted(node: Node): string | null {
@@ -144,6 +145,8 @@ function visit(node: Node, ctx: Ctx, stack: Frame[]): void {
     const body = node.childForFieldName('body');
     if (nameNode) collectCalls(ctx, node, qualify(ctx, nameNode.text));
     else collectCalls(ctx, node, ctx.owner);
+    // Function-local imports bind file-wide: an approximation that keeps their edges.
+    forEachOfType(node, IMPORT_NODES, (n) => collectImports(n, ctx));
     if (nameNode) {
       const isMethod = ctx.qualifier.length > 0;
       ctx.symbols.push({
@@ -177,7 +180,13 @@ function visit(node: Node, ctx: Ctx, stack: Frame[]): void {
       });
       const qname = qualify(ctx, nameNode.text);
       for (const base of node.childForFieldName('superclasses')?.namedChildren ?? []) {
-        addRef(ctx, qname, base, 'extends');
+        // `Repo[User]`, `Generic[T]`: the subscripted value is the base.
+        addRef(
+          ctx,
+          qname,
+          base.type === 'subscript' ? base.childForFieldName('value') : base,
+          'extends',
+        );
       }
       if (body) {
         const saved = { scopeExported: ctx.scopeExported, owner: ctx.owner };
