@@ -81,7 +81,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 - Cache key = context hash; `buildModuleContext` no longer O(files × all edges); "undocumented" counts only `exported` symbols, with word-boundary matching.
 - CI: persist docs between runs (commit `.atlas/docs/*.md` with hashes in front matter) so a PR that changes code without regenerating docs is reported stale. Fix the trigger branch (`main` does not exist).
 - Accept: a workflow test that runs drift against docs generated from the *base* commit reports the changed file as stale; synthesis on a fully cached 1k-file index ≤ 1 s; the job is green on this repo.
-- Follow-up: Atlas's own `.atlas/docs` are not committed yet, so CI here has nothing to check; commit them after SG9 and the audits.
+- Follow-up done in SG12: `.atlas/docs` and `.atlas/config.json` are committed. Every PR that changes code must run `atlas index . && atlas docs --offline` and commit the result, or CI fails.
 
 ### SG7: Grounded Q&A
 - Parse `[n]` and `file:line` references in answers and flag any citation that is outside the retrieved snippets. Excerpts respect `end_line`. Rank graph expansion by edge strength.
