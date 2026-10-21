@@ -23,6 +23,7 @@ function rowsFor(db: DB, fileId: number, symbolIds: number[]): Record<string, nu
     files: n('SELECT COUNT(*) AS c FROM files WHERE id = ?', fileId),
     symbols: n('SELECT COUNT(*) AS c FROM symbols WHERE file_id = ?', fileId),
     imports: n('SELECT COUNT(*) AS c FROM imports WHERE file_id = ?', fileId),
+    refs: n('SELECT COUNT(*) AS c FROM refs WHERE file_id = ?', fileId),
     edges: n(
       `SELECT COUNT(*) AS c FROM edges WHERE src_symbol IN (${ids}) OR dst_symbol IN (${ids})`,
     ),
@@ -80,6 +81,7 @@ describe('indexRepo pruning', () => {
   it('treats a rename as delete + add', async () => {
     const old = getFileByPath(db, 'src/shapes.ts')!;
     const ids = getSymbolsForFile(db, old.id).map((s) => s.id);
+    expect(rowsFor(db, old.id, ids).refs).toBeGreaterThan(0);
     renameSync(join(root, 'src/shapes.ts'), join(root, 'src/geometry.ts'));
 
     const stats = await indexRepo(db, root);
@@ -89,7 +91,9 @@ describe('indexRepo pruning', () => {
     const added = getFileByPath(db, 'src/geometry.ts')!;
     expect(getSymbolsForFile(db, added.id).map((s) => s.qualified_name)).toContain('Circle.area');
     const gone = rowsFor(db, old.id, ids);
-    expect(gone.docs + gone.embeddings_vec + gone.embeddings_meta + gone.fts + gone.edges).toBe(0);
+    expect(
+      gone.docs + gone.refs + gone.embeddings_vec + gone.embeddings_meta + gone.fts + gone.edges,
+    ).toBe(0);
     expect(() =>
       db.exec("INSERT INTO symbols_fts(symbols_fts) VALUES ('integrity-check')"),
     ).not.toThrow();

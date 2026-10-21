@@ -1,7 +1,15 @@
 import type Parser from 'tree-sitter';
 import type { LanguageId } from '../ingest/language.js';
 import type { SymbolKind } from '../db/index.js';
-import type { ParsedImport, ParsedSymbol, ParseResult } from './types.js';
+import type {
+  ParsedImport,
+  ParsedReference,
+  ParsedSymbol,
+  ParseResult,
+  RefKind,
+  RefReceiver,
+} from './types.js';
+import { forEachOfType, uniqueRefs } from './refs.js';
 
 type Node = Parser.SyntaxNode;
 
@@ -73,6 +81,8 @@ interface Ctx {
   qualifier: string[]; // path prefix for qualified names (e.g. ClassName)
   exportNames: Set<string>; // top-level names exported via `export { }`, `export default x` or CJS
   scopeExported: boolean; // exported flag of the enclosing class/interface/object
+  references: ParsedReference[];
+  owner: string | null; // qualified name references are attributed to; null = module
 }
 
 const FN_VALUES = new Set(['arrow_function', 'function_expression', 'function']);
@@ -117,14 +127,114 @@ function push(
   return sym;
 }
 
-function visitScope(ctx: Ctx, owner: ParsedSymbol, body: Node | null): void {
+function visitScope(ctx: Ctx, name: string, exported: boolean, body: Node | null): void {
   if (!body) return;
-  const saved = ctx.scopeExported;
-  ctx.qualifier.push(owner.name);
-  ctx.scopeExported = owner.exported;
+  const saved = { scopeExported: ctx.scopeExported, owner: ctx.owner };
+  ctx.owner = qualify(ctx, name);
+  ctx.qualifier.push(name);
+  ctx.scopeExported = exported;
   for (const c of body.namedChildren) visit(c, ctx);
   ctx.qualifier.pop();
-  ctx.scopeExported = saved;
+  Object.assign(ctx, saved);
+}
+
+interface Target {
+  name: string;
+  receiver: RefReceiver;
+  object: string | null;
+}
+
+const CALL_NODES = new Set(['call_expression', 'new_expression']);
+const NAME_NODES = new Set([
+  'identifier',
+  'type_identifier',
+  'property_identifier',
+  'private_property_identifier',
+  'nested_identifier',
+]);
+
+/** `a`, `a.b.c` for identifier chains; null for anything computed. */
+function dotted(node: Node): string | null {
+  if (NAME_NODES.has(node.type)) return node.text;
+  if (node.type !== 'member_expression') return null;
+  const obj = node.childForFieldName('object');
+  const prop = node.childForFieldName('property');
+  const head = obj ? dotted(obj) : null;
+  return head && prop ? `${head}.${prop.text}` : null;
+}
+
+function targetOf(node: Node | null): Target | null {
+  if (!node) return null;
+  switch (node.type) {
+    case 'identifier':
+    case 'type_identifier':
+      return { name: node.text, receiver: 'none', object: null };
+    case 'generic_type':
+      return targetOf(node.childForFieldName('name') ?? node.namedChildren[0] ?? null);
+    case 'nested_type_identifier': {
+      const mod = node.childForFieldName('module');
+      const name = node.childForFieldName('name');
+      return name ? { name: name.text, receiver: 'member', object: mod?.text ?? null } : null;
+    }
+    case 'member_expression': {
+      const prop = node.childForFieldName('property');
+      const obj = node.childForFieldName('object');
+      if (!prop || !obj || !NAME_NODES.has(prop.type)) return null;
+      if (obj.type === 'this') return { name: prop.text, receiver: 'this', object: null };
+      if (obj.type === 'super') return { name: prop.text, receiver: 'super', object: null };
+      return { name: prop.text, receiver: 'member', object: dotted(obj) };
+    }
+    default:
+      return null;
+  }
+}
+
+function addRef(ctx: Ctx, from: string | null, node: Node | null, kind: RefKind, at: Node): void {
+  const t = targetOf(node);
+  if (t) ctx.references.push({ fromQualifiedName: from, ...t, kind, line: lineOf(at) });
+}
+
+function addCall(ctx: Ctx, from: string | null, call: Node): void {
+  const callee =
+    call.type === 'new_expression'
+      ? call.childForFieldName('constructor')
+      : call.childForFieldName('function');
+  addRef(ctx, from, callee, 'calls', call);
+}
+
+function collectCalls(ctx: Ctx, node: Node | null, from: string | null): void {
+  if (node) forEachOfType(node, CALL_NODES, (c) => addCall(ctx, from, c));
+}
+
+function collectHeritage(ctx: Ctx, node: Node, from: string): void {
+  for (const c of node.namedChildren) {
+    if (c.type === 'extends_type_clause') {
+      for (const t of c.namedChildren) addRef(ctx, from, t, 'extends', t);
+    }
+    if (c.type !== 'class_heritage') continue;
+    for (const h of c.namedChildren) {
+      if (h.type === 'extends_clause') {
+        for (const t of h.namedChildren) {
+          if (t.type !== 'type_arguments') addRef(ctx, from, t, 'extends', t);
+        }
+      } else if (h.type === 'implements_clause') {
+        for (const t of h.namedChildren) addRef(ctx, from, t, 'implements', t);
+      } else {
+        addRef(ctx, from, h, 'extends', h); // JS grammar: the expression sits directly in class_heritage
+      }
+    }
+  }
+}
+
+/** Object literal assigned to `module.exports`, `exports.x` or `module.exports.x`: the scope name, else null. */
+function cjsObjectScope(assign: Node): string | null {
+  const left = assign.childForFieldName('left');
+  if (assign.childForFieldName('right')?.type !== 'object' || !left) return null;
+  if (isModuleExports(left)) return 'default';
+  if (left.type !== 'member_expression') return null;
+  const obj = left.childForFieldName('object');
+  const isExports = (obj?.type === 'identifier' && obj.text === 'exports') || isModuleExports(obj);
+  return isExports ? (left.childForFieldName('property')?.text ?? null) : null;
 }
 
 function visit(node: Node, ctx: Ctx): void {
@@ -145,22 +255,37 @@ function visit(node: Node, ctx: Ctx): void {
   // Functions — do not descend into function bodies, locals are not symbols.
   if (FN_NODES.has(node.type)) {
     const name = nameOf(node);
-    if (name) push(ctx, 'function', name, node);
+    const sym = name ? push(ctx, 'function', name, node) : null;
+    collectCalls(ctx, node, sym?.qualifiedName ?? ctx.owner);
     return;
   }
 
-  if (CLASS_NODES.has(node.type)) {
+  if (CLASS_NODES.has(node.type) || INTERFACE_NODES.has(node.type)) {
     const name = nameOf(node);
     if (name) {
-      visitScope(ctx, push(ctx, 'class', name, node), node.childForFieldName('body'));
+      const sym = push(ctx, CLASS_NODES.has(node.type) ? 'class' : 'interface', name, node);
+      collectHeritage(ctx, node, sym.qualifiedName ?? name);
+      visitScope(ctx, name, sym.exported, node.childForFieldName('body'));
       return;
     }
   }
 
-  if (INTERFACE_NODES.has(node.type)) {
-    const name = nameOf(node);
-    if (name) visitScope(ctx, push(ctx, 'interface', name, node), node.childForFieldName('body'));
-    return;
+  if (node.type === 'call_expression' || node.type === 'new_expression') {
+    addCall(ctx, ctx.owner, node);
+  }
+
+  if (ctx.qualifier.length === 0) {
+    const value = node.type === 'export_statement' ? node.childForFieldName('value') : null;
+    const scope =
+      value?.type === 'object'
+        ? 'default'
+        : node.type === 'assignment_expression'
+          ? cjsObjectScope(node)
+          : null;
+    if (scope) {
+      visitScope(ctx, scope, true, value ?? node.childForFieldName('right'));
+      return;
+    }
   }
 
   // Type aliases & enums; object-type members are qualified like interface members.
@@ -169,7 +294,7 @@ function visit(node: Node, ctx: Ctx): void {
     if (name) {
       const sym = push(ctx, 'type', name, node);
       const value = node.childForFieldName('value');
-      if (value?.type === 'object_type') visitScope(ctx, sym, value);
+      if (value?.type === 'object_type') visitScope(ctx, name, sym.exported, value);
     }
     return;
   }
@@ -177,7 +302,8 @@ function visit(node: Node, ctx: Ctx): void {
   // Methods — don't descend.
   if (METHOD_NODES.has(node.type)) {
     const name = nameOf(node);
-    if (name) push(ctx, 'method', name, node);
+    const sym = name ? push(ctx, 'method', name, node) : null;
+    collectCalls(ctx, node, sym?.qualifiedName ?? ctx.owner);
     return;
   }
 
@@ -193,15 +319,20 @@ function visit(node: Node, ctx: Ctx): void {
     if (FIELD_NODES.has(node.type)) {
       const name = (node.childForFieldName('name') ?? node.childForFieldName('property'))?.text;
       const value = node.childForFieldName('value');
-      if (name && value && FN_VALUES.has(value.type)) push(ctx, 'method', name, node);
+      const fn =
+        name && value && FN_VALUES.has(value.type) ? push(ctx, 'method', name, node) : null;
+      collectCalls(ctx, value, fn?.qualifiedName ?? ctx.owner);
       return;
     }
     // Object-literal properties holding functions: `{ arrow: () => 2 }`.
     if (node.type === 'pair') {
       const key = node.childForFieldName('key');
       const value = node.childForFieldName('value');
-      if (key && value && FN_VALUES.has(value.type))
-        push(ctx, 'method', trimQuotes(key.text), node);
+      const fn =
+        key && value && FN_VALUES.has(value.type)
+          ? push(ctx, 'method', trimQuotes(key.text), node)
+          : null;
+      collectCalls(ctx, value, fn?.qualifiedName ?? ctx.owner);
       return;
     }
   }
@@ -217,13 +348,14 @@ function visit(node: Node, ctx: Ctx): void {
       const nameNode = decl.childForFieldName('name');
       const valueNode = decl.childForFieldName('value');
       if (!nameNode || nameNode.type !== 'identifier') {
-        visit(decl, ctx);
+        collectCalls(ctx, valueNode, ctx.owner);
         continue;
       }
       const isFn = valueNode !== null && FN_VALUES.has(valueNode.type);
       const sym = push(ctx, isFn ? 'function' : 'variable', nameNode.text, decl, node);
-      if (valueNode?.type === 'object') visitScope(ctx, sym, valueNode);
-      else visit(decl, ctx);
+      // Values are not walked for symbols: locals of `const f = () => {...}` are not top-level.
+      if (valueNode?.type === 'object') visitScope(ctx, sym.name, sym.exported, valueNode);
+      else collectCalls(ctx, valueNode, sym.qualifiedName);
     }
     return;
   }
@@ -426,9 +558,11 @@ export function parseTsLike(root: Node, language: LanguageId): ParseResult {
     qualifier: [],
     exportNames: collectExportNames(root),
     scopeExported: false,
+    references: [],
+    owner: null,
   };
   for (const child of root.namedChildren) {
     visit(child, ctx);
   }
-  return { language, symbols: ctx.symbols, imports: ctx.imports };
+  return { language, symbols: ctx.symbols, imports: ctx.imports, references: uniqueRefs(ctx.references) };
 }

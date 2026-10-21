@@ -162,6 +162,16 @@ single place an embedder is chosen. `scripts/bench.mjs` baseline on Atlas itself
 (75 files, 690 symbols): index 595 ms, 2.6 ms/file median, no-op re-index 10 ms,
 search p50 1.7 ms / p95 3.7 ms. The 10k-symbol search budget is measured in SG5.
 
+## 2026-10-21 — SG4: resolver reads CST references
+The parsers record call (`f()`, `this.m()`/`self.m()`, `super.m()`, `ns.m()`,
+`new C()`) and heritage references per enclosing symbol; migration v4 stores them
+in `refs` (deduped per symbol) and resets file hashes so old indexes re-parse.
+The resolver no longer reads source, so comments and strings cannot produce
+edges. Weak policy: unresolved calls through an import binding and unresolved
+`this`/`super` calls are weak; calls on unbound names or receivers (builtins,
+locals, parameters) produce no edge. Methods of `module.exports = {...}` and
+`export default {...}` are qualified as `default.<name>` and importable by name.
+Golden edges for the resolver live in `fixtures/graph/expected-edges.json`.
 ## 2026-10-21 — SG5: hybrid search via weighted RRF
 `search()` unions three candidate sources: vec0 KNN, FTS5 (`symbols_fts`, bm25
 weighted 10/5/1 over name/qualified_name/docstring) and an exact-name lookup on

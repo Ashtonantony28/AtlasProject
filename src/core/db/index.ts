@@ -9,6 +9,7 @@ export type {
   DocRow,
   RunRow,
   ImportRow,
+  RefRow,
   SymbolKind,
   EdgeKind,
 } from './types.js';
