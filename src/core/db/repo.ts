@@ -241,3 +241,10 @@ export function counts(db: DB): {
     imports: q('SELECT COUNT(*) AS c FROM imports'),
   };
 }
+
+// Removes a file and its file-level docs; symbols, imports and edges cascade.
+// vec0 embeddings do not cascade: call deleteEmbeddingsForFile first.
+export function deleteFile(db: DB, fileId: number): void {
+  db.prepare("DELETE FROM docs WHERE target_kind = 'file' AND target_id = ?").run(fileId);
+  db.prepare('DELETE FROM files WHERE id = ?').run(fileId);
+}
