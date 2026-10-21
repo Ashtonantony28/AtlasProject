@@ -6,6 +6,17 @@ import { MIGRATIONS } from './schema.js';
 
 export type DB = Database.Database;
 
+const statements = new WeakMap<DB, Map<string, Database.Statement>>();
+
+/** `db.prepare(sql)`, memoised per connection for hot paths. */
+export function prepareCached(db: DB, sql: string): Database.Statement {
+  let byDb = statements.get(db);
+  if (!byDb) statements.set(db, (byDb = new Map()));
+  let stmt = byDb.get(sql);
+  if (!stmt) byDb.set(sql, (stmt = db.prepare(sql)));
+  return stmt;
+}
+
 export interface OpenDbOptions {
   readonly?: boolean;
   fileMustExist?: boolean;

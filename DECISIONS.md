@@ -316,3 +316,21 @@ retried. Partial extraction (a walker bug after a tree exists) is still stored
 with an internal diagnostic, as in SG11: retrying a deterministic bug forever
 would leave the file unindexed. `npm run typecheck` also runs
 `tsconfig.test.json`. `startServer` reports the bound port, so `--port 0` works.
+
+
+## 2026-10-21 — SG14: vec0 point deletes; exact search kept, ANN deferred
+vec0 executes `rowid IN (...)` as a scan of every chunk, so
+`deleteEmbeddingsForFile` deletes one rowid at a time with cached statements
+(`prepareCached`, memoised per connection) inside the caller's transaction.
+Search stays exact: filters resolve file ids first (`file_id IN (SELECT id FROM
+files ...)`) and drop the `files` join, FTS ranks `symbols_fts` alone with a
+2x over-fetch and falls back to the filtered join only when that cannot fill
+the pool, and vec0 similarity point reads (about 0.3 ms each) are done only for
+lexical hits that can still reach the top `limit`. At 150k symbols the floor is
+vec0's brute-force float KNN itself (110–130 ms for any k on this machine), so
+the 100 ms p95 target needs approximate KNN. Measured option: a SimHash
+`bit[768]` vec0 table (sign of a seeded Gaussian projection; plain
+`vec_quantize_binary` has 0.15 recall on the sparse local-hash vectors) with
+exact rerank of k'=80/160 candidates costs 50/90 ms at 0.70/0.88 recall@80
+(0.98/0.99 recall@10). That needs migration v6, backfill and makes the KNN
+candidate list approximate, so it is left for a decision rather than shipped.
