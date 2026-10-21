@@ -13,7 +13,8 @@ import {
   getAllSymbols,
   getDoc,
 } from '../core/db/index.js';
-import { LocalHashEmbedder, search } from '../core/vector/index.js';
+import { createEmbedder, search } from '../core/vector/index.js';
+import { loadConfig } from '../core/config.js';
 import type { SymbolKind } from '../core/db/index.js';
 import { buildGraphJson } from '../core/graph/index.js';
 
@@ -68,7 +69,7 @@ export async function startServer(db: DB, root: string, opts: ServeOptions = {})
   const host = opts.host ?? '127.0.0.1';
   const port = opts.port ?? 4321;
   const staticRoot = findStaticRoot();
-  const embedder = new LocalHashEmbedder();
+  const embedder = createEmbedder(loadConfig(root));
 
   const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     try {

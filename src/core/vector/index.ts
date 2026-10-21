@@ -12,6 +12,7 @@ export {
   deleteEmbeddingsForFile,
   getEmbeddingMeta,
   vectorKnn,
+  vectorSimilarities,
 } from './store.js';
 export type { StoredEmbedding } from './store.js';
 export { embedAllSymbols } from './embedAll.js';

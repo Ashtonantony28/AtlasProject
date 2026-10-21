@@ -11,7 +11,8 @@ import {
   type SymbolRow,
   type FileRow,
 } from '../db/index.js';
-import { LocalHashEmbedder, search } from '../vector/index.js';
+import { createEmbedder, search } from '../vector/index.js';
+import { loadConfig } from '../config.js';
 import { readFileFromRoot } from '../vector/index.js';
 
 export interface RetrievedSnippet {
@@ -44,7 +45,7 @@ export async function retrieveForQuery(
   const expansionLimit = opts.expansionLimit ?? DEFAULT_EXPANSION;
   const excerptLines = opts.excerptLines ?? DEFAULT_EXCERPT_LINES;
 
-  const embedder = new LocalHashEmbedder();
+  const embedder = createEmbedder(loadConfig(root));
   const hits = await search(db, embedder, query, { limit: seedLimit });
   const fileById = new Map(getAllFiles(db).map((f) => [f.id, f]));
   const symbolById = new Map(getAllSymbols(db).map((s) => [s.id, s]));
