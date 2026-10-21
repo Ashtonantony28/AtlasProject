@@ -123,6 +123,27 @@ if `.atlas/config.json` is absent, but is never written. Walk filters:
   indexed (default `[]` = everything not excluded).
 - `exclude` — globs added to `.gitignore` rules.
 
+### MCP server
+
+`atlas mcp` serves the index over stdio to MCP clients (Claude Code, Cursor, …)
+as tools: `atlas_index`, `atlas_search`, `atlas_symbol`, `atlas_graph`,
+`atlas_drift`, `atlas_docs` (read generated docs) and `atlas_ask` (grounded
+answer with citation checks). It is additive: `atlas docs` and `atlas ask`
+still work. `atlas_ask` spends tokens within `tokenBudget` per server session;
+`--offline` uses the mock LLM. Like the CLI, it writes only under `.atlas/`.
+
+```json
+{
+  "mcpServers": {
+    "atlas": {
+      "command": "npx",
+      "args": ["atlas", "mcp", "--cwd", "/path/to/repo"],
+      "env": { "ANTHROPIC_API_KEY": "sk-ant-…" }
+    }
+  }
+}
+```
+
 ## Verified on real third-party repos
 
 The `scripts/verify-external.sh` script clones a public repo into a temp dir,
@@ -160,6 +181,7 @@ totals: files=78 symbols=2780 imports=656 edges=1093
 | `src/core/qa/`    | retrieval + grounded ask |
 | `src/core/drift/` | stale-doc + undocumented-symbol detection |
 | `src/web/`        | dashboard HTTP API + static UI |
+| `src/mcp/`        | MCP server (`atlas mcp`) over the same core |
 | `fixtures/sample/`| tiny multi-language repo used by tests |
 | `.github/workflows/atlas.yml` | PR action that runs index + drift + posts a sticky comment |
 | `scripts/demo.sh` | full pipeline against the bundled fixture |

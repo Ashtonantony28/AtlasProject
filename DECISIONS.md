@@ -222,3 +222,15 @@ and `truncated: true`; at the default 10 snippets that bounds excerpts to
 ~1.2k lines, far below `tokenBudget`. Graph expansion keeps each neighbor's
 best edge and ranks resolved before weak, then extends > implements > calls >
 imports > references, then seed rank, then edge id.
+
+## 2026-10-21 — SG9: MCP server alongside `docs`/`ask`
+`atlas mcp` (src/mcp/server.ts, `@modelcontextprotocol/sdk` stdio) is an extra
+surface over `core/`; unlike `relaxed-knuth-DHc0Q` it keeps `synth/`, `docs`
+and `ask`. Tools: index, search, symbol, graph, drift (`persisted` checks
+`.atlas/docs`), docs (read-only; index first, `.atlas/docs` fills gaps; no
+synthesis, so no spend outside `ask`) and ask (returns SG7 `checks`/`flagged`).
+Handlers throw and the SDK turns errors, including zod validation failures, into
+`isError` results. `atlas_ask` goes through a per-session `TokenBudget` of
+`tokenBudget` that refuses a call when ~chars/3 input + `maxTokens` exceeds
+what is left; the Anthropic client is created lazily so the server starts
+without a key. The DB is closed on process exit, after in-flight calls finish.
