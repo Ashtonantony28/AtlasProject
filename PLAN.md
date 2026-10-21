@@ -54,7 +54,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 | SG14 | Search and embeddings at 150k symbols: bounded KNN latency, indexed embedding deletes (A2-02, A2-03) | SG5 | Claude (thread) | proposed (from AUDIT-2) |
 | SG15 | Bounded MCP and HTTP responses: pagination/limits for drift, graph, docs (A2-04, A2-09) | SG13 | Claude (thread) | proposed (from AUDIT-2) |
 | SG16 | Parse+insert ≤ 5 ms/file on express and got (A2-05) | SG11 | Claude (thread) | proposed (from AUDIT-2) |
-| SG17 | Indexer data safety and untested guarantees: unreadable dirs never prune, real parse failures keep old rows and retry, tests for dashboard read-only, `runDrift` tombstones, ask budget boundary, typecheck `test/` (A4-01..A4-06) | SG13 | Claude (thread) | proposed (from AUDIT-4) |
+| SG17 | Indexer data safety and untested guarantees: unreadable dirs never prune, real parse failures keep old rows and retry, tests for dashboard read-only, `runDrift` tombstones, ask budget boundary, typecheck `test/` (A4-01..A4-06) | SG13 | Claude (thread) | done: unreadable paths kept and counted failed, tree-sitter failure keeps rows and retries (`parseSourceOrThrow`), tests kill M1/M6/M9, A4-08 pinned, `typecheck` covers `test/`; 2 `it.fails` + 4 todos flipped; 313 tests |
 
 ### SG0: Shared interfaces + bench harness
 - Migration v3 (`symbols.exported`), `ParsedSymbol.exported`, `createEmbedder`, FTS5 table `symbols_fts` (migration v3), plus contract tests that pin each item in §Interfaces.
