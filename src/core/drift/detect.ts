@@ -3,12 +3,16 @@
 // Two signals:
 //   - stale: a doc whose stored source_hash differs from sha256 of the prompt
 //     it would be generated from now (its grounding context moved on), or a
-//     persisted doc whose file no longer exists. Fatal in the CLI.
+//     persisted doc whose file no longer exists, or a doc whose file on disk no
+//     longer matches its indexed content hash (edited, or failed to re-index).
+//     Fatal in the CLI.
 //   - undocumented: an exported symbol whose name (qualified or bare) does
 //     not appear as a whole identifier in its file's doc. Reported only;
 //     fatal with `atlas drift --strict`.
 
-import { type DB, getAllFiles, getSymbolsForFile } from '../db/index.js';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { type DB, type FileRow, getAllFiles, getSymbolsForFile } from '../db/index.js';
 import { sha256 } from '../ingest/index.js';
 import {
   architecturePrompt,
@@ -24,7 +28,7 @@ export interface StaleDocReport {
   targetId: number;
   targetPath: string; // file path or "architecture"
   storedHash: string;
-  currentHash: string; // "missing" when the file no longer exists
+  currentHash: string; // "missing" when the file no longer exists; "unindexed" when it changed since indexing
 }
 
 export interface UndocumentedSymbolReport {
@@ -73,7 +77,9 @@ export function detectDrift(db: DB, opts: DetectOptions): DriftReport {
     seen.add(file.path);
     const doc = fileDocs.get(file.path);
     if (doc) {
-      const current = sha256(modulePrompt(db, opts.root, file));
+      const current = indexedContentChanged(opts.root, file)
+        ? 'unindexed'
+        : sha256(modulePrompt(db, opts.root, file));
       if (doc.sourceHash !== current) {
         stale.push({
           kind: 'file',
@@ -126,6 +132,17 @@ export function detectDrift(db: DB, opts: DetectOptions): DriftReport {
     totals: { files: files.length, docs: docs.length, publicSymbols: publicSymbolCount },
     hasDrift: stale.length > 0 || undocumented.length > 0,
   };
+}
+
+/** The index is behind the file (edited since, or its re-index failed and kept the old rows). */
+function indexedContentChanged(root: string, file: FileRow): boolean {
+  let content: string;
+  try {
+    content = readFileSync(join(root, file.path), 'utf8');
+  } catch {
+    return false; // unreadable or deleted: the prompt check and pruning cover it
+  }
+  return sha256(content) !== file.content_hash;
 }
 
 /** Whole-identifier, case-sensitive match (`get` does not match inside `target`). */

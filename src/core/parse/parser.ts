@@ -3,6 +3,7 @@ import type { LanguageId } from '../ingest/language.js';
 import type { ParseResult } from './types.js';
 import { parseTsLike } from './ts.js';
 import { parsePython } from './py.js';
+import { internalDiagnostic, syntaxDiagnostics } from './refs.js';
 
 // tree-sitter grammars don't ship ESM-friendly types; load via dynamic import + assert any.
 // We cache parser instances per language since constructing them is non-trivial.
@@ -76,23 +77,47 @@ function grammarFor(language: LanguageId, filename?: string): GrammarId {
   return language === 'typescript' && filename?.toLowerCase().endsWith('.tsx') ? 'tsx' : language;
 }
 
-/** `filename` (path or basename) selects a grammar variant, e.g. tsx for `.tsx`. */
+function extract(root: Parser.SyntaxNode, language: LanguageId): ParseResult {
+  switch (language) {
+    case 'typescript':
+    case 'javascript':
+      return parseTsLike(root, language);
+    case 'python':
+      return parsePython(root);
+    default: {
+      const exhaustive: never = language;
+      throw new Error(`unsupported language: ${String(exhaustive)}`);
+    }
+  }
+}
+
+/**
+ * `filename` (path or basename) selects a grammar variant, e.g. tsx for `.tsx`.
+ * Never throws on bad input: syntax errors and internal failures become `diagnostics`.
+ */
 export async function parseSource(
   source: string,
   language: LanguageId,
   filename?: string,
 ): Promise<ParseResult> {
   const { parser } = await getBundle(grammarFor(language, filename));
-  const tree = parseChunked(parser, source);
-  switch (language) {
-    case 'typescript':
-    case 'javascript':
-      return parseTsLike(tree.rootNode, language);
-    case 'python':
-      return parsePython(tree.rootNode);
-    default: {
-      const exhaustive: never = language;
-      throw new Error(`unsupported language: ${String(exhaustive)}`);
-    }
+  let tree: Parser.Tree;
+  try {
+    tree = parseChunked(parser, source);
+  } catch (err) {
+    return {
+      language,
+      symbols: [],
+      imports: [],
+      references: [],
+      diagnostics: [internalDiagnostic(err)],
+    };
   }
+  const result = extract(tree.rootNode, language);
+  try {
+    result.diagnostics.unshift(...syntaxDiagnostics(tree.rootNode));
+  } catch (err) {
+    result.diagnostics.push(internalDiagnostic(err));
+  }
+  return result;
 }

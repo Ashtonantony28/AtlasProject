@@ -164,13 +164,13 @@ describe('AUDIT-1 graph', () => {
     expect(g.strong).toContain('users.py::UserRepo.all -calls-> models.py::Repo.get');
   });
 
-  it.fails('A1-04 parser does not throw on a long top-level expression (TS)', async () => {
+  it('A1-04 parser does not throw on a long top-level expression (TS)', async () => {
     const src = `console.log(${'"a" + '.repeat(4000)}"b");\nexport function after(): void {}\n`;
     const r = await parseSource(src, 'typescript', 'gen.ts');
     expect(r.symbols.map((s) => s.name)).toContain('after');
   });
 
-  it.fails('A1-04 parser does not throw on a long top-level expression (Python)', async () => {
+  it('A1-04 parser does not throw on a long top-level expression (Python)', async () => {
     const src = `print(${'"a" + '.repeat(4000)}"b")\ndef after():\n    pass\n`;
     const r = await parseSource(src, 'python', 'gen.py');
     expect(r.symbols.map((s) => s.name)).toContain('after');
@@ -322,7 +322,7 @@ const BASE = {
 };
 
 describe('AUDIT-1 drift', () => {
-  it.fails('A1-04 an edit that makes the parser throw still marks the doc stale', async () => {
+  it('A1-04 an edit that makes the parser throw still marks the doc stale', async () => {
     const { db, root, docsDir, failed } = await driftAfter(BASE, (r) =>
       writeFileSync(
         join(r, 'a.ts'),
@@ -330,7 +330,7 @@ describe('AUDIT-1 drift', () => {
       ),
     );
     try {
-      expect(failed).toBe(1); // the precondition: the edit made parsing fail
+      expect(failed).toBe(0); // the parser no longer throws, so the edit indexes (failed re-index: test/drift/unindexed.test.ts)
       expect(staleOf(db, root)).toContain('a.ts');
       expect(staleOf(db, root, docsDir)).toContain('a.ts');
     } finally {

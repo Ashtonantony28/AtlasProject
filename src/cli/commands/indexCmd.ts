@@ -55,6 +55,11 @@ export function registerIndexCommand(program: Command): void {
           [
             `scanned ${stats.filesScanned} files`,
             `indexed ${stats.filesIndexed}, skipped ${stats.filesSkipped}, failed ${stats.filesFailed}`,
+            ...(stats.filesWithDiagnostics > 0
+              ? [
+                  `${stats.filesWithDiagnostics} files with parse diagnostics (use --verbose to list)`,
+                ]
+              : []),
             `wrote ${stats.symbols} symbols, ${stats.imports} imports in ${stats.durationMs}ms`,
             edgesLine,
             `embedded ${stats.embeddings} new symbols`,
