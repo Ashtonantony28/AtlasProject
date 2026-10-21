@@ -1,10 +1,13 @@
 // Retrieval for Q&A. Combines:
 //   - hybrid search to find the seed symbols,
 //   - one-hop graph expansion (callers/callees, heritage) over the seeds,
-//   - source excerpts for the final set.
+//     ranked resolved-before-weak, then extends > implements > calls > imports > references,
+//   - source excerpts covering each symbol's full span, capped at `excerptLines` lines.
 
 import {
   type DB,
+  type EdgeKind,
+  type EdgeRow,
   getAllEdges,
   getAllFiles,
   getAllSymbols,
@@ -22,18 +25,27 @@ export interface RetrievedSnippet {
   excerpt: string;
   startLine: number;
   endLine: number;
+  truncated: boolean;
   reason: 'search' | 'graph';
 }
 
 export interface RetrieveOptions {
   seedLimit?: number;
   expansionLimit?: number;
+  /** Per-snippet line cap; a longer symbol is cut and marked as truncated. */
   excerptLines?: number;
 }
 
 const DEFAULT_SEED_LIMIT = 5;
 const DEFAULT_EXPANSION = 5;
-const DEFAULT_EXCERPT_LINES = 25;
+export const DEFAULT_EXCERPT_LINES = 120;
+const KIND_RANK: Record<EdgeKind, number> = {
+  extends: 0,
+  implements: 1,
+  calls: 2,
+  imports: 3,
+  references: 4,
+};
 
 export async function retrieveForQuery(
   db: DB,
@@ -69,11 +81,24 @@ export async function retrieveForQuery(
     const source = sourceFor(file.id);
     if (!source) return;
     const lines = source.split('\n');
-    const start = Math.max(1, sym.start_line);
-    const end = Math.min(lines.length, sym.start_line + excerptLines);
-    const excerpt = lines.slice(start - 1, end).join('\n');
+    const start = Math.min(lines.length, Math.max(1, sym.start_line));
+    const fullEnd = Math.min(lines.length, Math.max(start, sym.end_line));
+    const end = Math.min(fullEnd, start + Math.max(1, excerptLines) - 1);
+    const truncated = end < fullEnd;
+    let excerpt = lines.slice(start - 1, end).join('\n');
+    if (truncated)
+      excerpt += `\n… [truncated: ${fullEnd - end} more lines through line ${fullEnd}]`;
     seen.add(sym.id);
-    out.push({ symbol: sym, file, score, excerpt, startLine: start, endLine: end, reason });
+    out.push({
+      symbol: sym,
+      file,
+      score,
+      excerpt,
+      startLine: start,
+      endLine: end,
+      truncated,
+      reason,
+    });
   };
 
   // Seed
@@ -81,23 +106,42 @@ export async function retrieveForQuery(
     add(hit.symbol, hit.totalScore, 'search');
   }
 
-  // One-hop graph expansion: callers/callees + heritage from each seed.
-  const seedIds = new Set(out.map((o) => o.symbol.id));
-  let added = 0;
+  // One-hop graph expansion: callers/callees + heritage from each seed, strongest edge first.
+  const seedRank = new Map(out.map((o, i) => [o.symbol.id, i]));
+  const best = new Map<number, { edge: EdgeRow; seed: number }>();
   for (const e of edges) {
+    if (e.src_symbol === null || e.dst_symbol === null) continue;
+    const fromSrc = seedRank.get(e.src_symbol);
+    const fromDst = seedRank.get(e.dst_symbol);
+    const [candidateId, seed] =
+      fromSrc !== undefined ? [e.dst_symbol, fromSrc] : [e.src_symbol, fromDst];
+    if (seed === undefined || seen.has(candidateId)) continue;
+    const prev = best.get(candidateId);
+    if (!prev || compareExpansion({ edge: e, seed }, prev) < 0)
+      best.set(candidateId, { edge: e, seed });
+  }
+  const ranked = [...best.entries()].sort((a, b) => compareExpansion(a[1], b[1]));
+  let added = 0;
+  for (const [candidateId] of ranked) {
     if (added >= expansionLimit) break;
-    let candidateId: number | null = null;
-    if (e.src_symbol && seedIds.has(e.src_symbol) && e.dst_symbol) {
-      candidateId = e.dst_symbol;
-    } else if (e.dst_symbol && seedIds.has(e.dst_symbol) && e.src_symbol) {
-      candidateId = e.src_symbol;
-    }
-    if (candidateId === null || seen.has(candidateId)) continue;
     const sym = symbolById.get(candidateId);
     if (!sym || sym.kind === 'module') continue;
+    const before = out.length;
     add(sym, 0, 'graph');
-    added++;
+    if (out.length > before) added++;
   }
 
   return out;
+}
+
+function compareExpansion(
+  a: { edge: EdgeRow; seed: number },
+  b: { edge: EdgeRow; seed: number },
+): number {
+  return (
+    a.edge.weak - b.edge.weak ||
+    KIND_RANK[a.edge.kind] - KIND_RANK[b.edge.kind] ||
+    a.seed - b.seed ||
+    a.edge.id - b.edge.id
+  );
 }
