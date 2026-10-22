@@ -131,7 +131,7 @@ describe('AUDIT-18 performance under load', () => {
   // 8,000 functions takes 11 s in the embed phase (2,000: 0.6 s; 4,000: 2.0 s), one 30,000-line
   // Python file of assignments 47 s, all of it one block of the event loop. Bounded: a file's
   // source is split a constant number of times, not once per symbol.
-  it.fails('A18-01: embedding a file splits its source a bounded number of times', async () => {
+  it('A18-01: embedding a file splits its source a bounded number of times', async () => {
     const root = join(dir, 'generated');
     const N = 400;
     const src = Array.from(
@@ -150,7 +150,7 @@ describe('AUDIT-18 performance under load', () => {
     try {
       await indexRepo(db, root);
       expect(counts(db).symbols).toBeGreaterThanOrEqual(N);
-      // Today: one split per symbol (≈ N).
+      // Before SG55: one split per symbol (≈ N).
       expect(splits).toBeLessThanOrEqual(10);
     } finally {
       proto.split = original;
@@ -162,7 +162,7 @@ describe('AUDIT-18 performance under load', () => {
   // is one synchronous block. At 10k realistic files the embed phase of a forced run blocks the
   // event loop (and so an MCP server's stdin) for seconds. Bounded: the embed loop yields
   // between batches, so a self-rescheduling setImmediate ticks while embeddings are written.
-  it.fails('A18-02: the embed phase yields while it writes embeddings', async () => {
+  it('A18-02: the embed phase yields while it writes embeddings', async () => {
     const root = join(dir, 'embed');
     writeDenseRepo(root, 40, 100);
     const db: DB = openDatabase(join(dir, 'embed.db'));
@@ -186,7 +186,7 @@ describe('AUDIT-18 performance under load', () => {
       setImmediate(tick);
       await indexRepo(db, root);
       expect(ticksAt.length).toBeGreaterThan(3000);
-      // Every embedding of the run is written within one turn of the event loop today.
+      // Before SG55, every embedding of the run was written within one turn of the event loop.
       expect(ticksAt.at(-1)!).toBeGreaterThan(ticksAt[0]!);
     } finally {
       ticking = false;
@@ -201,7 +201,7 @@ describe('AUDIT-18 performance under load', () => {
   // The refusal reads "1688 of 200000 left; raise tokenBudget" while 186k are unspent: the
   // reserved tokens are reported as spent. Bounded: a refusal caused by in-flight reservations
   // says so (or the call waits for them), instead of reporting the budget as used up.
-  it.fails('A18-04: a refusal caused by in-flight reservations says so', async () => {
+  it('A18-04: a refusal caused by in-flight reservations says so', async () => {
     const root = join(dir, 'ask');
     cpSync(SAMPLE, root, { recursive: true });
     mkdirSync(join(root, '.atlas'), { recursive: true });
