@@ -228,7 +228,7 @@ describe('AUDIT-15 consistent surfaces (pinned)', () => {
       /^atlas: token budget exhausted: a call needs ~\d+ tokens \(~\d+ prompt \+ 1024 output\), 1000 of 1000 left; raise tokenBudget$/m;
     const docs = await cli(['docs', '--budget', '1000', '--cwd', root]);
     expect(docs.code).toBe(1);
-    expect(`atlas: ${docs.err}`).toMatch(exhausted);
+    expect(`atlas: ${docs.err}`).toMatch(new RegExp(exhausted.source.replace('tokenBudget', '--budget'), 'm')); // A15-03
     editConfig(root, { tokenBudget: 1000 });
     const ask = await cli(['ask', '--cwd', root, 'circle area']);
     expect(ask.code).toBe(1);
@@ -308,7 +308,7 @@ describe('AUDIT-15 consistent surfaces (pinned)', () => {
 });
 
 describe('AUDIT-15 findings', () => {
-  it.fails('A15-01: atlas_ask follows a raised tokenBudget, as the error message tells the user to do', async () => {
+  it('A15-01: atlas_ask follows a raised tokenBudget, as the error message tells the user to do', async () => {
     const root = await indexed();
     editConfig(root, { tokenBudget: 1000 });
     const ctx = mcp(root);
@@ -335,7 +335,7 @@ describe('AUDIT-15 findings', () => {
     }
   });
 
-  it.fails('A15-03: `docs --budget N` that cannot pay a call names --budget, not the config key', async () => {
+  it('A15-03: `docs --budget N` that cannot pay a call names --budget, not the config key', async () => {
     const root = await indexed();
     const run = await cli(['docs', '--offline', '--budget', '1000', '--cwd', root]);
     expect(run.code).toBe(1);
