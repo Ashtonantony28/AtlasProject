@@ -1,8 +1,11 @@
 export { synthesizeDocs } from './synthesize.js';
-export type { SynthesizeOptions, SynthesizeStats } from './synthesize.js';
+export type { DocStatus, SynthesizeOptions, SynthesizeStats } from './synthesize.js';
 export {
   createAnthropicClient,
   createOfflineClient,
+  incompleteReason,
+  ASK_MAX_TOKENS,
+  DOC_MAX_TOKENS,
 } from './llmClient.js';
 export type { LLMClient, LLMResult, LLMCallParams, LLMMessage } from './llmClient.js';
 export { budgeted, TokenBudget } from './budget.js';
