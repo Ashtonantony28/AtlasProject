@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/mcp/server.ts
-source_hash: 1959ebe09983e43bfae3207ace4eb4050c9d303af647fe9ff55a984a112100d2
+source_hash: 08e3c78dd217e96731f52570b5ab7d20733846c1553ed4af4301a838ab9fd0ce
 ---
 # module src/mcp/server.ts
 
@@ -13,15 +13,15 @@ source_hash: 1959ebe09983e43bfae3207ace4eb4050c9d303af647fe9ff55a984a112100d2
 - `createMcpContext` — function (src/mcp/server.ts:66)
 - `requireIndex` — function (src/mcp/server.ts:92)
 - `handleIndexTool` — function (src/mcp/server.ts:96)
-- `handleSearchTool` — function (src/mcp/server.ts:105)
-- `handleSymbolTool` — function (src/mcp/server.ts:128)
-- `handleGraphTool` — function (src/mcp/server.ts:170)
-- `handleDriftTool` — function (src/mcp/server.ts:188)
-- `handleDocsTool` — function (src/mcp/server.ts:213)
-- `handleAskTool` — function (src/mcp/server.ts:224)
-- `asText` — function (src/mcp/server.ts:248)
-- `createAtlasMcpServer` — function (src/mcp/server.ts:254)
-- `startMcpServer` — function (src/mcp/server.ts:373)
+- `handleSearchTool` — function (src/mcp/server.ts:106)
+- `handleSymbolTool` — function (src/mcp/server.ts:129)
+- `handleGraphTool` — function (src/mcp/server.ts:171)
+- `handleDriftTool` — function (src/mcp/server.ts:189)
+- `handleDocsTool` — function (src/mcp/server.ts:214)
+- `handleAskTool` — function (src/mcp/server.ts:225)
+- `asText` — function (src/mcp/server.ts:249)
+- `createAtlasMcpServer` — function (src/mcp/server.ts:255)
+- `startMcpServer` — function (src/mcp/server.ts:374)
 
 References: `src/mcp/server.ts:49`, `src/mcp/server.ts:55`, `src/mcp/server.ts:58`, `src/mcp/server.ts:66`, `src/mcp/server.ts:92`.
 

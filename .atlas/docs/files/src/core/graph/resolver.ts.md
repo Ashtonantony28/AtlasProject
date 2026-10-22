@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/graph/resolver.ts
-source_hash: f18f018597dc5e458af1ad3758a253d5f0c91f05baefb02fccc8f53c460639b8
+source_hash: 4d4ef417466459b560fe1324808ada7828d12b71e8ce532956754b38bb134539
 ---
 # module src/core/graph/resolver.ts
 
@@ -11,15 +11,15 @@ source_hash: f18f018597dc5e458af1ad3758a253d5f0c91f05baefb02fccc8f53c460639b8
 - `Binding` — type (src/core/graph/resolver.ts:47)
 - `ResolveOptions` — interface (src/core/graph/resolver.ts:54)
 - `ResolveStats` — interface (src/core/graph/resolver.ts:59)
-- `resolveGraph` — function (src/core/graph/resolver.ts:70)
-- `resolveAll` — function (src/core/graph/resolver.ts:74)
-- `EXTERNAL` — variable (src/core/graph/resolver.ts:375)
-- `VALUE_KINDS` — variable (src/core/graph/resolver.ts:376)
-- `localNameOf` — function (src/core/graph/resolver.ts:379)
-- `groupByFile` — function (src/core/graph/resolver.ts:388)
-- `refMeta` — function (src/core/graph/resolver.ts:398)
-- `ownerOf` — function (src/core/graph/resolver.ts:405)
+- `resolveGraph` — function (src/core/graph/resolver.ts:72)
+- `resolveAll` — function (src/core/graph/resolver.ts:76)
+- `EXTERNAL` — variable (src/core/graph/resolver.ts:379)
+- `VALUE_KINDS` — variable (src/core/graph/resolver.ts:380)
+- `localNameOf` — function (src/core/graph/resolver.ts:383)
+- `groupByFile` — function (src/core/graph/resolver.ts:392)
+- `refMeta` — function (src/core/graph/resolver.ts:402)
+- `ownerOf` — function (src/core/graph/resolver.ts:409)
 
-References: `src/core/graph/resolver.ts:34`, `src/core/graph/resolver.ts:47`, `src/core/graph/resolver.ts:54`, `src/core/graph/resolver.ts:59`, `src/core/graph/resolver.ts:70`.
+References: `src/core/graph/resolver.ts:34`, `src/core/graph/resolver.ts:47`, `src/core/graph/resolver.ts:54`, `src/core/graph/resolver.ts:59`, `src/core/graph/resolver.ts:72`.
 
 _Generated offline (mock client)._
