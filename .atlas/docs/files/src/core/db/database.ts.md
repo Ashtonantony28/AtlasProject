@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/db/database.ts
-source_hash: 90ee7b3e26a974836d8857af7c7710ee74b58849b39ed1e0bc50cce7bd4d8290
+source_hash: 2f72cdba0b23b9c8a41610eac0abea22454e188d92be11e25b37b70a17d2f66a
 ---
 # module src/core/db/database.ts
 
