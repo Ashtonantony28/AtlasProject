@@ -356,6 +356,52 @@ describe('MCP tool handlers', () => {
       expect(ctx.budget.remaining()).toBe(500);
     });
 
+    it('atlas_ask holds a call’s reservation while it runs, then releases it on an error or settles to the usage', async () => {
+      let release: () => void = () => undefined;
+      let fail = false;
+      const seen: number[] = [];
+      closeDatabase(ctx.db);
+      ctx = open({
+        llm: {
+          model: 'gated',
+          complete: async (p) => {
+            seen.push(p.maxTokens);
+            await new Promise<void>((r) => (release = r));
+            if (fail) throw new Error('upstream 529');
+            return {
+              content: 'Circle.area [1]',
+              inputTokens: 300,
+              outputTokens: 100,
+              stopReason: 'end_turn',
+            };
+          },
+        },
+      });
+      editConfig({ tokenBudget: 6000 });
+      const settle = async (fails: boolean): Promise<unknown> => {
+        fail = fails;
+        const first = handleAskTool(ctx, { question: 'circle area' });
+        await vi.waitFor(() => expect(seen).toHaveLength(1));
+        // The first call reserved its prompt and max_tokens: all of the budget.
+        await expect(handleAskTool(ctx, { question: 'circle area' })).rejects.toThrow(
+          /token budget exhausted: .*, 0 of 6000 left/,
+        );
+        release();
+        seen.length = 0;
+        return first;
+      };
+      await expect(settle(true)).rejects.toThrow(/upstream 529/);
+      expect(ctx.budget.total()).toMatchObject({ spent: 0 });
+      await expect(settle(false)).resolves.toMatchObject({ budgetRemaining: 5600 });
+      expect(ctx.budget.total()).toMatchObject({ spent: 400 });
+      // Settled to 400: the next call gets the rest of the budget again.
+      const next = handleAskTool(ctx, { question: 'circle area' });
+      await vi.waitFor(() => expect(seen).toHaveLength(1));
+      release();
+      await next;
+      expect(ctx.budget.total()).toMatchObject({ spent: 800 });
+    });
+
     it('atlas_ask follows a config edit: a raised tokenBudget keeps the spend, a new synthModel a new client', async () => {
       const fake = await fakeAnthropic((body) =>
         message(body, {

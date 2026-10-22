@@ -154,66 +154,60 @@ describe('AUDIT-17 medium', () => {
     },
   );
 
-  it.fails(
-    'A17-02 concurrent atlas_ask calls on one MCP session never spend more than tokenBudget',
-    async () => {
-      const root = newRepo({});
-      cpSync(SAMPLE, root, { recursive: true });
-      // Worst case the API allows: the whole prompt and every max_tokens token billed.
-      const greedy: LLMClient = {
-        model: 'greedy',
-        complete: async (p) => {
-          await new Promise((r) => setTimeout(r, 30));
-          return {
-            content: 'Circle.area [1]',
-            inputTokens: estimateInputTokens(p),
-            outputTokens: p.maxTokens,
-            stopReason: 'end_turn',
-          };
-        },
-      };
-      const ctx = createMcpContext({ root, llm: greedy });
-      ctxs.push(ctx);
-      await handleIndexTool(ctx, {});
-      const cfg = join(root, '.atlas', 'config.json');
-      writeFileSync(
-        cfg,
-        JSON.stringify({ ...JSON.parse(readFileSync(cfg, 'utf8')), tokenBudget: 6000 }),
-      );
-      const results = await Promise.allSettled([
-        handleAskTool(ctx, { question: 'circle area' }),
-        handleAskTool(ctx, { question: 'shape perimeter' }),
-        handleAskTool(ctx, { question: 'math helpers' }),
-      ]);
-      // Sequentially the second call is capped to what is left and the third refused.
-      expect(results.filter((r) => r.status === 'fulfilled').length).toBeGreaterThan(0);
-      expect(ctx.budget.total().spent).toBeLessThanOrEqual(6000);
-    },
-  );
+  it('A17-02 concurrent atlas_ask calls on one MCP session never spend more than tokenBudget', async () => {
+    const root = newRepo({});
+    cpSync(SAMPLE, root, { recursive: true });
+    // Worst case the API allows: the whole prompt and every max_tokens token billed.
+    const greedy: LLMClient = {
+      model: 'greedy',
+      complete: async (p) => {
+        await new Promise((r) => setTimeout(r, 30));
+        return {
+          content: 'Circle.area [1]',
+          inputTokens: estimateInputTokens(p),
+          outputTokens: p.maxTokens,
+          stopReason: 'end_turn',
+        };
+      },
+    };
+    const ctx = createMcpContext({ root, llm: greedy });
+    ctxs.push(ctx);
+    await handleIndexTool(ctx, {});
+    const cfg = join(root, '.atlas', 'config.json');
+    writeFileSync(
+      cfg,
+      JSON.stringify({ ...JSON.parse(readFileSync(cfg, 'utf8')), tokenBudget: 6000 }),
+    );
+    const results = await Promise.allSettled([
+      handleAskTool(ctx, { question: 'circle area' }),
+      handleAskTool(ctx, { question: 'shape perimeter' }),
+      handleAskTool(ctx, { question: 'math helpers' }),
+    ]);
+    // Sequentially the second call is capped to what is left and the third refused.
+    expect(results.filter((r) => r.status === 'fulfilled').length).toBeGreaterThan(0);
+    expect(ctx.budget.total().spent).toBeLessThanOrEqual(6000);
+  });
 
-  it.fails(
-    'A17-03 an MCP read during an atlas_index run (at an SG34 yield) never sees a graph missing the edges of re-parsed files',
-    async () => {
-      const root = newRepo(bigRepo(60));
-      const ctx = createMcpContext({ root, offline: true });
-      ctxs.push(ctx);
-      await handleIndexTool(ctx, {});
-      const edges = (): number => (handleGraphTool(ctx, { limit: 1 }) as GraphJson).totals.edges;
-      const full = edges();
-      expect(full).toBeGreaterThan(1000);
-      // A forced re-index changes nothing; an agent asks for the graph while it runs.
-      let done = false;
-      const run = handleIndexTool(ctx, { force: true }).finally(() => (done = true));
-      let least = full;
-      while (!done) {
-        least = Math.min(least, edges());
-        await new Promise(setImmediate);
-      }
-      expect((await run).edges).toBe(full);
-      // Today the reader sees 0 edges between the parse loop and the resolver.
-      expect(least).toBe(full);
-    },
-  );
+  it('A17-03 an MCP read during an atlas_index run (at an SG34 yield) never sees a graph missing the edges of re-parsed files', async () => {
+    const root = newRepo(bigRepo(60));
+    const ctx = createMcpContext({ root, offline: true });
+    ctxs.push(ctx);
+    await handleIndexTool(ctx, {});
+    const edges = (): number => (handleGraphTool(ctx, { limit: 1 }) as GraphJson).totals.edges;
+    const full = edges();
+    expect(full).toBeGreaterThan(1000);
+    // A forced re-index changes nothing; an agent asks for the graph while it runs.
+    let done = false;
+    const run = handleIndexTool(ctx, { force: true }).finally(() => (done = true));
+    let least = full;
+    while (!done) {
+      least = Math.min(least, edges());
+      await new Promise(setImmediate);
+    }
+    expect((await run).edges).toBe(full);
+    // Before SG50 the reader saw 0 edges between the parse loop and the resolver.
+    expect(least).toBe(full);
+  });
 });
 
 // ---------------------------------------------------------------- low
