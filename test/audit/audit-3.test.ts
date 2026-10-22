@@ -105,8 +105,7 @@ async function withServer<T>(root: string, fn: (base: string) => Promise<T>): Pr
     readonly: true,
     fileMustExist: true,
   });
-  const port = 42000 + Math.floor(Math.random() * 2000);
-  const handle = await startServer(db, root, { port });
+  const handle = await startServer(db, root, { port: 0 });
   try {
     return await fn(handle.url);
   } finally {

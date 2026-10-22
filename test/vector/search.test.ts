@@ -1,11 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { closeDatabase, openDatabase, getAllSymbols } from '../../src/core/db/index.js';
+import {
+  closeDatabase,
+  openDatabase,
+  getAllSymbols,
+  getFileByPath,
+  getSymbolsForFile,
+} from '../../src/core/db/index.js';
 import { indexRepo } from '../../src/core/ingest/index.js';
-import { LocalHashEmbedder, search, countEmbeddings } from '../../src/core/vector/index.js';
+import {
+  LocalHashEmbedder,
+  search,
+  countEmbeddings,
+  vectorKnn,
+} from '../../src/core/vector/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURE = join(__dirname, '..', '..', 'fixtures', 'sample');
@@ -102,5 +113,74 @@ describe('search end-to-end', () => {
     expect(hits[0]!.symbolId).toBe(stored!.symbol_id);
     expect(hits[0]!.similarity).toBeCloseTo(1, 3);
     closeDatabase(db);
+  });
+});
+
+// Embeds "frobnicate" as if it were "widget total", so only FTS can match zeta's docstring.
+class FrobnicateBlindEmbedder extends LocalHashEmbedder {
+  override async embed(inputs: string[]): Promise<Float32Array[]> {
+    return super.embed(inputs.map((s) => (s === 'frobnicate' ? 'widget total' : s)));
+  }
+}
+
+describe('search filter when FTS ranks matches outside the filter first', () => {
+  let dir: string;
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'atlas-search-'));
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  // 40 short "frobnicate" docstrings outside special/ outrank zeta's long one; ten
+  // widgetTotal functions fill special/'s KNN pool.
+  function writeRepo(root: string): void {
+    for (let i = 0; i < 4; i++) {
+      const body = Array.from(
+        { length: 10 },
+        (_, j) =>
+          `/** frobnicate */\nexport function decoy${i}x${j}(): number {\n  return ${j};\n}\n`,
+      ).join('\n');
+      mkdirSync(join(root, 'decoy'), { recursive: true });
+      writeFileSync(join(root, 'decoy', `d${i}.ts`), body);
+    }
+    const widgets = Array.from(
+      { length: 10 },
+      (_, k) =>
+        `/** Compute the widget total. */\nexport function widgetTotal${k}(count: number): number {\n  return count * ${k};\n}\n`,
+    ).join('\n');
+    mkdirSync(join(root, 'special'), { recursive: true });
+    writeFileSync(
+      join(root, 'special', 's.ts'),
+      `${widgets}\n/** Zeta handles parsing, routing, caching, logging and metrics, and has to frobnicate the cache total before shutdown completes. */\nexport function zeta(): void {}\n`,
+    );
+  }
+
+  it('still returns an FTS-only match inside a selective file filter', async () => {
+    const root = join(dir, 'repo');
+    writeRepo(root);
+    const db = openDatabase(join(dir, 'index.db'));
+    try {
+      await indexRepo(db, root);
+      const embedder = new FrobnicateBlindEmbedder();
+      const opts = { file: 'special/', candidatePoolSize: 5, limit: 5 };
+      const [q] = await embedder.embed(['frobnicate']);
+      const zeta = getSymbolsForFile(db, getFileByPath(db, 'special/s.ts')!.id).find(
+        (s) => s.name === 'zeta',
+      )!;
+      const pool = vectorKnn(db, q!, opts.candidatePoolSize, {
+        sql: 'SELECT s.id FROM symbols s WHERE s.file_id IN (SELECT id FROM files WHERE instr(path, ?) > 0)',
+        params: [opts.file],
+      });
+      expect(pool.map((r) => r.symbolId)).not.toContain(zeta.id);
+      const unfiltered = await search(db, embedder, 'frobnicate', { ...opts, file: undefined });
+      expect(unfiltered.map((h) => h.symbol.name)).not.toContain('zeta');
+
+      const hits = await search(db, embedder, 'frobnicate', opts);
+      for (const h of hits) expect(h.filePath).toContain('special/');
+      expect(hits.map((h) => h.symbol.name)).toContain('zeta');
+    } finally {
+      closeDatabase(db);
+    }
   });
 });

@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/drift/detect.ts
-source_hash: 50e2414e242ae98752ed0ff6771abfdf873ee083fea2039bb40058d3ada54d34
+source_hash: 2f482f367d4a9c12e5df421973e63f3ed2ea4d46d070e386ded53349850e0ebc
 ---
 # module src/core/drift/detect.ts
 

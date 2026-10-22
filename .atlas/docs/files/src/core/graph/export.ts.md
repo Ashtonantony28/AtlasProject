@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/graph/export.ts
-source_hash: c095c88950e891723a36776da03ef2f1dd698b70105657b5b57daf03d2546f63
+source_hash: 8634401bd281c76bab14ccf2bd705da7aa4bb6bc068b9f1b8cbb6f1b93edf381
 ---
 # module src/core/graph/export.ts
 
@@ -11,19 +11,21 @@ source_hash: c095c88950e891723a36776da03ef2f1dd698b70105657b5b57daf03d2546f63
 - `GraphNode` — interface (src/core/graph/export.ts:5)
 - `GraphEdge` — interface (src/core/graph/export.ts:15)
 - `GraphJson` — interface (src/core/graph/export.ts:23)
-- `GraphQuery` — interface (src/core/graph/export.ts:32)
-- `NODE_SQL` — variable (src/core/graph/export.ts:45)
-- `IN_IDS` — variable (src/core/graph/export.ts:48)
-- `buildGraphJson` — function (src/core/graph/export.ts:51)
-- `count` — function (src/core/graph/export.ts:101)
-- `scopeIds` — function (src/core/graph/export.ts:106)
-- `neighbourhood` — function (src/core/graph/export.ts:125)
-- `edgesWithin` — function (src/core/graph/export.ts:146)
-- `safeParse` — function (src/core/graph/export.ts:163)
-- `buildGraphDot` — function (src/core/graph/export.ts:171)
-- `graphToDot` — function (src/core/graph/export.ts:175)
-- `escapeDot` — function (src/core/graph/export.ts:198)
+- `GraphQuery` — interface (src/core/graph/export.ts:33)
+- `NODE_SQL` — variable (src/core/graph/export.ts:46)
+- `IN_IDS` — variable (src/core/graph/export.ts:49)
+- `buildGraphJson` — function (src/core/graph/export.ts:57)
+- `count` — function (src/core/graph/export.ts:106)
+- `scopeIds` — function (src/core/graph/export.ts:111)
+- `neighbourhood` — function (src/core/graph/export.ts:130)
+- `OWNED_BY` — function (src/core/graph/export.ts:150)
+- `edgesFromRange` — function (src/core/graph/export.ts:155)
+- `ownedEdges` — function (src/core/graph/export.ts:164)
+- `safeParse` — function (src/core/graph/export.ts:175)
+- `buildGraphDot` — function (src/core/graph/export.ts:183)
+- `graphToDot` — function (src/core/graph/export.ts:187)
+- `escapeDot` — function (src/core/graph/export.ts:210)
 
-References: `src/core/graph/export.ts:3`, `src/core/graph/export.ts:5`, `src/core/graph/export.ts:15`, `src/core/graph/export.ts:23`, `src/core/graph/export.ts:32`.
+References: `src/core/graph/export.ts:3`, `src/core/graph/export.ts:5`, `src/core/graph/export.ts:15`, `src/core/graph/export.ts:23`, `src/core/graph/export.ts:33`.
 
 _Generated offline (mock client)._

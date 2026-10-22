@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/ci/workflow.test.ts
-source_hash: e3d206df5f4a7c24265071502f8ce8e526a8bfd36a0534dc9fcd8cec712eff60
+source_hash: 63ab24bd3d6cbaae8e35c5e5dd9019849f4c36ea9970683cc728ef181198964a
 ---
 # module test/ci/workflow.test.ts
 
@@ -25,8 +25,23 @@ source_hash: e3d206df5f4a7c24265071502f8ce8e526a8bfd36a0534dc9fcd8cec712eff60
 - `ciCommentIdx` — variable (test/ci/workflow.test.ts:103)
 - `postIdx` — variable (test/ci/workflow.test.ts:104)
 - `yml` — variable (test/ci/workflow.test.ts:113)
-- `pr` — variable (test/ci/workflow.test.ts:118)
-- `workflowCommand` — function (test/ci/workflow.test.ts:127)
+- `pkg` — variable (test/ci/workflow.test.ts:114)
+- `cov` — variable (test/ci/workflow.test.ts:119)
+- `yml` — variable (test/ci/workflow.test.ts:125)
+- `pr` — variable (test/ci/workflow.test.ts:130)
+- `workflowCommand` — function (test/ci/workflow.test.ts:139)
+- `yml` — variable (test/ci/workflow.test.ts:146)
+- `base` — variable (test/ci/workflow.test.ts:147)
+- `dir` — variable (test/ci/workflow.test.ts:148)
+- `git` — function (test/ci/workflow.test.ts:149)
+- `runWorkflow` — function (test/ci/workflow.test.ts:174)
+- `p` — variable (test/ci/workflow.test.ts:201)
+- `db` — variable (test/ci/workflow.test.ts:208)
+- `exported` — variable (test/ci/workflow.test.ts:209)
+- `comment` — variable (test/ci/workflow.test.ts:214)
+- `p` — variable (test/ci/workflow.test.ts:222)
+- `cfgPath` — variable (test/ci/workflow.test.ts:243)
+- `cfg` — variable (test/ci/workflow.test.ts:244)
 
 References: `test/ci/workflow.test.ts:25`, `test/ci/workflow.test.ts:26`, `test/ci/workflow.test.ts:29`, `test/ci/workflow.test.ts:30`, `test/ci/workflow.test.ts:41`.
 

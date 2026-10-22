@@ -380,6 +380,43 @@ contention can still push got near 5.
 
 Requests send no `temperature`/`top_p`/`top_k` (current models and API `2026-10-21` reject them). Per-doc and `ask` `max_tokens` default to 16 000 (the non-streaming default; thinking counts toward it), so the budget reserves ~16k per call and a run stops ~16k short of `tokenBudget`. A `stop_reason` other than `end_turn`/`stop_sequence`, or empty text, is never stored: `docs` reports the target as failed and exits 1, `ask` errors.
 
+## 2026-10-22 — SG22: graph pages own their nodes' outgoing edges
+A7-02: a page used to return only edges with both endpoints on it, so paging
+lost almost every edge. Now an edge belongs to the page holding its `src` (its
+`dst` when `src` is null) and its far endpoint, which must be in scope, may be
+on another page; paging through all nodes yields each in-scope edge exactly
+once and `totals.edges` is their sum. Chosen over independently paged edges
+because it keeps the published params (`limit`/`edgeLimit`/`offset`) and
+fields unchanged, and over far-endpoint stubs to keep pages small. Unscoped
+pages select owned edges by id range with `LIMIT edgeLimit+1`; scoped pages
+read only `src IN page` rows (a subset of what they read before, so A6-01 is no
+worse; `totals.edges` still materialises the scope's edges). `truncated` now
+matches drift: true when `offset > 0`, more nodes follow, or `edgeLimit` cut
+the page. The dashboard names what was cut (symbols, or else edges) (A7-12).
+A7-05: `search`, `graph`, `ask` and `drift` reject an empty index like the MCP
+tools, via `openProjectIndex(…, { indexed: true })` / `requireIndexed`, with
+the same "index is empty: <next step>" message.
+
+## 2026-10-22 — SG20: walk skips follow `.gitignore` and config, not names at any depth
+
+Only `.git`, `.atlas`, `node_modules` and `__pycache__` (never project source) and virtualenvs (a directory holding `pyvenv.cfg`) are skipped at any depth. `dist`, `build`, `coverage`, `venv`, `.next`, `.cache` are root-anchored entries in the default `exclude` (`.venv/**`, `venv/**`, `.next/**`, `.cache/**` added to the default value; no new keys), so `src/build/` is indexed and a user can drop an entry to index the root one. Nested `.gitignore` files are now read (deeper files override shallower ones, `exclude` is applied last), which keeps `packages/*/dist` out where a package ignores it. Persisted docs strip a leading BOM before parsing front matter; `ci-comment` validates its input and counts from `totals`, noting when the lists are a page.
+
+## 2026-10-22 — SG23/SG24: perf budgets run serially; coverage gate on src/core
+Wall-clock budgets (search p95 ≤ 50 ms, cached synthesis and drift ≤ 1 s, limits
+unchanged) moved to `test/perf/` and run only under `npm run test:perf`
+(`vitest.perf.config.ts`: one fork, no file parallelism, a warm-up pass before
+measuring); the default config excludes them, so parallel-suite load cannot fail
+them (A6-06, A8-12). Chosen over env-gating or wider margins because the budgets
+stay enforced in CI at their frozen values. CI runs `npm run test:coverage`
+instead of `npm test` (same suite, plus `src/core` thresholds lines 90 /
+branches 88 / functions 96, aggregated over the glob), then `test:perf`. SG17's
+unreadable-path guarantees, the search FTS filter fallback and drift paging's
+gate invariance now live in `test/ingest`, `test/vector` and `test/drift`.
+
+## 2026-10-22 — SG19: bare specifiers resolve through tsconfig `paths`/`baseUrl`, workspaces and Python roots
+
+Module-specifier resolution moved to `src/core/graph/modules.ts` (`ModuleResolver`), built once per `resolveGraph`. Config files are read from `root` (read-only, cached), and only directories that hold indexed files are listed, once each, so cost does not grow per import. JS/TS order: relative path, then the nearest `tsconfig.json`/`jsconfig.json` (JSONC; local `extends` chains, arrays, solution-style `references`; package `extends` such as `@tsconfig/*` are not followed) with TS's rules (exact pattern, else longest wildcard prefix; targets relative to `baseUrl`, else to the config that defines `paths`), then `baseUrl`, then workspace packages (`package.json` `workspaces` array or `{packages}`, `pnpm-workspace.yaml`, `!` exclusions). A package entry tries `exports` (`source` > `types` > `import` > `module` > `default` > `require` > `node`, subpath and `*` patterns), then `source`/`module`/`main`/`types`, then `src/index`; a `dist|lib|build|out/` target that is not indexed is retried under `src/`. A name declared by two workspace members resolves to nothing. Python absolute imports try the repo root, the importer's top-level package root, then `src/` beside the root or any pyproject.toml/setup.cfg/setup.py, the dirs those configs name (`where`, `package_dir`, poetry `from`), then a discovered package root only when exactly one holds that top-level package. Unreadable or malformed configs are skipped and listed in `ResolveStats.diagnostics` (new field). No schema or config change. Known gap: a change to only a tsconfig/package.json does not trigger re-resolution on a no-op re-index (use `--force`).
+
 ## 2026-10-22 — SG18: assigned/anonymous functions, namespaces, `references` edges
 
 Module-level `obj.m = function`, `C.prototype.m = …`, `C.prototype = { … }` and `exports.x = …`

@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/config.ts
-source_hash: 2bf1ef32fe7993933cd4e24575269074d035eb203f193446dbe53db5793ff215
+source_hash: 748d8ce321369c835f66d686ca2d7d96cc454202bb5204167b8c79785b17ef8a
 ---
 # module src/core/config.ts
 
@@ -12,15 +12,15 @@ source_hash: 2bf1ef32fe7993933cd4e24575269074d035eb203f193446dbe53db5793ff215
 - `LEGACY_CONFIG_FILE` — variable (src/core/config.ts:8)
 - `DB_FILE` — variable (src/core/config.ts:9)
 - `ConfigSchema` — variable (src/core/config.ts:11)
-- `AtlasConfig` — type (src/core/config.ts:32)
-- `DEFAULT_CONFIG` — variable (src/core/config.ts:34)
-- `ResolvedPaths` — interface (src/core/config.ts:36)
-- `resolvePaths` — function (src/core/config.ts:43)
-- `findConfigPath` — function (src/core/config.ts:59)
-- `loadConfig` — function (src/core/config.ts:67)
-- `InitOptions` — interface (src/core/config.ts:90)
-- `InitResult` — interface (src/core/config.ts:94)
-- `writeDefaultConfig` — function (src/core/config.ts:105)
+- `AtlasConfig` — type (src/core/config.ts:43)
+- `DEFAULT_CONFIG` — variable (src/core/config.ts:45)
+- `ResolvedPaths` — interface (src/core/config.ts:47)
+- `resolvePaths` — function (src/core/config.ts:54)
+- `findConfigPath` — function (src/core/config.ts:70)
+- `loadConfig` — function (src/core/config.ts:78)
+- `InitOptions` — interface (src/core/config.ts:101)
+- `InitResult` — interface (src/core/config.ts:105)
+- `writeDefaultConfig` — function (src/core/config.ts:116)
 
 References: `src/core/config.ts:5`, `src/core/config.ts:6`, `src/core/config.ts:8`, `src/core/config.ts:9`, `src/core/config.ts:11`.
 

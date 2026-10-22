@@ -1,7 +1,7 @@
 ---
 kind: file
 target: vitest.config.ts
-source_hash: 89ed68ff2b4067578e39c66cde183d25a4240c1730eecda26c9539aaf98dc2f3
+source_hash: 19cebdfeaf8b05503514d25a070c214978a27c82ae4d43d6545818eccb7512a6
 ---
 # module vitest.config.ts
 

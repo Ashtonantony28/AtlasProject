@@ -3,7 +3,6 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { performance } from 'node:perf_hooks';
 import { closeDatabase, counts, openDatabase, type DB } from '../../src/core/db/index.js';
 import { indexRepo } from '../../src/core/ingest/index.js';
 import { LocalHashEmbedder, search } from '../../src/core/vector/index.js';
@@ -81,26 +80,6 @@ describe('hybrid search on a 10k-symbol index', () => {
     expect(hits.length).toBeGreaterThan(0);
     for (const h of hits) expect(h.filePath).toContain('special/');
     expect(hits.map((h) => h.symbol.name)).toContain('PaneLayout0');
-  });
-
-  it('keeps search p95 within 50 ms', async () => {
-    const queries = [
-      'widget total',
-      'zxqv',
-      'PaneLayout1',
-      'widgetTotal17x3',
-      'compute batch count',
-    ];
-    const lat: number[] = [];
-    for (let i = 0; i < 40; i++) {
-      const t = performance.now();
-      await search(db, embedder, queries[i % queries.length]!, { limit: 10 });
-      lat.push(performance.now() - t);
-    }
-    lat.sort((a, b) => a - b);
-    const p95 = lat[Math.ceil(0.95 * lat.length) - 1]!;
-    console.log(`search p95 at ${counts(db).symbols} symbols: ${p95.toFixed(2)} ms`);
-    expect(p95).toBeLessThanOrEqual(50);
   });
 });
 

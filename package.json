@@ -21,8 +21,9 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:perf": "vitest run -c vitest.perf.config.ts",
     "test:coverage": "vitest run --coverage",
-    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+    "prepublishOnly": "npm run typecheck && npm test && npm run test:perf && npm run build"
   },
   "keywords": [
     "codebase",

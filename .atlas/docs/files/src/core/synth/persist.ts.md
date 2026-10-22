@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/synth/persist.ts
-source_hash: 03cd601e17f9d276b1a83b1c7c4a44d271b98115d44503ca5cda82f8956bb5e8
+source_hash: d5644efbe49ca40cffb5a3de4e93983f2b48bc7e0832f78d2fe1cf8a5bb4a5f6
 ---
 # module src/core/synth/persist.ts
 
@@ -17,12 +17,13 @@ source_hash: 03cd601e17f9d276b1a83b1c7c4a44d271b98115d44503ca5cda82f8956bb5e8
 - `docsFromDb` — function (src/core/synth/persist.ts:72)
 - `deletedDocsFromDb` — function (src/core/synth/persist.ts:84)
 - `exportDocs` — function (src/core/synth/persist.ts:98)
-- `readPersistedDocs` — function (src/core/synth/persist.ts:128)
-- `importPersistedDocs` — function (src/core/synth/persist.ts:138)
-- `DocEntry` — type (src/core/synth/persist.ts:155)
-- `listDocs` — function (src/core/synth/persist.ts:158)
-- `countDocs` — function (src/core/synth/persist.ts:166)
-- `findDoc` — function (src/core/synth/persist.ts:187)
+- `unparsed` — function (src/core/synth/persist.ts:128)
+- `readPersistedDocs` — function (src/core/synth/persist.ts:141)
+- `importPersistedDocs` — function (src/core/synth/persist.ts:153)
+- `DocEntry` — type (src/core/synth/persist.ts:170)
+- `listDocs` — function (src/core/synth/persist.ts:173)
+- `countDocs` — function (src/core/synth/persist.ts:181)
+- `findDoc` — function (src/core/synth/persist.ts:202)
 
 References: `src/core/synth/persist.ts:26`, `src/core/synth/persist.ts:33`, `src/core/synth/persist.ts:34`, `src/core/synth/persist.ts:36`, `src/core/synth/persist.ts:40`.
 

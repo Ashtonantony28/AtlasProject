@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/audit/audit-7.test.ts
-source_hash: 291abfea0092f08557a11a0c779e60031d38244d8fed418532365d4c36572d18
+source_hash: af229643f357219da631965b1887850c30ae79f79be42fbc63a4941fcaac81a4
 ---
 # module test/audit/audit-7.test.ts
 

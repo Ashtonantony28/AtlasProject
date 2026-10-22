@@ -137,6 +137,23 @@ describe('dashboard renders in-browser (JSDOM)', () => {
     expect(doc.querySelectorAll('#graph g.node').length).toBe(3);
   });
 
+  it.each([
+    ['only edges were cut', { totals: { nodes: 4, edges: 15 } }, /graph shows 2 of 15 edges/],
+    ['a later page is complete in itself', { totals: { nodes: 4, edges: 2 } }, null],
+    ['symbols and edges were cut', { totals: { nodes: 9, edges: 15 } }, /graph shows 4 of 9 symbols$/],
+  ])('says only what was cut when %s (A7-12)', async (_, extra, note) => {
+    (dom.window as unknown as { fetch: ReturnType<typeof makeFetch> }).fetch = makeFetch({
+      ...FIXTURE_GRAPH,
+      ...extra,
+      truncated: true,
+    });
+    await runApp();
+    const stats = dom.window.document.querySelector('#stats')!.textContent ?? '';
+    if (note) expect(stats).toMatch(note);
+    else expect(stats).not.toMatch(/graph shows/);
+    if (note?.source.includes('edges')) expect(stats).not.toMatch(/of \d+ symbols/);
+  });
+
   it('populates the stats, file list, graph, and architecture doc on load', async () => {
     await runApp();
     const doc = dom.window.document;

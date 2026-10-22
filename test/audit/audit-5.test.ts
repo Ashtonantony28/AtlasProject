@@ -136,12 +136,12 @@ describe('AUDIT-5 graph', () => {
       "import { foo } from '@/lib/util';\nexport function page(): number {\n  return foo();\n}\n",
   };
 
-  it.fails('A5-02 tsconfig `paths` aliases (`@/lib/util`) resolve', async () => {
+  it('A5-02 tsconfig `paths` aliases (`@/lib/util`) resolve', async () => {
     const g = await graphOf(ALIASED);
     expect(g.strong).toContain('src/app/page.ts::page -calls-> src/lib/util.ts::foo');
   });
 
-  it.fails(
+  it(
     'A5-02 workspace package imports (`@acme/utils`) resolve to the package source',
     async () => {
       const g = await graphOf({
@@ -160,7 +160,7 @@ describe('AUDIT-5 graph', () => {
     },
   );
 
-  it.fails(
+  it(
     'A5-03 source directories named `build` (or `dist`, `coverage`) below the root are indexed',
     async () => {
       const g = await graphOf({
@@ -212,7 +212,7 @@ describe('AUDIT-5 graph', () => {
     expect([...g.strong].some((e) => e.startsWith('use.ts::u -calls-> shape.ts::'))).toBe(true);
   });
 
-  it.fails('A5-07 Python src layout: tests importing the package resolve', async () => {
+  it('A5-07 Python src layout: tests importing the package resolve', async () => {
     const g = await graphOf({
       'pyproject.toml': '[project]\nname = "mypkg"\n',
       'src/mypkg/__init__.py': '',
@@ -282,7 +282,7 @@ const BASE = {
 };
 
 describe('AUDIT-5 drift', () => {
-  it.fails("A5-02 an aliased caller switching callee marks the callee's doc stale", async () => {
+  it("A5-02 an aliased caller switching callee marks the callee's doc stale", async () => {
     const files: Record<string, string> = {
       'tsconfig.json': JSON.stringify({
         compilerOptions: { baseUrl: '.', paths: { '@/*': ['src/*'] } },
@@ -306,7 +306,7 @@ describe('AUDIT-5 drift', () => {
     }
   });
 
-  it.fails('A5-03 an edit under `src/build/` is reported by drift', async () => {
+  it('A5-03 an edit under `src/build/` is reported by drift', async () => {
     const { db, root, docsDir } = await driftAfter(
       {
         ...BASE,
@@ -325,7 +325,7 @@ describe('AUDIT-5 drift', () => {
     }
   });
 
-  it.fails('A5-08 a persisted doc saved with a UTF-8 BOM is still checked', async () => {
+  it('A5-08 a persisted doc saved with a UTF-8 BOM is still checked', async () => {
     const { db, root, docsDir } = await driftAfter(BASE, (r) =>
       writeFileSync(join(r, 'a.ts'), 'export function foo(): number { return 42; }\n'),
     );
@@ -338,7 +338,7 @@ describe('AUDIT-5 drift', () => {
     }
   });
 
-  it.fails(
+  it(
     'A5-09 the CI comment counts every stale doc, not just the page it was given',
     async () => {
       const { db, root } = await driftAfter(BASE, (r) => {

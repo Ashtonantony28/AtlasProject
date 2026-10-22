@@ -29,7 +29,7 @@ import {
   clearEdges,
 } from '../db/index.js';
 import type { EdgeKind, ImportRow, InsertEdgeInput, RefRow, SymbolRow } from '../db/index.js';
-import { posix } from 'node:path';
+import { ModuleResolver } from './modules.js';
 
 interface FileCtx {
   fileId: number;
@@ -52,7 +52,7 @@ type Binding =
   | { kind: 'external' };
 
 export interface ResolveOptions {
-  // Project root. Kept for callers; references come from the index, not from disk.
+  // Project root. References come from the index; tsconfig/package.json/pyproject are read from here.
   root: string;
 }
 
@@ -63,13 +63,15 @@ export interface ResolveStats {
   calls: number;
   heritage: number;
   references: number;
+  // Unreadable or malformed tsconfig/package.json and ambiguous workspace packages.
+  diagnostics: string[];
 }
 
-export function resolveGraph(db: DB, _opts: ResolveOptions): ResolveStats {
-  return db.transaction(() => resolveAll(db))();
+export function resolveGraph(db: DB, opts: ResolveOptions): ResolveStats {
+  return db.transaction(() => resolveAll(db, opts.root))();
 }
 
-function resolveAll(db: DB): ResolveStats {
+function resolveAll(db: DB, root: string): ResolveStats {
   clearEdges(db);
 
   const symbolsByFile = groupByFile(getAllSymbols(db));
@@ -127,6 +129,7 @@ function resolveAll(db: DB): ResolveStats {
 
   const byPath = new Map<string, FileCtx>();
   for (const ctx of contexts.values()) byPath.set(ctx.filePath, ctx);
+  const modules = new ModuleResolver(root, byPath);
 
   const stats: ResolveStats = {
     edges: 0,
@@ -135,6 +138,7 @@ function resolveAll(db: DB): ResolveStats {
     calls: 0,
     heritage: 0,
     references: 0,
+    diagnostics: modules.diagnostics,
   };
   const seen = new Set<string>();
   const edges: InsertEdgeInput[] = [];
@@ -204,7 +208,7 @@ function resolveAll(db: DB): ResolveStats {
     for (const r of bindingOnly ? ctx.imports : [...ctx.reexports, ...ctx.imports]) {
       if (r.imported !== '*' || r.alias !== null || r.module === '') continue;
       any = true;
-      const target = resolveModule(ctx, r.module, byPath);
+      const target = modules.resolve(ctx, r.module);
       if (!target) {
         unresolved = true;
         continue;
@@ -218,7 +222,7 @@ function resolveAll(db: DB): ResolveStats {
   // The binding an import (or re-export) row creates. Named imports that cannot be
   // found in an indexed target are `external` with `weak` set by the caller.
   function bindingOf(ctx: FileCtx, imp: ImportRow, seen = new Set<string>()): Binding {
-    const target = resolveModule(ctx, imp.module, byPath);
+    const target = modules.resolve(ctx, imp.module);
     const name = imp.imported;
     if (name === null || name === '*') return target ? { kind: 'module', ctx: target } : EXTERNAL;
     if (target) {
@@ -226,7 +230,7 @@ function resolveAll(db: DB): ResolveStats {
       if (b) return b;
       if (name === 'default') return { kind: 'module', ctx: target };
     }
-    const sub = resolveSubmodule(ctx, imp.module, name, byPath);
+    const sub = modules.submodule(ctx, imp.module, name);
     return sub ? { kind: 'module', ctx: sub } : EXTERNAL;
   }
 
@@ -240,7 +244,7 @@ function resolveAll(db: DB): ResolveStats {
     for (const imp of [...ctx.imports, ...ctx.reexports]) {
       if (imp.module === '') continue;
       const meta = { module: imp.module, imported: imp.imported, alias: imp.alias };
-      const target = resolveModule(ctx, imp.module, byPath);
+      const target = modules.resolve(ctx, imp.module);
       const binding = bindingOf(ctx, imp);
       const dst =
         binding.kind === 'symbol'
@@ -404,68 +408,4 @@ function ownerOf(sym: SymbolRow): string | null {
   if (sym.kind !== 'method') return null;
   const dot = q.lastIndexOf('.');
   return dot > 0 ? q.slice(0, dot) : null;
-}
-
-const TS_EXTS = ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs'];
-const TS_CANDIDATES = ['', ...TS_EXTS, ...TS_EXTS.map((e) => `/index${e}`)];
-
-/** Resolve a module specifier against the indexed files. */
-function resolveModule(from: FileCtx, spec: string, byPath: Map<string, FileCtx>): FileCtx | null {
-  if (from.language === 'python') return resolvePython(from, spec, byPath);
-  if (!spec.startsWith('.') && !spec.startsWith('/')) return null; // package, not indexable
-  const base = posix.join(posix.dirname(from.filePath), spec.replace(/\.[cm]?[jt]sx?$/i, ''));
-  for (const ext of TS_CANDIDATES) {
-    const hit = byPath.get(normalizePosix(base + ext));
-    if (hit) return hit;
-  }
-  return null;
-}
-
-/** `from pkg import util` where `util` is a submodule rather than a name in `pkg/__init__.py`. */
-function resolveSubmodule(
-  from: FileCtx,
-  spec: string,
-  name: string,
-  byPath: Map<string, FileCtx>,
-): FileCtx | null {
-  if (from.language !== 'python') return null;
-  return resolvePython(from, /\.$/.test(spec) ? spec + name : `${spec}.${name}`, byPath);
-}
-
-/**
- * Python: N leading dots go up N-1 directories from the importing file; absolute
- * dotted names are searched from the repo root and from the importing file's
- * top-level package root (the parent of the outermost dir with `__init__.py`).
- */
-function resolvePython(from: FileCtx, spec: string, byPath: Map<string, FileCtx>): FileCtx | null {
-  const dots = /^\.*/.exec(spec)![0].length;
-  const rel = spec.slice(dots).split('.').filter(Boolean).join('/');
-  let roots: string[];
-  if (dots > 0) {
-    let dir = posix.dirname(from.filePath);
-    for (let i = 1; i < dots; i++) dir = posix.dirname(dir);
-    roots = [dir];
-  } else {
-    let dir = posix.dirname(from.filePath);
-    while (dir !== '.' && byPath.has(normalizePosix(`${dir}/__init__.py`)))
-      dir = posix.dirname(dir);
-    roots = dir === '.' ? ['.'] : ['.', dir];
-  }
-  for (const root of roots) {
-    const base = posix.join(root, rel);
-    for (const cand of rel
-      ? [`${base}.py`, `${base}.pyi`, `${base}/__init__.py`]
-      : [`${base}/__init__.py`]) {
-      const hit = byPath.get(normalizePosix(cand));
-      if (hit) return hit;
-    }
-  }
-  return null;
-}
-
-function normalizePosix(p: string): string {
-  return p
-    .split(/[\\/]/)
-    .filter((s) => s && s !== '.')
-    .join('/');
 }
