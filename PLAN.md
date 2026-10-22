@@ -60,8 +60,8 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 | SG20 | Walker skip list follows `.gitignore` and config, not hard-coded names at any depth; BOM-safe doc front matter; ci-comment uses totals (A5-03, A5-08, A5-09, A7-04) | SG17 | Claude (thread) | proposed (from AUDIT-5) |
 | SG21 | LLM client works on current models: no sampling params, adequate `max_tokens`, `stop_reason` refusal/max_tokens never stored as a complete doc (A7-01, A7-03, A7-10) | SG7 | Claude (thread) | done |
 | SG22 | Graph paging keeps cross-page edges and reports `truncated` consistently; empty-index behaviour agrees across CLI and MCP (A7-02, A7-05, A7-12) | SG15 | Claude (thread) | done |
-| SG23 | Perf budget tests run serially in their own vitest project so load cannot fail them; same limits (A6-06) | SG14 | Claude (thread) | proposed (from AUDIT-6) |
-| SG24 | Test hardening from AUDIT-8: unreadable-path and filter-fallback guarantees live in unit suites, drift paging cannot change the gate/exit code, A2-01 query-plan repro binds both params and becomes a plain test, coverage threshold in vitest config (A8-01, A8-02, A8-04, A8-05, A8-11) | SG17 | Claude (thread) | proposed (from AUDIT-8) |
+| SG23 | Perf budget tests run serially in their own vitest project so load cannot fail them; same limits (A6-06) | SG14 | Claude (thread) | done |
+| SG24 | Test hardening from AUDIT-8: unreadable-path and filter-fallback guarantees live in unit suites, drift paging cannot change the gate/exit code, A2-01 query-plan repro binds both params and becomes a plain test, coverage threshold in vitest config (A8-01, A8-02, A8-04, A8-05, A8-11) | SG17 | Claude (thread) | done |
 
 ### SG0: Shared interfaces + bench harness
 - Migration v3 (`symbols.exported`), `ParsedSymbol.exported`, `createEmbedder`, FTS5 table `symbols_fts` (migration v3), plus contract tests that pin each item in §Interfaces.

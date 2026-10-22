@@ -234,13 +234,18 @@ totals: files=78 symbols=2780 imports=656 edges=1093
 ```bash
 npm run typecheck       # strict TS, zero errors
 npm run lint            # ESLint flat config, zero errors
-npm test                # vitest — 302 tests
+npm test                # vitest unit + integration suites (parallel)
+npm run test:perf       # frozen wall-clock budgets in test/perf/, run serially
+npm run test:coverage   # npm test + src/core coverage thresholds (CI runs this)
 npm run build           # tsc + copy static assets
 ```
 
 `npm test` includes a self-index integration test (Atlas indexes its own
 source tree) and an end-to-end CI workflow test (index → docs → drift →
-ci-comment produces the exact comment payload).
+ci-comment produces the exact comment payload). Timing budgets (search p95
+≤ 50 ms at 10k symbols, cached synthesis and drift ≤ 1 s at 1k files) live in
+`test/perf/` and run only under `npm run test:perf`, one file at a time, so a
+loaded machine running the parallel suite cannot fail them.
 
 ## CI
 

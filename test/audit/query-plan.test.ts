@@ -1,8 +1,8 @@
-// AUDIT-2 A2-01: the per-module call-edge queries in synth/context.ts drive from
-// idx_edges_kind (every `calls` edge in the repo) instead of the file's symbols,
-// so docs and drift are O(files x edges). Marked `fails` until fixed: when the
-// plan stops scanning idx_edges_kind this test starts failing and should become a
-// plain `it`.
+// AUDIT-2 A2-01: the per-module call-edge queries in synth/context.ts used to drive
+// from idx_edges_kind (every `calls` edge in the repo) instead of the file's symbols,
+// so docs and drift were O(files x edges). Fixed; this pins the plan. NEIGHBOUR_SQL takes the
+// file id twice (A8-05: binding it once made the old `it.fails` fail on "Too few
+// parameter values", hiding the fix).
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -31,7 +31,7 @@ describe('AUDIT-2 query plans', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it.fails('module call-edge queries do not scan every call edge (A2-01)', () => {
+  it('module call-edge queries do not scan every call edge (A2-01)', () => {
     const seen: string[] = [];
     const prepare = db.prepare.bind(db);
     const spy = ((sql: string) => {
@@ -45,7 +45,9 @@ describe('AUDIT-2 query plans', () => {
     const callSql = seen.filter((s) => /JOIN edges/.test(s));
     expect(callSql.length).toBeGreaterThan(0);
     for (const sql of callSql) {
-      const plan = (prepare(`EXPLAIN QUERY PLAN ${sql}`).all(file.id) as { detail: string }[])
+      const plan = (
+        prepare(`EXPLAIN QUERY PLAN ${sql}`).all(file.id, file.id) as { detail: string }[]
+      )
         .map((r) => r.detail)
         .join('\n');
       expect(plan).not.toMatch(/idx_edges_kind/);

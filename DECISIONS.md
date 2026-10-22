@@ -396,3 +396,15 @@ the page. The dashboard names what was cut (symbols, or else edges) (A7-12).
 A7-05: `search`, `graph`, `ask` and `drift` reject an empty index like the MCP
 tools, via `openProjectIndex(…, { indexed: true })` / `requireIndexed`, with
 the same "index is empty: <next step>" message.
+
+## 2026-10-22 — SG23/SG24: perf budgets run serially; coverage gate on src/core
+Wall-clock budgets (search p95 ≤ 50 ms, cached synthesis and drift ≤ 1 s, limits
+unchanged) moved to `test/perf/` and run only under `npm run test:perf`
+(`vitest.perf.config.ts`: one fork, no file parallelism, a warm-up pass before
+measuring); the default config excludes them, so parallel-suite load cannot fail
+them (A6-06, A8-12). Chosen over env-gating or wider margins because the budgets
+stay enforced in CI at their frozen values. CI runs `npm run test:coverage`
+instead of `npm test` (same suite, plus `src/core` thresholds lines 90 /
+branches 88 / functions 96, aggregated over the glob), then `test:perf`. SG17's
+unreadable-path guarantees, the search FTS filter fallback and drift paging's
+gate invariance now live in `test/ingest`, `test/vector` and `test/drift`.

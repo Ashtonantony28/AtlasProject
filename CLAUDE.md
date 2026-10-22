@@ -181,9 +181,12 @@ quickstart reproduces a full run end-to-end.
 1. `npm run typecheck` — zero errors.
 2. `npm run lint` — zero errors (warnings noted).
 3. `npm test` — all green; new behavior has a new test.
-4. Run the relevant CLI command against `fixtures/sample` and **read the
+4. `npm run test:perf` — wall-clock budgets (`test/perf/`), run serially;
+   limits are frozen. `npm run test:coverage` — `src/core` coverage thresholds
+   in `vitest.config.ts`. CI runs both.
+5. Run the relevant CLI command against `fixtures/sample` and **read the
    output**. Confirm it matches expectations, not just that it exited 0.
-5. `git status` clean intent → commit with a Conventional Commit message.
+6. `git status` clean intent → commit with a Conventional Commit message.
 
 If any step fails, fix it before continuing. Do not paper over failures by
 deleting or skipping tests.
