@@ -1,17 +1,20 @@
 ---
 kind: file
 target: src/core/ingest/indexer.ts
-source_hash: f09eb3f9c6d4b7c338040df488225f506b58a26e0734f40a6d56490a07a8927b
+source_hash: b230ed6aac58acc12b89646a6b2421c8d64d81a703f7b63c8350d4da5d6a7c4a
 ---
 # module src/core/ingest/indexer.ts
 
 `module src/core/ingest/indexer.ts` exposes the following public surface:
 
-- `IndexOptions` — interface (src/core/ingest/indexer.ts:24)
-- `IndexOptions.onFile` — method (src/core/ingest/indexer.ts:30)
-- `IndexStats` — interface (src/core/ingest/indexer.ts:37)
-- `indexRepo` — function (src/core/ingest/indexer.ts:52)
+- `IndexOptions` — interface (src/core/ingest/indexer.ts:27)
+- `IndexOptions.onFile` — method (src/core/ingest/indexer.ts:33)
+- `IndexStats` — interface (src/core/ingest/indexer.ts:40)
+- `MAX_RESOLVER_DIAGNOSTICS` — variable (src/core/ingest/indexer.ts:65)
+- `IndexState` — interface (src/core/ingest/indexer.ts:68)
+- `lastState` — function (src/core/ingest/indexer.ts:76)
+- `indexRepo` — function (src/core/ingest/indexer.ts:92)
 
-References: `src/core/ingest/indexer.ts:24`, `src/core/ingest/indexer.ts:30`, `src/core/ingest/indexer.ts:37`, `src/core/ingest/indexer.ts:52`, `src/core/ingest/indexer.ts:24`.
+References: `src/core/ingest/indexer.ts:27`, `src/core/ingest/indexer.ts:33`, `src/core/ingest/indexer.ts:40`, `src/core/ingest/indexer.ts:65`, `src/core/ingest/indexer.ts:68`.
 
 _Generated offline (mock client)._

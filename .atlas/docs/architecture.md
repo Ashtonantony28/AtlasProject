@@ -1,13 +1,13 @@
 ---
 kind: architecture
 target: architecture
-source_hash: c6e183892bf7c03988a157499fc2a603904a7b34ffc2901bd70e1e345314f371
+source_hash: 8e302f3aea96deba5257f68317d6a477a7dc2d54d3b2483510679cb5ac1c9bf0
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 189 files, 2570 symbols, 6263 edges
+**Totals:** 191 files, 2648 symbols, 6408 edges
 
 ## Modules
 
@@ -53,25 +53,25 @@ This codebase's modules collaborate through the graph above.
 - `src/cli/commands/ciCommentCmd.ts` — typescript, loc=165, 7 symbols
 - `src/cli/commands/docsCmd.ts` — typescript, loc=99, 2 symbols
 - `src/cli/commands/driftCmd.ts` — typescript, loc=64, 2 symbols
-- `src/cli/commands/graphCmd.ts` — typescript, loc=70, 2 symbols
-- `src/cli/commands/indexCmd.ts` — typescript, loc=67, 2 symbols
-- `src/core/config.ts` — typescript, loc=132, 14 symbols
+- `src/cli/commands/indexCmd.ts` — typescript, loc=101, 6 symbols
+- `src/core/config.ts` — typescript, loc=134, 14 symbols
 - `src/core/db/database.ts` — typescript, loc=95, 9 symbols
-- `src/core/db/repo.ts` — typescript, loc=390, 43 symbols
+- `src/core/db/repo.ts` — typescript, loc=408, 44 symbols
 - `src/core/db/schema.ts` — typescript, loc=187, 3 symbols
 - `src/core/db/types.ts` — typescript, loc=79, 9 symbols
 - `src/core/drift/detect.ts` — typescript, loc=245, 10 symbols
+- `src/core/graph/export.ts` — typescript, loc=212, 18 symbols
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=363)
-- `src/core/db/repo.ts` (degree=356)
-- `src/mcp/server.ts` (degree=252)
+- `src/core/db/repo.ts` (degree=371)
+- `src/core/db/database.ts` (degree=369)
+- `src/mcp/server.ts` (degree=257)
 - `src/core/parse/ts.ts` (degree=229)
+- `src/core/ingest/indexer.ts` (degree=178)
+- `src/core/graph/modules.ts` (degree=172)
 - `src/core/synth/persist.ts` (degree=167)
-- `src/core/ingest/indexer.ts` (degree=164)
 - `test/synth/completion.test.ts` (degree=153)
-- `src/core/graph/modules.ts` (degree=144)
 - `test/audit/audit-4.test.ts` (degree=137)
 - `test/graph/paging.test.ts` (degree=136)
 

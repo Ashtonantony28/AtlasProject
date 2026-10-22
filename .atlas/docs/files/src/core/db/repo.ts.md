@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/db/repo.ts
-source_hash: 0102ad3afc05be19bb61572022136eb7b2d0319d930e1ae7dffeb899d40231c4
+source_hash: bbad5f499e15625748131a947432beec2fd20b1e68de9f3a4ffb316bbca22cfc
 ---
 # module src/core/db/repo.ts
 
@@ -47,9 +47,10 @@ source_hash: 0102ad3afc05be19bb61572022136eb7b2d0319d930e1ae7dffeb899d40231c4
 - `clearDocTombstones` — function (src/core/db/repo.ts:341)
 - `startRun` — function (src/core/db/repo.ts:345)
 - `finishRun` — function (src/core/db/repo.ts:352)
-- `getLastRun` — function (src/core/db/repo.ts:360)
-- `counts` — function (src/core/db/repo.ts:364)
-- `deleteFile` — function (src/core/db/repo.ts:383)
+- `getLastRunStats` — function (src/core/db/repo.ts:361)
+- `getLastRun` — function (src/core/db/repo.ts:378)
+- `counts` — function (src/core/db/repo.ts:382)
+- `deleteFile` — function (src/core/db/repo.ts:401)
 
 References: `src/core/db/repo.ts:17`, `src/core/db/repo.ts:24`, `src/core/db/repo.ts:48`, `src/core/db/repo.ts:52`, `src/core/db/repo.ts:56`.
 

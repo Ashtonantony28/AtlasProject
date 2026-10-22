@@ -434,6 +434,10 @@ resolved edges to a function, method or class, and drift's neighbourhood hash pi
 materialised and value nodes made them about 7× as many. Parse+insert median on got went ~3.6 →
 ~4.2 ms/file (budget 5), and express stayed ~1.7.
 
+## 2026-10-22 — SG25: index state in `runs.stats_json`; extractor version, resolver fingerprint, size cap
+
+No schema change: each index run stores `state` (`extractorVersion`, `resolverFingerprint`, extra resolver inputs, resolver diagnostics) in its `runs.stats_json`; the next run reads the last finished run's. A different or missing `extractorVersion` (`src/core/parse/version.ts`; the parse golden test refuses to regenerate without a bump) re-parses every file once without `--force`, and a file that fails to re-parse keeps its rows with a blank hash so it retries. This replaces "a migration that blanks `content_hash`" per parser fix, which SG11/SG18 forgot. Edges are rebuilt when a file changed or the resolver fingerprint differs: `RESOLVER_VERSION` plus every tsconfig/jsconfig, package.json (resolver fields only, so version bumps do not re-resolve), pnpm-workspace.yaml, pyproject.toml, setup.cfg and setup.py (presence) in a directory holding an indexed file or an ancestor, plus configs the last resolve read elsewhere (`extends` targets). One `readdir` per such directory instead of watching files; closes SG19's known gap. Resolver diagnostics go into `IndexStats` (first 20 + count, carried over on a no-op) and the CLI (first 10). Oversized files (optional `maxFileBytes`, default 1 MiB, not written by `init`) are reported per file and counted in `filesTooLarge` and `filesSkipped`, and are still pruned like an exclusion.
+
 ## 2026-10-22 — SG27: index cost stays linear on monorepos and deep `.gitignore` trees
 
 Python absolute imports probe only roots that hold the import's top-level name: one pass over

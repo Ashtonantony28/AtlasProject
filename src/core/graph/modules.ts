@@ -4,8 +4,38 @@
 // discovered package root. Config files are read from disk once (read-only, cached); the
 // only directories listed are those holding indexed files and the configs they reference.
 
+import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, posix } from 'node:path';
+
+/**
+ * Bump when resolver logic changes edges for the same index and configs: it is part of
+ * `resolverFingerprint`, so the next `atlas index` re-resolves.
+ */
+export const RESOLVER_VERSION = 1;
+
+/** Config files read by `ModuleResolver`, looked for in every directory holding an indexed file. */
+export const RESOLVER_CONFIG_FILES = [
+  'tsconfig.json',
+  'jsconfig.json',
+  'package.json',
+  'pnpm-workspace.yaml',
+  'pyproject.toml',
+  'setup.cfg',
+  'setup.py',
+];
+
+// package.json fields the resolver uses; other edits (version, scripts) do not re-resolve.
+const PACKAGE_FIELDS = [
+  'name',
+  'workspaces',
+  'exports',
+  'source',
+  'module',
+  'main',
+  'types',
+  'typings',
+];
 
 export interface ModuleFile {
   filePath: string;
@@ -52,6 +82,8 @@ const CONDITIONS = ['source', 'types', 'import', 'module', 'default', 'require',
 
 export class ModuleResolver<T extends ModuleFile> {
   readonly diagnostics: string[] = [];
+  /** Every config path this resolver tried to read (repo-relative), present or not. */
+  readonly inputs = new Set<string>();
   private readonly dirs = new Map<string, Set<string>>();
   private readonly json = new Map<string, Record<string, unknown> | null>();
   private readonly tsconfigs = new Map<string, TsConfig | null>();
@@ -369,13 +401,8 @@ export class ModuleResolver<T extends ModuleFile> {
 
   /** Every directory that holds an indexed file, and its ancestors; '' is the root. */
   private dirsOfFiles(): Set<string> {
-    if (this.knownDirs) return this.knownDirs;
-    const out = new Set<string>(['']);
-    for (const path of this.byPath.keys()) {
-      for (let d = parentOf(path); d && !out.has(d); d = parentOf(d)) out.add(d);
-    }
-    this.knownDirs = out;
-    return out;
+    this.knownDirs ??= dirsOf(this.byPath.keys());
+    return this.knownDirs;
   }
 
   private list(dir: string): Set<string> {
@@ -392,6 +419,7 @@ export class ModuleResolver<T extends ModuleFile> {
   }
 
   private read(path: string): string | null {
+    if (!path.startsWith('..')) this.inputs.add(path);
     if (path.startsWith('..') || !this.list(parentOf(path)).has(posix.basename(path))) return null;
     try {
       return readFileSync(join(this.root, path), 'utf8');
@@ -417,6 +445,70 @@ export class ModuleResolver<T extends ModuleFile> {
     this.json.set(path, out);
     return out;
   }
+}
+
+/** Every directory that holds one of `paths`, and its ancestors; '' is the root. */
+function dirsOf(paths: Iterable<string>): Set<string> {
+  const out = new Set<string>(['']);
+  for (const path of paths) {
+    for (let d = parentOf(path); d && !out.has(d); d = parentOf(d)) out.add(d);
+  }
+  return out;
+}
+
+/**
+ * A hash of everything `ModuleResolver` reads besides the index: `RESOLVER_VERSION`, each
+ * `RESOLVER_CONFIG_FILES` entry in a directory holding one of `filePaths` (or an ancestor),
+ * and `extraInputs` (configs read elsewhere, e.g. an `extends` target). package.json counts
+ * only through the fields the resolver uses; setup.py only by its presence. `extraInputs`
+ * in the result are those the directory scan does not already cover.
+ */
+export function resolverFingerprint(
+  root: string,
+  filePaths: Iterable<string>,
+  extraInputs: Iterable<string> = [],
+): { hash: string; extraInputs: string[] } {
+  const scanned = new Set<string>();
+  for (const dir of dirsOf(filePaths)) {
+    let entries: string[];
+    try {
+      entries = readdirSync(join(root, dir));
+    } catch {
+      continue;
+    }
+    for (const name of RESOLVER_CONFIG_FILES)
+      if (entries.includes(name)) scanned.add(joinRel(dir, name));
+  }
+  const extra = [...new Set(extraInputs)].filter(
+    (p) => !scanned.has(p) && !p.startsWith('..') && !posix.isAbsolute(p),
+  );
+  const h = createHash('sha256').update(`resolver:${RESOLVER_VERSION}\n`);
+  for (const path of [...scanned, ...extra].sort()) {
+    h.update(`${path}\0${configDigest(root, path)}\n`);
+  }
+  return { hash: h.digest('hex'), extraInputs: extra.sort() };
+}
+
+function configDigest(root: string, path: string): string {
+  if (posix.basename(path) === 'setup.py') return 'present';
+  let text: string;
+  try {
+    text = readFileSync(join(root, path), 'utf8');
+  } catch {
+    return 'missing';
+  }
+  if (posix.basename(path) === 'package.json') {
+    try {
+      const json = parseJsonc(text);
+      if (isRecord(json)) {
+        const picked = PACKAGE_FIELDS.map((f) => [f, json[f] ?? null]);
+        return createHash('sha256').update(JSON.stringify(picked)).digest('hex');
+      }
+    } catch {
+      // Malformed: fall through to the raw text, so fixing it re-resolves.
+    }
+  }
+  return createHash('sha256').update(text).digest('hex');
 }
 
 /**
