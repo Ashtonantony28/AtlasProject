@@ -1,10 +1,13 @@
 import Database from 'better-sqlite3';
 import * as sqliteVec from 'sqlite-vec';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, linkSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { MIGRATIONS } from './schema.js';
 
 export type DB = Database.Database;
+
+/** How long a statement waits for another connection's lock before `SQLITE_BUSY`. */
+const BUSY_TIMEOUT_MS = 5000;
 
 const statements = new WeakMap<DB, Map<string, Database.Statement>>();
 
@@ -35,11 +38,13 @@ function loadVecExtension(db: DB): void {
 export function openDatabase(dbPath: string, opts: OpenDbOptions = {}): DB {
   if (!opts.readonly && !opts.fileMustExist && !existsSync(dbPath)) {
     mkdirSync(dirname(dbPath), { recursive: true });
+    if (dbPath !== ':memory:') createWalFile(dbPath);
   }
 
   const db = new Database(dbPath, {
     readonly: opts.readonly ?? false,
     fileMustExist: opts.fileMustExist ?? false,
+    timeout: BUSY_TIMEOUT_MS,
   });
 
   // sqlite-vec is needed even in read-only mode because the embeddings_vec
@@ -47,13 +52,50 @@ export function openDatabase(dbPath: string, opts: OpenDbOptions = {}): DB {
   loadVecExtension(db);
 
   if (!opts.readonly) {
-    db.pragma('journal_mode = WAL');
-    db.pragma('foreign_keys = ON');
-    db.pragma('synchronous = NORMAL');
-    runMigrations(db);
+    let op = 'journal mode';
+    try {
+      db.pragma('journal_mode = WAL');
+      db.pragma('foreign_keys = ON');
+      db.pragma('synchronous = NORMAL');
+      op = 'migrations';
+      runMigrations(db);
+    } catch (err) {
+      nameBusy(err, op);
+      throw err;
+    }
   }
 
   return db;
+}
+
+/**
+ * Creates `dbPath` already in WAL mode, by linking a finished file into place. Switching an
+ * existing file to WAL upgrades a read lock to a write lock, which SQLite refuses at once (no busy
+ * wait) when another process is switching it too. Best effort: on any failure the open creates it.
+ */
+function createWalFile(dbPath: string): void {
+  const tmp = `${dbPath}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    const db = new Database(tmp);
+    try {
+      db.pragma('journal_mode = WAL');
+    } finally {
+      db.close();
+    }
+    linkSync(tmp, dbPath);
+  } catch {
+    // EEXIST: another process created it first.
+  } finally {
+    rmSync(tmp, { force: true });
+  }
+}
+
+/** Names the operation in an `SQLITE_BUSY` error's message (`migrations: database is locked`). */
+export function nameBusy(err: unknown, op: string): void {
+  const code = (err as { code?: unknown } | null)?.code;
+  if (err instanceof Error && typeof code === 'string' && code.startsWith('SQLITE_BUSY')) {
+    err.message = `${op}: ${err.message}`;
+  }
 }
 
 function ensureMigrationsTable(db: DB): void {
