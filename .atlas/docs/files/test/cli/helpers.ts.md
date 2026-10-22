@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/cli/helpers.ts
-source_hash: 397b7316a2e5dd7bb0cb86a64d415554692924bad2b334657437c797eb2b45a2
+source_hash: ea90f6f3086eb0db1c2933958cc3470794cbf92afae7bf93d92604c144299398
 ---
 # module test/cli/helpers.ts
 

@@ -11,7 +11,7 @@ import {
   synthesizeDocs,
 } from '../../core/synth/index.js';
 import { budgetSchema, numberArg, parseParams } from '../../core/params.js';
-import { openProjectIndex } from '../../core/project.js';
+import { openProjectIndex, requireIndexed } from '../../core/project.js';
 
 interface DocsArgs {
   offline?: boolean;
@@ -60,6 +60,7 @@ export function registerDocsCommand(program: Command): void {
           return;
         }
 
+        requireIndexed(db);
         const model = opts.model ?? config.synthModel;
         const llm = opts.offline
           ? createOfflineClient()
