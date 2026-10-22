@@ -60,6 +60,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 | SG20 | Walker skip list follows `.gitignore` and config, not hard-coded names at any depth; BOM-safe doc front matter; ci-comment uses totals (A5-03, A5-08, A5-09, A7-04) | SG17 | Claude (thread) | proposed (from AUDIT-5) |
 | SG21 | LLM client works on current models: no sampling params, adequate `max_tokens`, `stop_reason` refusal/max_tokens never stored as a complete doc (A7-01, A7-03, A7-10) | SG7 | Claude (thread) | done |
 | SG22 | Graph paging keeps cross-page edges and reports `truncated` consistently; empty-index behaviour agrees across CLI and MCP (A7-02, A7-05, A7-12) | SG15 | Claude (thread) | proposed (from AUDIT-7) |
+| SG23 | Perf budget tests run serially in their own vitest project so load cannot fail them; same limits (A6-06) | SG14 | Claude (thread) | proposed (from AUDIT-6) |
 
 ### SG0: Shared interfaces + bench harness
 - Migration v3 (`symbols.exported`), `ParsedSymbol.exported`, `createEmbedder`, FTS5 table `symbols_fts` (migration v3), plus contract tests that pin each item in §Interfaces.
@@ -124,3 +125,4 @@ Fresh subagents that wrote none of the code. Each writes `AUDIT-<n>.md`, ranked 
 - AUDIT-4 (test coverage): `src/core` 96.6% lines (target 85%); 0 critical, 5 high, 7 medium, 5 low; 7 of 10 mutations killed. Repros in `test/audit/audit-4.test.ts`. Highs and A4-06 became SG17.
 - AUDIT-5 (round 2, graph and drift soundness): 0 critical, 3 high, 5 medium, 5 low. Repros in `test/audit/audit-5.test.ts`. Highs became SG18–SG20 with the mediums on the same code paths. SG16's walk matched the old one on 10,937 real files.
 - AUDIT-7 (round 2, API consistency): 0 critical, 2 high, 3 medium, 7 low. Repros in `test/audit/audit-7.test.ts`. Highs became SG21–SG22; A7-04 joins SG20. A3-11 and A3-13 remain open.
+- AUDIT-6 (round 2, performance): 0 critical, 0 high, 5 medium, 1 low. Every frozen budget passes in isolation; the search p95 gate flakes under the full suite (A6-06, SG23) (got parse+insert marginal at 4.60 ms/file). A2-06 memory growth traces to tree-sitter 0.21 freeing trees only on GC.
