@@ -101,7 +101,15 @@ function lastState(db: DB): IndexState {
 
 // Runs on one DB file (or in-memory connection) queue: each starts after the previous settles,
 // so no two runs snapshot `files` and insert the same symbols; other processes wait on the file lock.
-const queues = new Map<unknown, Promise<void>>();
+// A call whose run kind matches a queued run that has not started joins it instead of queuing.
+interface Queue {
+  tail: Promise<void>;
+  pending: Map<string, Promise<IndexStats>>;
+}
+const queues = new Map<unknown, Queue>();
+
+// Index runs yield to the event loop at least this often, so timers, stdin and finalizers run.
+const YIELD_MS = 50;
 
 function dbFile(db: DB): string {
   try {
@@ -111,29 +119,59 @@ function dbFile(db: DB): string {
   }
 }
 
+// Calls with a progress callback never share a run: each caller sees its own files.
+function runKind(root: string, opts: IndexOptions): string | undefined {
+  if (opts.onFile) return undefined;
+  const { force = false, skipEmbeddings = false, exclude, include, languages, maxBytes } = opts;
+  return JSON.stringify([
+    resolve(root),
+    force,
+    skipEmbeddings,
+    exclude,
+    include,
+    languages,
+    maxBytes,
+  ]);
+}
+
 export function indexRepo(db: DB, root: string, opts: IndexOptions = {}): Promise<IndexStats> {
   const key = db.memory ? db : dbFile(db);
-  const run = (queues.get(key) ?? Promise.resolve()).then(async () => {
-    const release = db.memory ? undefined : await acquireIndexLock(key as string);
-    try {
-      return await runIndex(db, root, opts);
-    } finally {
-      release?.();
-    }
-  });
-  const tail = run.then(
+  let queue = queues.get(key);
+  if (!queue) queues.set(key, (queue = { tail: Promise.resolve(), pending: new Map() }));
+  const kind = runKind(root, opts);
+  const joined = kind === undefined ? undefined : queue.pending.get(kind);
+  if (joined) return joined;
+  const { pending } = queue;
+  const run = queue.tail
+    .then(() => new Promise(setImmediate))
+    .then(async () => {
+      if (kind !== undefined) pending.delete(kind);
+      const release = db.memory ? undefined : await acquireIndexLock(key as string);
+      try {
+        return await runIndex(db, root, opts);
+      } finally {
+        release?.();
+      }
+    });
+  if (kind !== undefined) pending.set(kind, run);
+  const tail = (queue.tail = run.then(
     () => undefined,
     () => undefined,
-  );
-  queues.set(key, tail);
+  ));
   void tail.then(() => {
-    if (queues.get(key) === tail) queues.delete(key);
+    if (queues.get(key)?.tail === tail) queues.delete(key);
   });
   return run;
 }
 
 async function runIndex(db: DB, root: string, opts: IndexOptions): Promise<IndexStats> {
   const t0 = Date.now();
+  let lastYield = t0;
+  const yieldIfDue = async (always = false): Promise<void> => {
+    if (!always && Date.now() - lastYield < YIELD_MS) return;
+    await new Promise(setImmediate);
+    lastYield = Date.now();
+  };
   const prev = lastState(db);
   const interrupted =
     db
@@ -163,6 +201,7 @@ async function runIndex(db: DB, root: string, opts: IndexOptions): Promise<Index
 
   const { files, unreadable, tooLarge } = walkRepoReport(root, opts);
   stats.filesScanned = files.length;
+  await yieldIfDue(true);
 
   const existingByPath = new Map(
     (
@@ -205,6 +244,7 @@ async function runIndex(db: DB, root: string, opts: IndexOptions): Promise<Index
   }
 
   for (const file of files) {
+    await yieldIfDue();
     const existing = existingByPath.get(file.relativePath);
     existingByPath.delete(file.relativePath);
 
@@ -310,6 +350,7 @@ async function runIndex(db: DB, root: string, opts: IndexOptions): Promise<Index
     });
   }
 
+  await yieldIfDue(true);
   if (retry.length > 0) {
     const blank = db.prepare("UPDATE files SET content_hash = '' WHERE id = ?");
     db.transaction(() => {
@@ -359,6 +400,7 @@ async function runIndex(db: DB, root: string, opts: IndexOptions): Promise<Index
 
   // Generate embeddings for any new/changed symbols. Local-only, no API spend.
   if (!opts.skipEmbeddings) {
+    await yieldIfDue(true);
     const embedder = createEmbedder(loadConfig(root));
     const embStats = await embedAllSymbols(db, embedder, root);
     stats.embeddings = embStats.generated;
