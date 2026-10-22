@@ -1,13 +1,13 @@
 ---
 kind: architecture
 target: architecture
-source_hash: 22181a2781d6278dbe582a7dfe8e8226177efe1b6d7936a3ae2dccede04e855f
+source_hash: c6e183892bf7c03988a157499fc2a603904a7b34ffc2901bd70e1e345314f371
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 186 files, 2499 symbols, 6078 edges
+**Totals:** 189 files, 2570 symbols, 6263 edges
 
 ## Modules
 
@@ -55,23 +55,23 @@ This codebase's modules collaborate through the graph above.
 - `src/cli/commands/driftCmd.ts` — typescript, loc=64, 2 symbols
 - `src/cli/commands/graphCmd.ts` — typescript, loc=70, 2 symbols
 - `src/cli/commands/indexCmd.ts` — typescript, loc=67, 2 symbols
-- `src/cli/commands/init.ts` — typescript, loc=37, 2 symbols
-- `src/cli/commands/mcpCmd.ts` — typescript, loc=21, 2 symbols
-- `src/cli/commands/searchCmd.ts` — typescript, loc=72, 2 symbols
 - `src/core/config.ts` — typescript, loc=132, 14 symbols
 - `src/core/db/database.ts` — typescript, loc=95, 9 symbols
-- `src/core/db/repo.ts` — typescript, loc=320, 38 symbols
+- `src/core/db/repo.ts` — typescript, loc=390, 43 symbols
+- `src/core/db/schema.ts` — typescript, loc=187, 3 symbols
+- `src/core/db/types.ts` — typescript, loc=79, 9 symbols
+- `src/core/drift/detect.ts` — typescript, loc=245, 10 symbols
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=354)
-- `src/core/db/repo.ts` (degree=317)
+- `src/core/db/database.ts` (degree=363)
+- `src/core/db/repo.ts` (degree=356)
 - `src/mcp/server.ts` (degree=252)
 - `src/core/parse/ts.ts` (degree=229)
 - `src/core/synth/persist.ts` (degree=167)
-- `src/core/ingest/indexer.ts` (degree=162)
+- `src/core/ingest/indexer.ts` (degree=164)
 - `test/synth/completion.test.ts` (degree=153)
-- `src/core/graph/modules.ts` (degree=140)
+- `src/core/graph/modules.ts` (degree=144)
 - `test/audit/audit-4.test.ts` (degree=137)
 - `test/graph/paging.test.ts` (degree=136)
 

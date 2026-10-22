@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/ingest/indexer.ts
-source_hash: 20f0ba275908de3a280535f15f1ffe08f95a7808b4000e7f6175d72955fe6c00
+source_hash: f09eb3f9c6d4b7c338040df488225f506b58a26e0734f40a6d56490a07a8927b
 ---
 # module src/core/ingest/indexer.ts
 
@@ -9,9 +9,9 @@ source_hash: 20f0ba275908de3a280535f15f1ffe08f95a7808b4000e7f6175d72955fe6c00
 
 - `IndexOptions` — interface (src/core/ingest/indexer.ts:24)
 - `IndexOptions.onFile` — method (src/core/ingest/indexer.ts:30)
-- `IndexStats` — interface (src/core/ingest/indexer.ts:33)
-- `indexRepo` — function (src/core/ingest/indexer.ts:48)
+- `IndexStats` — interface (src/core/ingest/indexer.ts:37)
+- `indexRepo` — function (src/core/ingest/indexer.ts:52)
 
-References: `src/core/ingest/indexer.ts:24`, `src/core/ingest/indexer.ts:30`, `src/core/ingest/indexer.ts:33`, `src/core/ingest/indexer.ts:48`, `src/core/ingest/indexer.ts:24`.
+References: `src/core/ingest/indexer.ts:24`, `src/core/ingest/indexer.ts:30`, `src/core/ingest/indexer.ts:37`, `src/core/ingest/indexer.ts:52`, `src/core/ingest/indexer.ts:24`.
 
 _Generated offline (mock client)._

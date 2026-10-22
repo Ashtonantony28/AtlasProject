@@ -433,3 +433,20 @@ resolved edges to a function, method or class, and drift's neighbourhood hash pi
 `forEachOfType`'s native cut-off rose from 100 to 500 descendants, because native matches are
 materialised and value nodes made them about 7× as many. Parse+insert median on got went ~3.6 →
 ~4.2 ms/file (budget 5), and express stayed ~1.7.
+
+## 2026-10-22 — SG27: index cost stays linear on monorepos and deep `.gitignore` trees
+
+Python absolute imports probe only roots that hold the import's top-level name: one pass over
+the indexed `.py`/`.pyi` paths maps each segment name to the dirs that contain it, so a stdlib or
+third-party import is one map miss and a real one checks only its own roots, in the old order
+(results byte-identical on every fixture, got and Atlas). tsconfig `paths` keep TS precedence
+with an exact-key map plus star patterns bucketed by prefix, probed longest prefix first. The
+walker no longer re-derives every ancestor rule set's parent-directory verdict per entry: each
+set's verdict for the directory is carried down, a set whose patterns have no inner `/` or `**`
+is tested by entry name, and consecutive such sets are merged into one matcher (last matching
+rule wins either way), so a file costs one regex pass over the active rules. Inserts use cached
+multi-row `VALUES` statements (64/16/4/1 rows), which keep row order and ids. On got this cut
+insert time by about a third, but the parse+insert median stayed about 4.1 ms/file. The median
+file is about 85% parse (ts.ts/refs.ts traversal) and about 0.45 ms COMMIT, and refs were only 4%
+of the cost, so AUDIT-10's attribution of the SG18 regression to row-by-row ref inserts does not
+hold.

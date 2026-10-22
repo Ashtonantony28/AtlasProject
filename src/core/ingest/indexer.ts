@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs';
 import {
   type DB,
   upsertFile,
-  insertSymbol,
-  insertImport,
+  insertSymbols,
+  insertImports,
   insertRefs,
   deleteSymbolsForFile,
   deleteImportsForFile,
@@ -27,7 +27,11 @@ export interface IndexOptions extends WalkOptions {
   // Skip embedding generation (useful for fast incremental runs).
   skipEmbeddings?: boolean;
   // Per-file callback for progress reporting.
-  onFile?: (file: { path: string; status: 'parsed' | 'skipped' | 'failed'; reason?: string }) => void;
+  onFile?: (file: {
+    path: string;
+    status: 'parsed' | 'skipped' | 'failed';
+    reason?: string;
+  }) => void;
 }
 
 export interface IndexStats {
@@ -142,8 +146,9 @@ export async function indexRepo(
         content_hash: hash,
         loc: countLoc(content),
       });
-      for (const sym of parsed.symbols) {
-        insertSymbol(db, {
+      insertSymbols(
+        db,
+        parsed.symbols.map((sym) => ({
           file_id: fileId,
           kind: sym.kind,
           name: sym.name,
@@ -153,18 +158,19 @@ export async function indexRepo(
           docstring: sym.docstring,
           qualified_name: sym.qualifiedName,
           exported: sym.exported,
-        });
-      }
-      for (const imp of parsed.imports) {
-        insertImport(db, {
+        })),
+      );
+      insertImports(
+        db,
+        parsed.imports.map((imp) => ({
           file_id: fileId,
           module: imp.module,
           imported: imp.imported,
           alias: imp.alias,
           start_line: imp.line,
           reexport: imp.reexport ?? false,
-        });
-      }
+        })),
+      );
       insertRefs(
         db,
         fileId,
