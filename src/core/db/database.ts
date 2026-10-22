@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import * as sqliteVec from 'sqlite-vec';
-import { existsSync, linkSync, mkdirSync, rmSync } from 'node:fs';
+import { existsSync, linkSync, mkdirSync, rmSync, statSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { MIGRATIONS } from './schema.js';
 
@@ -40,7 +40,9 @@ function loadVecExtension(db: DB): void {
 export function openDatabase(dbPath: string, opts: OpenDbOptions = {}): DB {
   if (!opts.readonly && !opts.fileMustExist && !existsSync(dbPath)) {
     mkdirSync(dirname(dbPath), { recursive: true });
-    if (dbPath !== ':memory:') createWalFile(dbPath);
+    // A `-wal` left by a killed run would be replayed into a pre-made file; SQLite drops it beside
+    // a 0-byte one (and `switchToWal` waits out the processes racing to switch that file).
+    if (dbPath !== ':memory:' && !existsSync(`${dbPath}-wal`)) createWalFile(dbPath);
   }
 
   const db = new Database(dbPath, {
@@ -56,7 +58,7 @@ export function openDatabase(dbPath: string, opts: OpenDbOptions = {}): DB {
   if (!opts.readonly) {
     let op = 'journal mode';
     try {
-      db.pragma('journal_mode = WAL');
+      switchToWal(db, dbPath);
       db.pragma('foreign_keys = ON');
       db.pragma('synchronous = NORMAL');
       op = 'migrations';
@@ -89,6 +91,27 @@ function createWalFile(dbPath: string): void {
     // EEXIST: another process created it first.
   } finally {
     rmSync(tmp, { force: true });
+  }
+}
+
+/**
+ * `journal_mode = WAL`. While the file is still empty, another process switching it at the same
+ * time makes SQLite refuse the switch at once (`SQLITE_BUSY`), and two first reads both try to
+ * delete a stale `-wal` (`SQLITE_IOERR_DELETE_NOENT`): both are retried until the busy timeout.
+ */
+function switchToWal(db: DB, dbPath: string): void {
+  const deadline = Date.now() + BUSY_TIMEOUT_MS;
+  for (;;) {
+    try {
+      db.pragma('journal_mode = WAL');
+      return;
+    } catch (err) {
+      const code = (err as { code?: unknown } | null)?.code;
+      const transient = code === 'SQLITE_BUSY' || code === 'SQLITE_IOERR_DELETE_NOENT';
+      const empty = statSync(dbPath, { throwIfNoEntry: false })?.size === 0;
+      if (!transient || !empty || Date.now() >= deadline) throw err;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, LOCK_POLL_MS);
+    }
   }
 }
 
