@@ -1,17 +1,16 @@
 ---
 kind: architecture
 target: architecture
-source_hash: 4487280d0f16665c6e6422cf23b74bd5d9aeec7cdd99a2c80d06e5542a4c8c55
+source_hash: 9c9ce6c749467fe7282c697632607a65af94bca3a6773f7ec44f6d79862cfc1d
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 165 files, 2029 symbols, 4989 edges
+**Totals:** 166 files, 2082 symbols, 5090 edges
 
 ## Modules
 
-- `eslint.config.js` — javascript, loc=32, 0 symbols
 - `fixtures/graph/py/pkg/api/star_src.py` — python, loc=2, 1 symbols
 - `fixtures/graph/py/pkg/api/views.py` — python, loc=2, 1 symbols
 - `fixtures/graph/py/pkg/models.py` — python, loc=14, 5 symbols
@@ -56,20 +55,21 @@ This codebase's modules collaborate through the graph above.
 - `scripts/copy-static.mjs` — javascript, loc=16, 3 symbols
 - `scripts/synthetic-repo.mjs` — javascript, loc=29, 1 symbols
 - `src/cli/commands/askCmd.ts` — typescript, loc=87, 2 symbols
-- `src/cli/commands/ciCommentCmd.ts` — typescript, loc=91, 3 symbols
+- `src/cli/commands/ciCommentCmd.ts` — typescript, loc=165, 7 symbols
 - `src/cli/commands/docsCmd.ts` — typescript, loc=99, 2 symbols
 - `src/cli/commands/driftCmd.ts` — typescript, loc=64, 2 symbols
 - `src/cli/commands/graphCmd.ts` — typescript, loc=70, 2 symbols
 - `src/cli/commands/indexCmd.ts` — typescript, loc=67, 2 symbols
+- `src/cli/commands/init.ts` — typescript, loc=37, 2 symbols
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=305)
+- `src/core/db/database.ts` (degree=306)
 - `src/core/db/repo.ts` (degree=273)
 - `src/mcp/server.ts` (degree=226)
 - `src/core/parse/ts.ts` (degree=164)
+- `src/core/synth/persist.ts` (degree=157)
 - `test/synth/completion.test.ts` (degree=153)
-- `src/core/synth/persist.ts` (degree=147)
 - `src/core/ingest/indexer.ts` (degree=138)
 - `test/audit/audit-4.test.ts` (degree=133)
 - `test/mcp/server.test.ts` (degree=120)

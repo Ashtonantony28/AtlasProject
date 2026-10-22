@@ -17,10 +17,21 @@ export const ConfigSchema = z.object({
     .array(z.enum(['typescript', 'javascript', 'python']))
     .default(['typescript', 'javascript', 'python']),
   // Gitignore-style globs. Empty include = walk everything; exclude adds to .gitignore.
+  // The defaults are root-anchored: `src/build/` is still walked.
   include: z.array(z.string()).default([]),
   exclude: z
     .array(z.string())
-    .default(['node_modules/**', 'dist/**', 'build/**', '.atlas/**', 'coverage/**']),
+    .default([
+      'node_modules/**',
+      'dist/**',
+      'build/**',
+      '.atlas/**',
+      'coverage/**',
+      '.venv/**',
+      'venv/**',
+      '.next/**',
+      '.cache/**',
+    ]),
   // Per-run cost guardrail (Phase 5+). Inputs+outputs combined, approximate.
   tokenBudget: z.number().int().positive().default(200_000),
   // Embeddings model name (resolved by provider; Phase 4).

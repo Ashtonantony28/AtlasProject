@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/ingest/walker.ts
-source_hash: 994f1ec677cd938c51df1c7d93e33589b193c859b55df0b122dfbd8395494b6b
+source_hash: 53072c577703aebc79e05f7f1a45f78b19153c7c43586a5629aeaba07cb9ea3c
 ---
 # module src/core/ingest/walker.ts
 
@@ -12,10 +12,13 @@ source_hash: 994f1ec677cd938c51df1c7d93e33589b193c859b55df0b122dfbd8395494b6b
 - `UnreadableEntry` — interface (src/core/ingest/walker.ts:25)
 - `WalkResult` — interface (src/core/ingest/walker.ts:30)
 - `DEFAULT_MAX_BYTES` — variable (src/core/ingest/walker.ts:35)
-- `ALWAYS_SKIP` — variable (src/core/ingest/walker.ts:38)
-- `loadGitignore` — function (src/core/ingest/walker.ts:52)
-- `walkRepo` — function (src/core/ingest/walker.ts:69)
-- `walkRepoReport` — function (src/core/ingest/walker.ts:74)
+- `ALWAYS_SKIP` — variable (src/core/ingest/walker.ts:39)
+- `Ignore` — type (src/core/ingest/walker.ts:41)
+- `Rules` — interface (src/core/ingest/walker.ts:44)
+- `readGitignore` — function (src/core/ingest/walker.ts:49)
+- `isIgnored` — function (src/core/ingest/walker.ts:60)
+- `walkRepo` — function (src/core/ingest/walker.ts:75)
+- `walkRepoReport` — function (src/core/ingest/walker.ts:80)
 
 References: `src/core/ingest/walker.ts:6`, `src/core/ingest/walker.ts:17`, `src/core/ingest/walker.ts:25`, `src/core/ingest/walker.ts:30`, `src/core/ingest/walker.ts:35`.
 

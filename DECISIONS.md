@@ -379,3 +379,7 @@ contention can still push got near 5.
 ## 2026-10-22 — SG21: no sampling params, 16k max_tokens, incomplete completions are failures
 
 Requests send no `temperature`/`top_p`/`top_k` (current models and API `2026-10-21` reject them). Per-doc and `ask` `max_tokens` default to 16 000 (the non-streaming default; thinking counts toward it), so the budget reserves ~16k per call and a run stops ~16k short of `tokenBudget`. A `stop_reason` other than `end_turn`/`stop_sequence`, or empty text, is never stored: `docs` reports the target as failed and exits 1, `ask` errors.
+
+## 2026-10-22 — SG20: walk skips follow `.gitignore` and config, not names at any depth
+
+Only `.git`, `.atlas`, `node_modules` and `__pycache__` (never project source) and virtualenvs (a directory holding `pyvenv.cfg`) are skipped at any depth. `dist`, `build`, `coverage`, `venv`, `.next`, `.cache` are root-anchored entries in the default `exclude` (`.venv/**`, `venv/**`, `.next/**`, `.cache/**` added to the default value; no new keys), so `src/build/` is indexed and a user can drop an entry to index the root one. Nested `.gitignore` files are now read (deeper files override shallower ones, `exclude` is applied last), which keeps `packages/*/dist` out where a package ignores it. Persisted docs strip a leading BOM before parsing front matter; `ci-comment` validates its input and counts from `totals`, noting when the lists are a page.
