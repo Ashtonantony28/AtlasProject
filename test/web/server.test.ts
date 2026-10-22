@@ -31,10 +31,7 @@ describe('dashboard HTTP API', () => {
     await indexRepo(db, FIXTURE);
     await synthesizeDocs(db, createOfflineClient(), { root: FIXTURE, tokenBudget: 200_000 });
 
-    // Port 0 = OS-assigned ephemeral. We'll use 0; server will pick. But our
-    // server takes a fixed port; instead, pick a high-numbered port for tests.
-    const port = 41327 + Math.floor(Math.random() * 1000);
-    const handle = await startServer(db, FIXTURE, { port });
+    const handle = await startServer(db, FIXTURE, { port: 0 });
     try {
       // Static index.html
       const root = await fetch(handle.url);
@@ -87,8 +84,7 @@ describe('dashboard HTTP API', () => {
   it('returns 404 for unknown doc ids', async () => {
     const db = openDatabase(join(dir, 'index.db'));
     await indexRepo(db, FIXTURE);
-    const port = 41327 + Math.floor(Math.random() * 1000);
-    const handle = await startServer(db, FIXTURE, { port });
+    const handle = await startServer(db, FIXTURE, { port: 0 });
     try {
       const r = await fetch(`${handle.url}api/doc/file/999999`);
       expect(r.status).toBe(404);
