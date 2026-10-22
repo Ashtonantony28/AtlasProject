@@ -1,13 +1,13 @@
 ---
 kind: architecture
 target: architecture
-source_hash: dc39c8cc9de5a05f3c04daf0b0babb61bc4a7bbc63c05adea0ec7d542f3c281b
+source_hash: a537c25e74497ed0db54c34803a7f815b824cc36dd6a6d5b8dd8c06912baac20
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 216 files, 1538 symbols, 7190 edges
+**Totals:** 217 files, 1549 symbols, 7282 edges
 
 ## Modules
 
@@ -64,15 +64,15 @@ This codebase's modules collaborate through the graph above.
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=491)
-- `src/core/db/repo.ts` (degree=420)
+- `src/core/db/database.ts` (degree=497)
+- `src/core/db/repo.ts` (degree=435)
 - `src/mcp/server.ts` (degree=332)
 - `src/core/parse/ts.ts` (degree=296)
-- `src/core/ingest/indexer.ts` (degree=225)
+- `src/core/ingest/indexer.ts` (degree=228)
 - `src/core/graph/modules.ts` (degree=184)
-- `src/core/synth/persist.ts` (degree=159)
+- `src/core/synth/persist.ts` (degree=161)
+- `src/core/db/index.ts` (degree=124)
 - `test/audit/audit-21.test.ts` (degree=124)
-- `src/core/db/index.ts` (degree=123)
 - `test/audit/audit-19.test.ts` (degree=121)
 
 _Generated offline (mock client)._
