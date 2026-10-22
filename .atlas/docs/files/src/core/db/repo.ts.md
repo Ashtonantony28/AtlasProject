@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/db/repo.ts
-source_hash: 267f20aba0ef01f85b0b3d052e373aa5aef26d953a866f5b0246ea69edf6ebe0
+source_hash: b8312de26d3ca64ae1ef363ae60daf41f4fc86cc486bce2244cda8916cff3c62
 ---
 # module src/core/db/repo.ts
 
@@ -38,19 +38,19 @@ source_hash: 267f20aba0ef01f85b0b3d052e373aa5aef26d953a866f5b0246ea69edf6ebe0
 - `getAllRefs` — function (src/core/db/repo.ts:266)
 - `deleteRefsForFile` — function (src/core/db/repo.ts:270)
 - `UpsertDocInput` — interface (src/core/db/repo.ts:274)
-- `upsertDoc` — function (src/core/db/repo.ts:282)
-- `getDoc` — function (src/core/db/repo.ts:309)
-- `TOMBSTONE_KIND` — variable (src/core/db/repo.ts:318)
-- `getAllDocs` — function (src/core/db/repo.ts:320)
-- `DocTombstone` — interface (src/core/db/repo.ts:326)
-- `getDocTombstones` — function (src/core/db/repo.ts:332)
-- `clearDocTombstones` — function (src/core/db/repo.ts:344)
-- `startRun` — function (src/core/db/repo.ts:348)
-- `finishRun` — function (src/core/db/repo.ts:355)
-- `getLastRunStats` — function (src/core/db/repo.ts:364)
-- `getLastRun` — function (src/core/db/repo.ts:381)
-- `counts` — function (src/core/db/repo.ts:385)
-- `deleteFile` — function (src/core/db/repo.ts:404)
+- `upsertDoc` — function (src/core/db/repo.ts:281)
+- `getDoc` — function (src/core/db/repo.ts:306)
+- `TOMBSTONE_KIND` — variable (src/core/db/repo.ts:315)
+- `getAllDocs` — function (src/core/db/repo.ts:317)
+- `DocTombstone` — interface (src/core/db/repo.ts:323)
+- `getDocTombstones` — function (src/core/db/repo.ts:329)
+- `clearDocTombstones` — function (src/core/db/repo.ts:341)
+- `startRun` — function (src/core/db/repo.ts:345)
+- `finishRun` — function (src/core/db/repo.ts:352)
+- `getLastRunStats` — function (src/core/db/repo.ts:361)
+- `getLastRun` — function (src/core/db/repo.ts:378)
+- `counts` — function (src/core/db/repo.ts:382)
+- `deleteFile` — function (src/core/db/repo.ts:401)
 
 References: `src/core/db/repo.ts:17`, `src/core/db/repo.ts:24`, `src/core/db/repo.ts:48`, `src/core/db/repo.ts:52`, `src/core/db/repo.ts:56`.
 

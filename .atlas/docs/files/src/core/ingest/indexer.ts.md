@@ -1,29 +1,29 @@
 ---
 kind: file
 target: src/core/ingest/indexer.ts
-source_hash: 548d16531a1dde756ff7fff27a3741ba589dcea58108fda83fcfffbb07f5a7dd
+source_hash: 2e2fe5a356d79578e41af02d655584db989ed7ab836ebd21c8888e36b1e3aad1
 ---
 # module src/core/ingest/indexer.ts
 
 `module src/core/ingest/indexer.ts` exposes the following public surface:
 
-- `IndexOptions` — interface (src/core/ingest/indexer.ts:34)
-- `IndexOptions.onFile` — method (src/core/ingest/indexer.ts:40)
-- `IndexStats` — interface (src/core/ingest/indexer.ts:47)
-- `MAX_RESOLVER_DIAGNOSTICS` — variable (src/core/ingest/indexer.ts:79)
-- `IndexState` — interface (src/core/ingest/indexer.ts:82)
-- `lastState` — function (src/core/ingest/indexer.ts:90)
-- `Queue` — interface (src/core/ingest/indexer.ts:109)
-- `queues` — variable (src/core/ingest/indexer.ts:113)
-- `YIELD_MS` — variable (src/core/ingest/indexer.ts:116)
-- `dbFile` — function (src/core/ingest/indexer.ts:118)
-- `runKind` — function (src/core/ingest/indexer.ts:127)
-- `indexRepo` — function (src/core/ingest/indexer.ts:141)
-- `stampedExtractorVersion` — function (src/core/ingest/indexer.ts:175)
-- `SymbolKey` — type (src/core/ingest/indexer.ts:185)
-- `carryEdges` — function (src/core/ingest/indexer.ts:193)
-- `runIndex` — function (src/core/ingest/indexer.ts:236)
+- `IndexOptions` — interface (src/core/ingest/indexer.ts:33)
+- `IndexOptions.onFile` — method (src/core/ingest/indexer.ts:39)
+- `IndexStats` — interface (src/core/ingest/indexer.ts:46)
+- `MAX_RESOLVER_DIAGNOSTICS` — variable (src/core/ingest/indexer.ts:78)
+- `IndexState` — interface (src/core/ingest/indexer.ts:81)
+- `lastState` — function (src/core/ingest/indexer.ts:89)
+- `Queue` — interface (src/core/ingest/indexer.ts:108)
+- `queues` — variable (src/core/ingest/indexer.ts:112)
+- `YIELD_MS` — variable (src/core/ingest/indexer.ts:115)
+- `dbFile` — function (src/core/ingest/indexer.ts:117)
+- `runKind` — function (src/core/ingest/indexer.ts:126)
+- `indexRepo` — function (src/core/ingest/indexer.ts:140)
+- `stampedExtractorVersion` — function (src/core/ingest/indexer.ts:174)
+- `SymbolKey` — type (src/core/ingest/indexer.ts:184)
+- `carryEdges` — function (src/core/ingest/indexer.ts:192)
+- `runIndex` — function (src/core/ingest/indexer.ts:235)
 
-References: `src/core/ingest/indexer.ts:34`, `src/core/ingest/indexer.ts:40`, `src/core/ingest/indexer.ts:47`, `src/core/ingest/indexer.ts:79`, `src/core/ingest/indexer.ts:82`.
+References: `src/core/ingest/indexer.ts:33`, `src/core/ingest/indexer.ts:39`, `src/core/ingest/indexer.ts:46`, `src/core/ingest/indexer.ts:78`, `src/core/ingest/indexer.ts:81`.
 
 _Generated offline (mock client)._
