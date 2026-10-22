@@ -1,13 +1,13 @@
 ---
 kind: architecture
 target: architecture
-source_hash: 3292d85d3fb4cb361f9bee3b4cd9739c71bddaa21cfb24860e787c116d0b2bac
+source_hash: 2689c01fdcb47548ed11792565c6eb2c0ade61bf09eb63dbe85858e52553263c
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 196 files, 1286 symbols, 5916 edges
+**Totals:** 198 files, 1303 symbols, 5988 edges
 
 ## Modules
 
@@ -29,9 +29,7 @@ This codebase's modules collaborate through the graph above.
 - `fixtures/graph/web/decoys.ts` — typescript, loc=15, 2 symbols
 - `fixtures/graph/web/geo.ts` — typescript, loc=15, 6 symbols
 - `fixtures/graph/web/handlers.js` — javascript, loc=18, 4 symbols
-- `fixtures/graph/web/ids.ts` — typescript, loc=5, 1 symbols
 - `fixtures/graph/web/legacy.cjs` — javascript, loc=8, 2 symbols
-- `fixtures/graph/web/lib/index.mts` — typescript, loc=3, 1 symbols
 - `fixtures/graph/web/measure.ts` — typescript, loc=8, 2 symbols
 - `fixtures/graph/web/routes.js` — javascript, loc=11, 3 symbols
 - `fixtures/graph/web/shape.ts` — typescript, loc=7, 2 symbols
@@ -61,18 +59,20 @@ This codebase's modules collaborate through the graph above.
 - `src/cli/commands/docsCmd.ts` — typescript, loc=100, 2 symbols
 - `src/cli/commands/driftCmd.ts` — typescript, loc=64, 2 symbols
 - `src/cli/commands/graphCmd.ts` — typescript, loc=70, 2 symbols
+- `src/cli/commands/indexCmd.ts` — typescript, loc=103, 6 symbols
+- `src/cli/commands/init.ts` — typescript, loc=37, 2 symbols
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=379)
-- `src/core/db/repo.ts` (degree=348)
+- `src/core/db/database.ts` (degree=386)
+- `src/core/db/repo.ts` (degree=357)
 - `src/core/parse/ts.ts` (degree=294)
 - `src/mcp/server.ts` (degree=250)
 - `src/core/graph/modules.ts` (degree=184)
-- `src/core/ingest/indexer.ts` (degree=174)
+- `src/core/ingest/indexer.ts` (degree=184)
 - `src/core/synth/persist.ts` (degree=159)
+- `src/core/db/index.ts` (degree=108)
 - `scripts/audit2-reindex.mjs` (degree=107)
-- `src/core/db/index.ts` (degree=107)
 - `test/synth/completion.test.ts` (degree=107)
 
 _Generated offline (mock client)._
