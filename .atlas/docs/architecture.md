@@ -1,19 +1,19 @@
 ---
 kind: architecture
 target: architecture
-source_hash: 4487280d0f16665c6e6422cf23b74bd5d9aeec7cdd99a2c80d06e5542a4c8c55
+source_hash: 70efc6315eb39b98ee10d3702558a601a26fd28a3776f294eb68bf607a6d709c
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 165 files, 2029 symbols, 4989 edges
+**Totals:** 173 files, 2113 symbols, 5170 edges
 
 ## Modules
 
-- `eslint.config.js` — javascript, loc=32, 0 symbols
 - `fixtures/graph/py/pkg/api/star_src.py` — python, loc=2, 1 symbols
 - `fixtures/graph/py/pkg/api/views.py` — python, loc=2, 1 symbols
+- `fixtures/graph/py/pkg/hooks.py` — python, loc=13, 3 symbols
 - `fixtures/graph/py/pkg/models.py` — python, loc=14, 5 symbols
 - `fixtures/graph/py/pkg/repo.py` — python, loc=23, 6 symbols
 - `fixtures/graph/py/pkg/star_use.py` — python, loc=5, 1 symbols
@@ -27,18 +27,20 @@ This codebase's modules collaborate through the graph above.
 - `fixtures/graph/web/cjs/main.js` — javascript, loc=16, 5 symbols
 - `fixtures/graph/web/consumer.js` — javascript, loc=7, 2 symbols
 - `fixtures/graph/web/decoys.ts` — typescript, loc=15, 2 symbols
+- `fixtures/graph/web/geo.ts` — typescript, loc=15, 6 symbols
+- `fixtures/graph/web/handlers.js` — javascript, loc=18, 4 symbols
 - `fixtures/graph/web/ids.ts` — typescript, loc=5, 1 symbols
 - `fixtures/graph/web/legacy.cjs` — javascript, loc=8, 2 symbols
 - `fixtures/graph/web/lib/index.mts` — typescript, loc=3, 1 symbols
+- `fixtures/graph/web/measure.ts` — typescript, loc=8, 2 symbols
+- `fixtures/graph/web/routes.js` — javascript, loc=11, 3 symbols
+- `fixtures/graph/web/shape.ts` — typescript, loc=7, 2 symbols
 - `fixtures/graph/web/store.ts` — typescript, loc=1, 1 symbols
 - `fixtures/graph/web/strings.ts` — typescript, loc=7, 2 symbols
 - `fixtures/graph/web/ui/Base.ts` — typescript, loc=8, 3 symbols
-- `fixtures/graph/web/ui/Panel.tsx` — typescript, loc=3, 1 symbols
-- `fixtures/graph/web/ui/cycle.ts` — typescript, loc=5, 1 symbols
-- `fixtures/graph/web/ui/extra.ts` — typescript, loc=3, 1 symbols
 - `fixtures/graph/web/widget.ts` — typescript, loc=38, 9 symbols
-- `fixtures/parse/walk.js` — javascript, loc=40, 8 symbols
-- `fixtures/parse/walk.ts` — typescript, loc=79, 22 symbols
+- `fixtures/parse/walk.js` — javascript, loc=40, 10 symbols
+- `fixtures/parse/walk.ts` — typescript, loc=79, 23 symbols
 - `fixtures/sample/src/app.ts` — typescript, loc=14, 2 symbols
 - `fixtures/sample/src/math.ts` — typescript, loc=15, 3 symbols
 - `fixtures/sample/src/shapes.ts` — typescript, loc=35, 11 symbols
@@ -54,24 +56,22 @@ This codebase's modules collaborate through the graph above.
 - `scripts/audit2-reindex.mjs` — javascript, loc=146, 31 symbols
 - `scripts/bench.mjs` — javascript, loc=93, 25 symbols
 - `scripts/copy-static.mjs` — javascript, loc=16, 3 symbols
-- `scripts/synthetic-repo.mjs` — javascript, loc=29, 1 symbols
 - `src/cli/commands/askCmd.ts` — typescript, loc=87, 2 symbols
 - `src/cli/commands/ciCommentCmd.ts` — typescript, loc=91, 3 symbols
 - `src/cli/commands/docsCmd.ts` — typescript, loc=99, 2 symbols
 - `src/cli/commands/driftCmd.ts` — typescript, loc=64, 2 symbols
 - `src/cli/commands/graphCmd.ts` — typescript, loc=70, 2 symbols
-- `src/cli/commands/indexCmd.ts` — typescript, loc=67, 2 symbols
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=305)
-- `src/core/db/repo.ts` (degree=273)
+- `src/core/db/database.ts` (degree=311)
+- `src/core/db/repo.ts` (degree=279)
+- `src/core/parse/ts.ts` (degree=229)
 - `src/mcp/server.ts` (degree=226)
-- `src/core/parse/ts.ts` (degree=164)
 - `test/synth/completion.test.ts` (degree=153)
-- `src/core/synth/persist.ts` (degree=147)
-- `src/core/ingest/indexer.ts` (degree=138)
-- `test/audit/audit-4.test.ts` (degree=133)
+- `src/core/synth/persist.ts` (degree=151)
+- `src/core/ingest/indexer.ts` (degree=141)
+- `test/audit/audit-4.test.ts` (degree=137)
 - `test/mcp/server.test.ts` (degree=120)
 - `test/audit/audit-3.test.ts` (degree=116)
 

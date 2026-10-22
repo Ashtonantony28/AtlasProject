@@ -258,7 +258,7 @@ describe('AUDIT-1 graph', () => {
     ).toBe(true);
   });
 
-  it.fails('A1-15 `exports.x = function x() {}` defines an importable symbol', async () => {
+  it('A1-15 `exports.x = function x() {}` defines an importable symbol', async () => {
     const g = await graphOf({
       'util.js': 'exports.helper = function helper() { return 1; };\n',
       'main.js':

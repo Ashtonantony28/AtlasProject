@@ -1,7 +1,7 @@
 ---
 kind: file
 target: fixtures/graph/web/ui/Base.ts
-source_hash: a42e44580db006cc275460505130fecb05ec0ff19fd5b636bbf323ca2e07438e
+source_hash: fd2c6ce8d443472891c99ca2fd5474c066b5e8b07938fd10a03f5b32305b9131
 ---
 # module fixtures/graph/web/ui/Base.ts
 

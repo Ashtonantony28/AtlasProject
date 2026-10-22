@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/parse/refs.ts
-source_hash: 043dfad41db3f9d27ec8077042caaff5d72e4901e6af89a85b42b1d7845f47da
+source_hash: 5edbccc0776a010d3155278f0379df575b2faa2c23bd8a8042f787d09b395aef
 ---
 # module src/core/parse/refs.ts
 
@@ -17,9 +17,10 @@ source_hash: 043dfad41db3f9d27ec8077042caaff5d72e4901e6af89a85b42b1d7845f47da
 - `syntaxDiagnostics` — function (src/core/parse/refs.ts:85)
 - `snippet` — function (src/core/parse/refs.ts:125)
 - `internalDiagnostic` — function (src/core/parse/refs.ts:131)
-- `NATIVE_MIN_DESCENDANTS` — variable (src/core/parse/refs.ts:142)
-- `forEachOfType` — function (src/core/parse/refs.ts:145)
-- `uniqueRefs` — function (src/core/parse/refs.ts:174)
+- `NATIVE_MIN_DESCENDANTS` — variable (src/core/parse/refs.ts:143)
+- `forEachOfType` — function (src/core/parse/refs.ts:146)
+- `boundValueRefs` — function (src/core/parse/refs.ts:178)
+- `uniqueRefs` — function (src/core/parse/refs.ts:187)
 
 References: `src/core/parse/refs.ts:4`, `src/core/parse/refs.ts:10`, `src/core/parse/refs.ts:13`, `src/core/parse/refs.ts:16`, `src/core/parse/refs.ts:21`.
 

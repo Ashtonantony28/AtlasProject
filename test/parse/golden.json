@@ -295,6 +295,22 @@
     "line": 23
    },
    {
+    "fromQualifiedName": "Circle.area",
+    "name": "PI",
+    "receiver": "none",
+    "object": null,
+    "kind": "references",
+    "line": 23
+   },
+   {
+    "fromQualifiedName": "Circle.area",
+    "name": "radius",
+    "receiver": "this",
+    "object": null,
+    "kind": "references",
+    "line": 23
+   },
+   {
     "fromQualifiedName": "Square",
     "name": "Shape",
     "receiver": "none",
@@ -316,6 +332,14 @@
     "receiver": "none",
     "object": null,
     "kind": "calls",
+    "line": 33
+   },
+   {
+    "fromQualifiedName": "Square.area",
+    "name": "side",
+    "receiver": "this",
+    "object": null,
+    "kind": "references",
     "line": 33
    }
   ],
@@ -366,7 +390,16 @@
    }
   ],
   "imports": [],
-  "references": [],
+  "references": [
+   {
+    "fromQualifiedName": "Counter.increment",
+    "kind": "references",
+    "line": 18,
+    "name": "value",
+    "receiver": "this",
+    "object": null
+   }
+  ],
   "diagnostics": []
  },
  "graph/py/pkg/__init__.py": {
@@ -430,6 +463,84 @@
   ],
   "imports": [],
   "references": [],
+  "diagnostics": []
+ },
+ "graph/py/pkg/hooks.py": {
+  "language": "python",
+  "symbols": [
+   {
+    "kind": "function",
+    "name": "on_start",
+    "signature": "def on_start():",
+    "startLine": 4,
+    "endLine": 5,
+    "docstring": null,
+    "qualifiedName": "on_start",
+    "exported": true
+   },
+   {
+    "kind": "variable",
+    "name": "HOOKS",
+    "signature": "HOOKS = [on_start]",
+    "startLine": 8,
+    "endLine": 8,
+    "docstring": null,
+    "qualifiedName": "HOOKS",
+    "exported": true
+   },
+   {
+    "kind": "function",
+    "name": "register",
+    "signature": "def register(app):",
+    "startLine": 11,
+    "endLine": 13,
+    "docstring": null,
+    "qualifiedName": "register",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": ".util",
+    "imported": "helper",
+    "alias": null,
+    "line": 1
+   }
+  ],
+  "references": [
+   {
+    "fromQualifiedName": "HOOKS",
+    "kind": "references",
+    "line": 8,
+    "name": "on_start",
+    "receiver": "none",
+    "object": null
+   },
+   {
+    "fromQualifiedName": "register",
+    "kind": "calls",
+    "line": 12,
+    "name": "add",
+    "receiver": "member",
+    "object": "app"
+   },
+   {
+    "fromQualifiedName": "register",
+    "kind": "references",
+    "line": 12,
+    "name": "helper",
+    "receiver": "none",
+    "object": null
+   },
+   {
+    "fromQualifiedName": "register",
+    "kind": "references",
+    "line": 13,
+    "name": "on_start",
+    "receiver": "none",
+    "object": null
+   }
+  ],
   "diagnostics": []
  },
  "graph/py/pkg/models.py": {
@@ -1121,7 +1232,24 @@
     "reexport": true
    }
   ],
-  "references": [],
+  "references": [
+   {
+    "fromQualifiedName": null,
+    "name": "createApp",
+    "receiver": "none",
+    "object": null,
+    "kind": "references",
+    "line": 9
+   },
+   {
+    "fromQualifiedName": null,
+    "name": "version",
+    "receiver": "none",
+    "object": null,
+    "kind": "references",
+    "line": 10
+   }
+  ],
   "diagnostics": []
  },
  "graph/web/cjs/index.js": {
@@ -1260,6 +1388,22 @@
     "object": null,
     "kind": "calls",
     "line": 12
+   },
+   {
+    "fromQualifiedName": "default",
+    "name": "main",
+    "receiver": "none",
+    "object": null,
+    "kind": "references",
+    "line": 16
+   },
+   {
+    "fromQualifiedName": "default",
+    "name": "Sub",
+    "receiver": "none",
+    "object": null,
+    "kind": "references",
+    "line": 16
    }
   ],
   "diagnostics": []
@@ -1270,7 +1414,7 @@
    {
     "kind": "class",
     "name": "Model",
-    "signature": "class Model {",
+    "signature": "module.exports = class Model {",
     "startLine": 1,
     "endLine": 5,
     "docstring": null,
@@ -1347,6 +1491,14 @@
     "object": "legacy",
     "kind": "calls",
     "line": 4
+   },
+   {
+    "fromQualifiedName": null,
+    "name": "useLegacy",
+    "receiver": "none",
+    "object": null,
+    "kind": "references",
+    "line": 7
    }
   ],
   "diagnostics": []
@@ -1392,6 +1544,156 @@
   "references": [],
   "diagnostics": []
  },
+ "graph/web/geo.ts": {
+  "language": "typescript",
+  "symbols": [
+   {
+    "kind": "variable",
+    "name": "Circle",
+    "signature": "namespace Circle {",
+    "startLine": 1,
+    "endLine": 9,
+    "docstring": null,
+    "qualifiedName": "Circle",
+    "exported": true
+   },
+   {
+    "kind": "function",
+    "name": "area",
+    "signature": "function area(): number {",
+    "startLine": 2,
+    "endLine": 4,
+    "docstring": null,
+    "qualifiedName": "Circle.area",
+    "exported": true
+   },
+   {
+    "kind": "function",
+    "name": "hidden",
+    "signature": "function hidden(): number {",
+    "startLine": 5,
+    "endLine": 7,
+    "docstring": null,
+    "qualifiedName": "Circle.hidden",
+    "exported": false
+   },
+   {
+    "kind": "variable",
+    "name": "unit",
+    "signature": "unit = hidden()",
+    "startLine": 8,
+    "endLine": 8,
+    "docstring": null,
+    "qualifiedName": "Circle.unit",
+    "exported": true
+   },
+   {
+    "kind": "variable",
+    "name": "Square",
+    "signature": "namespace Square {",
+    "startLine": 11,
+    "endLine": 15,
+    "docstring": null,
+    "qualifiedName": "Square",
+    "exported": true
+   },
+   {
+    "kind": "function",
+    "name": "area",
+    "signature": "function area(): number {",
+    "startLine": 12,
+    "endLine": 14,
+    "docstring": null,
+    "qualifiedName": "Square.area",
+    "exported": true
+   }
+  ],
+  "imports": [],
+  "references": [
+   {
+    "fromQualifiedName": "Circle.unit",
+    "name": "hidden",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 8
+   }
+  ],
+  "diagnostics": []
+ },
+ "graph/web/handlers.js": {
+  "language": "javascript",
+  "symbols": [
+   {
+    "kind": "function",
+    "name": "Store",
+    "signature": "function Store() {}",
+    "startLine": 1,
+    "endLine": 1,
+    "docstring": null,
+    "qualifiedName": "Store",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "get",
+    "signature": "Store.prototype.get = function (key) {",
+    "startLine": 4,
+    "endLine": 6,
+    "docstring": "/** Look a key up. */",
+    "qualifiedName": "Store.get",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "has",
+    "signature": "Store.prototype.has = function has(key) {",
+    "startLine": 8,
+    "endLine": 11,
+    "docstring": null,
+    "qualifiedName": "Store.has",
+    "exported": true
+   },
+   {
+    "kind": "function",
+    "name": "list",
+    "signature": "exports.list = function (req, res) {",
+    "startLine": 13,
+    "endLine": 16,
+    "docstring": null,
+    "qualifiedName": "list",
+    "exported": true
+   }
+  ],
+  "imports": [],
+  "references": [
+   {
+    "fromQualifiedName": "Store.get",
+    "name": "has",
+    "receiver": "this",
+    "object": null,
+    "kind": "calls",
+    "line": 5
+   },
+   {
+    "fromQualifiedName": "list",
+    "name": "render",
+    "receiver": "member",
+    "object": "res",
+    "kind": "calls",
+    "line": 15
+   },
+   {
+    "fromQualifiedName": null,
+    "name": "Store",
+    "receiver": "none",
+    "object": null,
+    "kind": "references",
+    "line": 18
+   }
+  ],
+  "diagnostics": []
+ },
  "graph/web/ids.ts": {
   "language": "typescript",
   "symbols": [
@@ -1415,7 +1717,16 @@
     "reexport": true
    }
   ],
-  "references": [],
+  "references": [
+   {
+    "fromQualifiedName": null,
+    "name": "makeId",
+    "receiver": "none",
+    "object": null,
+    "kind": "references",
+    "line": 5
+   }
+  ],
   "diagnostics": []
  },
  "graph/web/legacy.cjs": {
@@ -1486,6 +1797,233 @@
     "object": "Math",
     "kind": "calls",
     "line": 2
+   }
+  ],
+  "diagnostics": []
+ },
+ "graph/web/measure.ts": {
+  "language": "typescript",
+  "symbols": [
+   {
+    "kind": "function",
+    "name": "measure",
+    "signature": "function measure(): number {",
+    "startLine": 4,
+    "endLine": 6,
+    "docstring": null,
+    "qualifiedName": "measure",
+    "exported": true
+   },
+   {
+    "kind": "variable",
+    "name": "areas",
+    "signature": "areas = [1, 2].map(Circle.area)",
+    "startLine": 8,
+    "endLine": 8,
+    "docstring": null,
+    "qualifiedName": "areas",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": "./shape",
+    "imported": "default",
+    "alias": "Shape",
+    "line": 1
+   },
+   {
+    "module": "./geo",
+    "imported": "Circle",
+    "alias": null,
+    "line": 2
+   }
+  ],
+  "references": [
+   {
+    "fromQualifiedName": "measure",
+    "name": "area",
+    "receiver": "member",
+    "object": null,
+    "kind": "calls",
+    "line": 5
+   },
+   {
+    "fromQualifiedName": "measure",
+    "name": "Shape",
+    "receiver": "none",
+    "object": null,
+    "kind": "calls",
+    "line": 5
+   },
+   {
+    "fromQualifiedName": "measure",
+    "name": "area",
+    "receiver": "member",
+    "object": "Circle",
+    "kind": "calls",
+    "line": 5
+   },
+   {
+    "fromQualifiedName": "areas",
+    "name": "map",
+    "receiver": "member",
+    "object": null,
+    "kind": "calls",
+    "line": 8
+   },
+   {
+    "fromQualifiedName": "areas",
+    "name": "area",
+    "receiver": "member",
+    "object": "Circle",
+    "kind": "references",
+    "line": 8
+   }
+  ],
+  "diagnostics": []
+ },
+ "graph/web/routes.js": {
+  "language": "javascript",
+  "symbols": [
+   {
+    "kind": "variable",
+    "name": "handlers",
+    "signature": "handlers = require('./handlers')",
+    "startLine": 1,
+    "endLine": 1,
+    "docstring": null,
+    "qualifiedName": "handlers",
+    "exported": false
+   },
+   {
+    "kind": "function",
+    "name": "notFound",
+    "signature": "function notFound() {}",
+    "startLine": 3,
+    "endLine": 3,
+    "docstring": null,
+    "qualifiedName": "notFound",
+    "exported": false
+   },
+   {
+    "kind": "function",
+    "name": "register",
+    "signature": "function register(router) {",
+    "startLine": 5,
+    "endLine": 9,
+    "docstring": null,
+    "qualifiedName": "register",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": "./handlers",
+    "imported": "default",
+    "alias": "handlers",
+    "line": 1
+   }
+  ],
+  "references": [
+   {
+    "fromQualifiedName": "register",
+    "name": "get",
+    "receiver": "member",
+    "object": "router",
+    "kind": "calls",
+    "line": 6
+   },
+   {
+    "fromQualifiedName": "register",
+    "name": "list",
+    "receiver": "member",
+    "object": "handlers",
+    "kind": "references",
+    "line": 6
+   },
+   {
+    "fromQualifiedName": "register",
+    "name": "Store",
+    "receiver": "member",
+    "object": "handlers",
+    "kind": "references",
+    "line": 7
+   },
+   {
+    "fromQualifiedName": "register",
+    "name": "notFound",
+    "receiver": "none",
+    "object": null,
+    "kind": "references",
+    "line": 7
+   },
+   {
+    "fromQualifiedName": "register",
+    "name": "register",
+    "receiver": "none",
+    "object": null,
+    "kind": "references",
+    "line": 8
+   },
+   {
+    "fromQualifiedName": "default",
+    "name": "register",
+    "receiver": "none",
+    "object": null,
+    "kind": "references",
+    "line": 11
+   }
+  ],
+  "diagnostics": []
+ },
+ "graph/web/shape.ts": {
+  "language": "typescript",
+  "symbols": [
+   {
+    "kind": "class",
+    "name": "default",
+    "signature": "export default class extends BaseView<number> {",
+    "startLine": 3,
+    "endLine": 7,
+    "docstring": null,
+    "qualifiedName": "default",
+    "exported": true
+   },
+   {
+    "kind": "method",
+    "name": "area",
+    "signature": "area(): number {",
+    "startLine": 4,
+    "endLine": 6,
+    "docstring": null,
+    "qualifiedName": "default.area",
+    "exported": true
+   }
+  ],
+  "imports": [
+   {
+    "module": "",
+    "imported": "default",
+    "alias": "default",
+    "line": 3,
+    "reexport": true
+   },
+   {
+    "module": "./ui/Base",
+    "imported": "BaseView",
+    "alias": null,
+    "line": 1
+   }
+  ],
+  "references": [
+   {
+    "fromQualifiedName": "default",
+    "name": "BaseView",
+    "receiver": "none",
+    "object": null,
+    "kind": "extends",
+    "line": 3
    }
   ],
   "diagnostics": []
@@ -1912,11 +2450,31 @@
    {
     "kind": "function",
     "name": "createApp",
-    "signature": "function createApp(opts) {",
+    "signature": "module.exports = function createApp(opts) {",
     "startLine": 5,
     "endLine": 7,
     "docstring": null,
     "qualifiedName": "createApp",
+    "exported": true
+   },
+   {
+    "kind": "function",
+    "name": "helper",
+    "signature": "exports.helper = function helper() {",
+    "startLine": 9,
+    "endLine": 11,
+    "docstring": null,
+    "qualifiedName": "helper",
+    "exported": true
+   },
+   {
+    "kind": "class",
+    "name": "Model",
+    "signature": "module.exports.Model = class Model extends Base {",
+    "startLine": 13,
+    "endLine": 17,
+    "docstring": null,
+    "qualifiedName": "Model",
     "exported": true
    },
    {
@@ -1926,8 +2484,8 @@
     "startLine": 14,
     "endLine": 16,
     "docstring": null,
-    "qualifiedName": "save",
-    "exported": false
+    "qualifiedName": "Model.save",
+    "exported": true
    },
    {
     "kind": "function",
@@ -2043,7 +2601,7 @@
     "line": 6
    },
    {
-    "fromQualifiedName": null,
+    "fromQualifiedName": "helper",
     "name": "run",
     "receiver": "member",
     "object": null,
@@ -2051,7 +2609,15 @@
     "line": 10
    },
    {
-    "fromQualifiedName": "save",
+    "fromQualifiedName": "Model",
+    "name": "Base",
+    "receiver": "none",
+    "object": null,
+    "kind": "extends",
+    "line": 13
+   },
+   {
+    "fromQualifiedName": "Model.save",
     "name": "write",
     "receiver": "member",
     "object": null,
@@ -2059,7 +2625,7 @@
     "line": 15
    },
    {
-    "fromQualifiedName": "save",
+    "fromQualifiedName": "Model.save",
     "name": "j",
     "receiver": "none",
     "object": null,
@@ -2289,14 +2855,24 @@
     "exported": true
    },
    {
+    "kind": "class",
+    "name": "default",
+    "signature": "export default class extends Base {",
+    "startLine": 39,
+    "endLine": 43,
+    "docstring": null,
+    "qualifiedName": "default",
+    "exported": true
+   },
+   {
     "kind": "method",
     "name": "go",
     "signature": "go() {",
     "startLine": 40,
     "endLine": 42,
     "docstring": null,
-    "qualifiedName": "go",
-    "exported": false
+    "qualifiedName": "default.go",
+    "exported": true
    },
    {
     "kind": "variable",
@@ -2390,6 +2966,13 @@
    }
   ],
   "imports": [
+   {
+    "module": "",
+    "imported": "default",
+    "alias": "default",
+    "line": 39,
+    "reexport": true
+   },
    {
     "module": "./harness.js",
     "imported": "describe",
@@ -2617,7 +3200,15 @@
     "line": 29
    },
    {
-    "fromQualifiedName": "go",
+    "fromQualifiedName": "default",
+    "name": "Base",
+    "receiver": "none",
+    "object": null,
+    "kind": "extends",
+    "line": 39
+   },
+   {
+    "fromQualifiedName": "default.go",
     "name": "go2",
     "receiver": "none",
     "object": null,
@@ -2631,6 +3222,22 @@
     "object": null,
     "kind": "calls",
     "line": 46
+   },
+   {
+    "fromQualifiedName": "b",
+    "name": "a",
+    "receiver": "none",
+    "object": null,
+    "kind": "references",
+    "line": 46
+   },
+   {
+    "fromQualifiedName": "c.m",
+    "name": "b",
+    "receiver": "none",
+    "object": null,
+    "kind": "references",
+    "line": 47
    },
    {
     "fromQualifiedName": "hoisted",

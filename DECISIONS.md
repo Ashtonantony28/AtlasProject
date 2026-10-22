@@ -379,3 +379,20 @@ contention can still push got near 5.
 ## 2026-10-22 — SG21: no sampling params, 16k max_tokens, incomplete completions are failures
 
 Requests send no `temperature`/`top_p`/`top_k` (current models and API `2026-10-21` reject them). Per-doc and `ask` `max_tokens` default to 16 000 (the non-streaming default; thinking counts toward it), so the budget reserves ~16k per call and a run stops ~16k short of `tokenBudget`. A `stop_reason` other than `end_turn`/`stop_sequence`, or empty text, is never stored: `docs` reports the target as failed and exits 1, `ask` errors.
+
+## 2026-10-22 — SG18: assigned/anonymous functions, namespaces, `references` edges
+
+Module-level `obj.m = function`, `C.prototype.m = …`, `C.prototype = { … }` and `exports.x = …`
+define symbols (a method under its object; an exported function for `exports.x`). This applies only
+outside function bodies, IIFEs excepted, so assignments in callbacks still define nothing.
+Anonymous `export default` / `module.exports =` functions and classes are named `default`. A
+`default` symbol stops the members of `export default { … }` from being importable by name. TS
+namespaces and `declare module` become kind `variable` (what TS emits) with qualified members,
+because kind `module` means "the file" to the resolver, search, embeddings and drift.
+`references` refs come from identifiers or member expressions in call arguments, arrays, object
+values and shorthands, JSX expressions, returns, declarators and assignments. The parser drops
+those whose root name is not bound at the top level (locals, params). The resolver emits only
+resolved edges to a function, method or class, and drift's neighbourhood hash picks them up.
+`forEachOfType`'s native cut-off rose from 100 to 500 descendants, because native matches are
+materialised and value nodes made them about 7× as many. Parse+insert median on got went ~3.6 →
+~4.2 ms/file (budget 5), and express stayed ~1.7.

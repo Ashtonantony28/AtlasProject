@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/params.ts
-source_hash: 1e460bf4cb020a8813153c8f3ced8253251ffdabd7edaae69da20923b26f37be
+source_hash: a4a3e703b2e1f3e65bcdf2cb306277bacab2d7628a72a76259007b4e865fee02
 ---
 # module src/core/params.ts
 
@@ -27,6 +27,8 @@ source_hash: 1e460bf4cb020a8813153c8f3ced8253251ffdabd7edaae69da20923b26f37be
 - `budgetSchema` — variable (src/core/params.ts:70)
 - `portSchema` — variable (src/core/params.ts:71)
 - `parseParams` — function (src/core/params.ts:74)
+- `numberArg` — function (src/core/params.ts:81)
+- `listArg` — function (src/core/params.ts:87)
 
 References: `src/core/params.ts:7`, `src/core/params.ts:9`, `src/core/params.ts:11`, `src/core/params.ts:19`, `src/core/params.ts:23`.
 
