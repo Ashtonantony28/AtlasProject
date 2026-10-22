@@ -555,6 +555,8 @@ resolver's import-first rule keeps those edges on the required module. `EXTRACTO
 (A13-01).
 
 
+
+
 ## 2026-10-22 — SG34: index runs yield, and calls with the same options share a queued run
 
 `runIndex` awaits `new Promise(setImmediate)` after the walk, after the parse loop, before
