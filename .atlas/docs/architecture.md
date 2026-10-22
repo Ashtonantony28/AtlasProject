@@ -1,13 +1,13 @@
 ---
 kind: architecture
 target: architecture
-source_hash: 576d028140c564d4973646e35ffe3a19f5432fdb154e847866c6b121ab153920
+source_hash: 1f3ce197694b421f24ac37005edbf3a000f3be14f3d27d629755c72f11674e79
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 189 files, 1217 symbols, 5405 edges
+**Totals:** 192 files, 1243 symbols, 5562 edges
 
 ## Modules
 
@@ -60,17 +60,17 @@ This codebase's modules collaborate through the graph above.
 - `scripts/audit3-patho.mjs` — javascript, loc=164, 29 symbols
 - `scripts/bench.mjs` — javascript, loc=93, 25 symbols
 - `scripts/copy-static.mjs` — javascript, loc=16, 3 symbols
-- `scripts/synthetic-repo.mjs` — javascript, loc=29, 1 symbols
+- `src/cli/commands/askCmd.ts` — typescript, loc=87, 2 symbols
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=349)
+- `src/core/db/database.ts` (degree=358)
+- `src/core/db/repo.ts` (degree=326)
 - `src/core/parse/ts.ts` (degree=294)
-- `src/core/db/repo.ts` (degree=288)
 - `src/mcp/server.ts` (degree=226)
-- `src/core/graph/modules.ts` (degree=167)
+- `src/core/graph/modules.ts` (degree=171)
+- `src/core/ingest/indexer.ts` (degree=160)
 - `src/core/synth/persist.ts` (degree=159)
-- `src/core/ingest/indexer.ts` (degree=158)
 - `scripts/audit2-reindex.mjs` (degree=107)
 - `test/synth/completion.test.ts` (degree=107)
 - `test/audit/audit-8.test.ts` (degree=106)

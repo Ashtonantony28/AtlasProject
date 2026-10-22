@@ -92,6 +92,28 @@ export function insertSymbol(db: DB, input: InsertSymbolInput): number {
   return Number(info.lastInsertRowid);
 }
 
+/** Row-for-row the same as calling `insertSymbol` for each input, in order (A10-02). */
+export function insertSymbols(db: DB, inputs: readonly InsertSymbolInput[]): void {
+  insertBatched(
+    db,
+    'INSERT INTO symbols (file_id, kind, name, signature, start_line, end_line, docstring, qualified_name, exported)',
+    9,
+    inputs,
+    (s, out) =>
+      out.push(
+        s.file_id,
+        s.kind,
+        s.name,
+        s.signature,
+        s.start_line,
+        s.end_line,
+        s.docstring,
+        s.qualified_name,
+        s.exported ? 1 : 0,
+      ),
+  );
+}
+
 export function getSymbolsForFile(db: DB, fileId: number): SymbolRow[] {
   return db
     .prepare('SELECT * FROM symbols WHERE file_id = ? ORDER BY start_line')
@@ -129,11 +151,47 @@ export function insertEdge(db: DB, input: InsertEdgeInput): number {
 }
 
 export function insertEdges(db: DB, edges: InsertEdgeInput[]): void {
-  const stmt = db.prepare(
-    `INSERT INTO edges (src_symbol, dst_symbol, kind, weak, meta) VALUES (?, ?, ?, ?, ?)`,
+  insertBatched(
+    db,
+    'INSERT INTO edges (src_symbol, dst_symbol, kind, weak, meta)',
+    5,
+    edges,
+    (e, out) => out.push(e.src_symbol, e.dst_symbol, e.kind, e.weak ? 1 : 0, e.meta ?? null),
   );
-  for (const e of edges) {
-    stmt.run(e.src_symbol, e.dst_symbol, e.kind, e.weak ? 1 : 0, e.meta ?? null);
+}
+
+// Multi-row INSERT chunk sizes, largest first. 64 rows × 9 columns stays far below SQLite's
+// bound-parameter limit; each size is one cached statement per table.
+const BATCH_SIZES = [64, 16, 4, 1];
+const batchSql = new Map<string, Map<number, string>>();
+
+/**
+ * Insert `rows` with multi-row `VALUES` statements (A10-02): one statement step per chunk
+ * instead of per row. Rows keep their order, so ids are assigned exactly as row-by-row inserts
+ * would assign them. Callers wrap this in a transaction as before.
+ */
+function insertBatched<T>(
+  db: DB,
+  head: string,
+  columns: number,
+  rows: readonly T[],
+  values: (row: T, out: unknown[]) => void,
+): void {
+  let sqls = batchSql.get(head);
+  if (!sqls) batchSql.set(head, (sqls = new Map()));
+  let i = 0;
+  while (i < rows.length) {
+    const n = BATCH_SIZES.find((size) => size <= rows.length - i)!;
+    let sql = sqls.get(n);
+    if (!sql) {
+      const tuple = `(${new Array<string>(columns).fill('?').join(', ')})`;
+      sqls.set(n, (sql = `${head} VALUES ${new Array<string>(n).fill(tuple).join(', ')}`));
+    }
+    const stmt = prepareCached(db, sql);
+    const params: unknown[] = [];
+    for (let k = i; k < i + n; k++) values(rows[k]!, params);
+    stmt.run(params);
+    i += n;
   }
 }
 
@@ -170,6 +228,18 @@ export function insertImport(db: DB, input: InsertImportInput): number {
   return Number(info.lastInsertRowid);
 }
 
+/** Row-for-row the same as calling `insertImport` for each input, in order (A10-02). */
+export function insertImports(db: DB, inputs: readonly InsertImportInput[]): void {
+  insertBatched(
+    db,
+    'INSERT INTO imports (file_id, module, imported, alias, start_line, reexport)',
+    6,
+    inputs,
+    (i, out) =>
+      out.push(i.file_id, i.module, i.imported, i.alias, i.start_line, i.reexport ? 1 : 0),
+  );
+}
+
 export function getImportsForFile(db: DB, fileId: number): ImportRow[] {
   return db
     .prepare('SELECT * FROM imports WHERE file_id = ? ORDER BY start_line')
@@ -183,14 +253,14 @@ export function getAllImports(db: DB): ImportRow[] {
 export type InsertRefInput = Omit<RefRow, 'id' | 'file_id'>;
 
 export function insertRefs(db: DB, fileId: number, refs: InsertRefInput[]): void {
-  const stmt = prepareCached(
+  insertBatched(
     db,
-    `INSERT INTO refs (file_id, src_qualified_name, name, receiver, object, kind, line)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    'INSERT INTO refs (file_id, src_qualified_name, name, receiver, object, kind, line)',
+    7,
+    refs,
+    (r, out) =>
+      out.push(fileId, r.src_qualified_name, r.name, r.receiver, r.object, r.kind, r.line),
   );
-  for (const r of refs) {
-    stmt.run(fileId, r.src_qualified_name, r.name, r.receiver, r.object, r.kind, r.line);
-  }
 }
 
 export function getAllRefs(db: DB): RefRow[] {

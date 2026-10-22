@@ -460,3 +460,20 @@ declare` is exported, Python `__all__ += [...]` extends a literal `__all__` (A9-
 links of a chain are skipped by node id, not `node.parent` (O(depth) in tree-sitter 0.21).
 Express/got/trpc top-level variables+functions: 1789/5047/5683 → 547/486/2240; callback
 locals 69%/90%/61% → 0%. The extractor version (SG25) must be bumped with this change.
+
+## 2026-10-22 — SG27: index cost stays linear on monorepos and deep `.gitignore` trees
+
+Python absolute imports probe only roots that hold the import's top-level name: one pass over
+the indexed `.py`/`.pyi` paths maps each segment name to the dirs that contain it, so a stdlib or
+third-party import is one map miss and a real one checks only its own roots, in the old order
+(results byte-identical on every fixture, got and Atlas). tsconfig `paths` keep TS precedence
+with an exact-key map plus star patterns bucketed by prefix, probed longest prefix first. The
+walker no longer re-derives every ancestor rule set's parent-directory verdict per entry: each
+set's verdict for the directory is carried down, a set whose patterns have no inner `/` or `**`
+is tested by entry name, and consecutive such sets are merged into one matcher (last matching
+rule wins either way), so a file costs one regex pass over the active rules. Inserts use cached
+multi-row `VALUES` statements (64/16/4/1 rows), which keep row order and ids. On got this cut
+insert time by about a third, but the parse+insert median stayed about 4.1 ms/file. The median
+file is about 85% parse (ts.ts/refs.ts traversal) and about 0.45 ms COMMIT, and refs were only 4%
+of the cost, so AUDIT-10's attribution of the SG18 regression to row-by-row ref inserts does not
+hold.

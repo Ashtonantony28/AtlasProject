@@ -51,7 +51,24 @@ interface TsConfig {
 
 interface PathsScope {
   baseUrl: string | null;
-  paths: { prefix: string; suffix: string; star: boolean; targets: string[]; base: string }[];
+  paths: PathsMatcher;
+}
+
+/** One tsconfig `paths` entry, split at its `*` (if any). */
+export interface PathAlias {
+  prefix: string;
+  suffix: string;
+  star: boolean;
+  targets: string[];
+  base: string;
+}
+
+interface PythonEnv {
+  roots: string[];
+  discovered: Map<string, string[]>;
+  heads: Map<string, Set<string>>;
+  /** The configured roots (in `roots` order) that hold a module or package named `top`. */
+  rootsHolding(top: string): string[];
 }
 
 interface WorkspacePkg {
@@ -71,9 +88,10 @@ export class ModuleResolver<T extends ModuleFile> {
   private readonly json = new Map<string, Record<string, unknown> | null>();
   private readonly tsconfigs = new Map<string, TsConfig | null>();
   private readonly scopes = new Map<string, PathsScope | null>();
+  private readonly matchers = new WeakMap<TsConfig['paths'], PathsMatcher>();
   private knownDirs: Set<string> | null = null;
   private workspaces: Map<string, WorkspacePkg | null> | null = null;
-  private python: { roots: string[]; discovered: Map<string, string[]> } | null = null;
+  private python: PythonEnv | null = null;
 
   constructor(
     private readonly root: string,
@@ -108,20 +126,7 @@ export class ModuleResolver<T extends ModuleFile> {
   private viaTsconfig(dir: string, spec: string): T | null {
     const scope = this.scopeFor(dir);
     if (!scope) return null;
-    let best: PathsScope['paths'][number] | null = null;
-    for (const p of scope.paths) {
-      const fits = p.star
-        ? spec.length >= p.prefix.length + p.suffix.length &&
-          spec.startsWith(p.prefix) &&
-          spec.endsWith(p.suffix)
-        : spec === p.prefix;
-      if (!fits) continue;
-      if (!p.star) {
-        best = p;
-        break;
-      }
-      if (!best || p.prefix.length > best.prefix.length) best = p;
-    }
+    const best = scope.paths.match(spec);
     if (best) {
       const star = best.star
         ? spec.slice(best.prefix.length, spec.length - best.suffix.length)
@@ -161,12 +166,22 @@ export class ModuleResolver<T extends ModuleFile> {
           }
         }
       }
-      scope = cfg && (cfg.paths.length || cfg.baseUrl !== null) ? toScope(cfg) : null;
+      scope =
+        cfg && (cfg.paths.length || cfg.baseUrl !== null)
+          ? { baseUrl: cfg.baseUrl, paths: this.matcher(cfg.paths) }
+          : null;
     } else {
       scope = key ? this.scopeFor(parentOf(key)) : null;
     }
     this.scopes.set(key, scope);
     return scope;
+  }
+
+  /** One compiled matcher per `paths` list; configs that `extends` a base share its list (A10-05). */
+  private matcher(paths: TsConfig['paths']): PathsMatcher {
+    let m = this.matchers.get(paths);
+    if (!m) this.matchers.set(paths, (m = new PathsMatcher(paths)));
+    return m;
   }
 
   private tsconfig(path: string, seen: Set<string>): TsConfig | null {
@@ -292,8 +307,20 @@ export class ModuleResolver<T extends ModuleFile> {
       while (dir !== '.' && this.byPath.has(normalizePosix(`${dir}/__init__.py`)))
         dir = posix.dirname(dir);
       const env = this.pythonRoots();
-      const found = env.discovered.get(rel.split('/')[0]!) ?? [];
-      roots = ['.', dir, ...env.roots, ...(found.length === 1 ? found : [])];
+      const top = rel.split('/')[0]!;
+      const found = env.discovered.get(top) ?? [];
+      if (/^[^/\\]+(\/[^/\\]+)*$/.test(rel)) {
+        // Only roots holding a `top` module or package can match (A10-01): an import that is
+        // not in the index (stdlib, third-party) costs one map lookup, not one per root.
+        const holders = env.heads.get(top);
+        if (!holders) return null;
+        roots = [];
+        for (const r of ['.', dir]) if (holders.has(normalizePosix(r))) roots.push(r);
+        for (const r of env.rootsHolding(top)) roots.push(r);
+        if (found.length === 1 && holders.has(found[0]!)) roots.push(found[0]!);
+      } else {
+        roots = ['.', dir, ...env.roots, ...(found.length === 1 ? found : [])];
+      }
     }
     for (const root of new Set(roots)) {
       const base = posix.join(root || '.', rel);
@@ -312,11 +339,15 @@ export class ModuleResolver<T extends ModuleFile> {
    * plus their `where` / `package_dir` / poetry `from` dirs), and top-level package name →
    * the dirs holding it as a package (`<root>/<name>/__init__.py` with no `<root>/__init__.py`).
    */
-  private pythonRoots(): { roots: string[]; discovered: Map<string, string[]> } {
+  private pythonRoots(): PythonEnv {
     if (this.python) return this.python;
     const roots: string[] = [];
+    const seen = new Set<string>();
     const add = (d: string): void => {
-      if (!roots.includes(d)) roots.push(d);
+      if (!seen.has(d)) {
+        seen.add(d);
+        roots.push(d);
+      }
     };
     for (const dir of this.dirsOfFiles()) {
       const entries = this.list(dir);
@@ -328,7 +359,21 @@ export class ModuleResolver<T extends ModuleFile> {
       if (entries.has('src')) add(joinRel(dir, 'src'));
     }
     const discovered = new Map<string, string[]>();
+    // heads: name → every dir D such that some indexed `.py`/`.pyi` path is `D/name.py[i]` or
+    // lies under `D/name/`. A candidate `<root>/<name>/…` can only exist if `root` is in it.
+    const heads = new Map<string, Set<string>>();
     for (const path of this.byPath.keys()) {
+      if (!path.endsWith('.py') && !path.endsWith('.pyi')) continue;
+      const segs = path.split('/');
+      let dir = '';
+      for (let i = 0; i < segs.length; i++) {
+        const seg = segs[i]!;
+        const name = i === segs.length - 1 ? seg.replace(/\.pyi?$/, '') : seg;
+        let set = heads.get(name);
+        if (!set) heads.set(name, (set = new Set()));
+        set.add(dir);
+        dir = dir ? `${dir}/${seg}` : seg;
+      }
       if (!path.endsWith('/__init__.py')) continue;
       const pkg = posix.dirname(path);
       const parent = parentOf(pkg);
@@ -336,7 +381,19 @@ export class ModuleResolver<T extends ModuleFile> {
       const name = posix.basename(pkg);
       discovered.set(name, [...(discovered.get(name) ?? []), parent]);
     }
-    this.python = { roots, discovered };
+    const order = new Map(roots.map((r, i) => [r, i]));
+    const memo = new Map<string, string[]>();
+    const rootsHolding = (top: string): string[] => {
+      let out = memo.get(top);
+      if (!out) {
+        out = [...(heads.get(top) ?? [])]
+          .filter((d) => order.has(d))
+          .sort((a, b) => order.get(a)! - order.get(b)!);
+        memo.set(top, out);
+      }
+      return out;
+    };
+    this.python = { roots, discovered, heads, rootsHolding };
     return this.python;
   }
 
@@ -454,20 +511,57 @@ function configDigest(root: string, path: string): string {
   return createHash('sha256').update(text).digest('hex');
 }
 
-function toScope(cfg: TsConfig): PathsScope {
-  return {
-    baseUrl: cfg.baseUrl,
-    paths: cfg.paths.map((p) => {
+/**
+ * tsconfig `paths` lookup with TypeScript's precedence: an exact (star-free) key wins, else
+ * the matching pattern with the longest prefix, first in declaration order on a tie. Exact
+ * keys sit in a map and star patterns are bucketed by prefix, so a lookup probes at most
+ * one bucket per distinct prefix length instead of every alias (A10-05).
+ */
+export class PathsMatcher {
+  /** Map and bucket lookups made by `match`, for the operation-count test. */
+  probes = 0;
+  private readonly exact = new Map<string, PathAlias>();
+  private readonly byPrefix = new Map<string, PathAlias[]>();
+  private readonly prefixLengths: number[];
+
+  constructor(paths: readonly { pattern: string; targets: string[]; base: string }[]) {
+    const lengths = new Set<number>();
+    for (const p of paths) {
       const star = p.pattern.indexOf('*');
-      return {
+      const alias: PathAlias = {
         prefix: star < 0 ? p.pattern : p.pattern.slice(0, star),
         suffix: star < 0 ? '' : p.pattern.slice(star + 1),
         star: star >= 0,
         targets: p.targets,
         base: p.base,
       };
-    }),
-  };
+      if (!alias.star) {
+        if (!this.exact.has(alias.prefix)) this.exact.set(alias.prefix, alias);
+        continue;
+      }
+      const bucket = this.byPrefix.get(alias.prefix);
+      if (bucket) bucket.push(alias);
+      else this.byPrefix.set(alias.prefix, [alias]);
+      lengths.add(alias.prefix.length);
+    }
+    this.prefixLengths = [...lengths].sort((a, b) => b - a);
+  }
+
+  match(spec: string): PathAlias | null {
+    this.probes++;
+    const hit = this.exact.get(spec);
+    if (hit) return hit;
+    for (const n of this.prefixLengths) {
+      if (n > spec.length) continue;
+      this.probes++;
+      const bucket = this.byPrefix.get(spec.slice(0, n));
+      if (!bucket) continue;
+      for (const p of bucket) {
+        if (spec.length >= n + p.suffix.length && spec.endsWith(p.suffix)) return p;
+      }
+    }
+    return null;
+  }
 }
 
 /** Candidate paths (relative to the package dir) for `name` or `name/sub`. */

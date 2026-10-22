@@ -1,16 +1,16 @@
 ---
 kind: file
 target: test/audit/audit-10.test.ts
-source_hash: 1148f3e5adef52bdd50a8619d5c7c8c247fb5eaef72081c15dee031a9e8565c8
+source_hash: ffb2c65e18e9e9c5e36ae632f42643a05454630c88c89a49cefffbe0bf8e9750
 ---
 # module test/audit/audit-10.test.ts
 
 `module test/audit/audit-10.test.ts` exposes the following public surface:
 
-- `PROJECTS` — variable (test/audit/audit-10.test.ts:11)
-- `CountingMap` — class (test/audit/audit-10.test.ts:14)
-- `CountingMap.get` — method (test/audit/audit-10.test.ts:16)
+- `PROJECTS` — variable (test/audit/audit-10.test.ts:10)
+- `CountingMap` — class (test/audit/audit-10.test.ts:13)
+- `CountingMap.get` — method (test/audit/audit-10.test.ts:15)
 
-References: `test/audit/audit-10.test.ts:11`, `test/audit/audit-10.test.ts:14`, `test/audit/audit-10.test.ts:16`, `test/audit/audit-10.test.ts:11`, `test/audit/audit-10.test.ts:14`.
+References: `test/audit/audit-10.test.ts:10`, `test/audit/audit-10.test.ts:13`, `test/audit/audit-10.test.ts:15`, `test/audit/audit-10.test.ts:10`, `test/audit/audit-10.test.ts:13`.
 
 _Generated offline (mock client)._
