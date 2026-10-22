@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/drift/undocumented.test.ts
-source_hash: e0aa7b17b0f80954d394e8193cc3b672cdb1ff9a7d871e80e875d565eeebd811
+source_hash: cf00b5f5a9f0817d8ebb53c2085bf85d886f576f80b8ae8eb1ef7f511e19c59d
 ---
 # module test/drift/undocumented.test.ts
 
@@ -9,15 +9,7 @@ source_hash: e0aa7b17b0f80954d394e8193cc3b672cdb1ff9a7d871e80e875d565eeebd811
 
 - `API` — variable (test/drift/undocumented.test.ts:15)
 - `PY` — variable (test/drift/undocumented.test.ts:23)
-- `dir` — variable (test/drift/undocumented.test.ts:32)
-- `root` — variable (test/drift/undocumented.test.ts:33)
-- `db` — variable (test/drift/undocumented.test.ts:34)
-- `docFor` — function (test/drift/undocumented.test.ts:49)
-- `report` — variable (test/drift/undocumented.test.ts:55)
-- `names` — variable (test/drift/undocumented.test.ts:56)
-- `names` — variable (test/drift/undocumented.test.ts:75)
-- `names` — variable (test/drift/undocumented.test.ts:84)
 
-References: `test/drift/undocumented.test.ts:15`, `test/drift/undocumented.test.ts:23`, `test/drift/undocumented.test.ts:32`, `test/drift/undocumented.test.ts:33`, `test/drift/undocumented.test.ts:34`.
+References: `test/drift/undocumented.test.ts:15`, `test/drift/undocumented.test.ts:23`, `test/drift/undocumented.test.ts:15`, `test/drift/undocumented.test.ts:23`.
 
 _Generated offline (mock client)._

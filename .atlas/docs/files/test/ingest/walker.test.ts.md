@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/ingest/walker.test.ts
-source_hash: fe826c91f1d32b2871637388945849427937211891b7449879b12b1af4e20411
+source_hash: 0da200ff3b0a2ba7796b6abfc5e1031860566b4ba619394afec06c763a3be61f
 ---
 # module test/ingest/walker.test.ts
 
@@ -9,12 +9,7 @@ source_hash: fe826c91f1d32b2871637388945849427937211891b7449879b12b1af4e20411
 
 - `__dirname` — variable (test/ingest/walker.test.ts:6)
 - `FIXTURE` — variable (test/ingest/walker.test.ts:7)
-- `files` — variable (test/ingest/walker.test.ts:11)
-- `rels` — variable (test/ingest/walker.test.ts:12)
-- `files` — variable (test/ingest/walker.test.ts:22)
-- `byPath` — variable (test/ingest/walker.test.ts:23)
-- `files` — variable (test/ingest/walker.test.ts:29)
 
-References: `test/ingest/walker.test.ts:6`, `test/ingest/walker.test.ts:7`, `test/ingest/walker.test.ts:11`, `test/ingest/walker.test.ts:12`, `test/ingest/walker.test.ts:22`.
+References: `test/ingest/walker.test.ts:6`, `test/ingest/walker.test.ts:7`, `test/ingest/walker.test.ts:6`, `test/ingest/walker.test.ts:7`.
 
 _Generated offline (mock client)._

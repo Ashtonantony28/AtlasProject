@@ -1,15 +1,12 @@
 ---
 kind: file
 target: test/cli/readonly.test.ts
-source_hash: 75115fc89e90b6486eea7ee69d8535027cd94d4118163245944b4ba262168b44
+source_hash: 29d0a5a6623b9dc71d50ef08e66611769988f4ed0622c994af74739148c19326
 ---
 # module test/cli/readonly.test.ts
 
 `module test/cli/readonly.test.ts` exposes the following public surface:
 
-- `dir` — variable (test/cli/readonly.test.ts:6)
-- `status` — variable (test/cli/readonly.test.ts:24)
-
-References: `test/cli/readonly.test.ts:6`, `test/cli/readonly.test.ts:24`, `test/cli/readonly.test.ts:6`, `test/cli/readonly.test.ts:24`.
+_No symbols extracted._
 
 _Generated offline (mock client)._

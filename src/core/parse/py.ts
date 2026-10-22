@@ -143,17 +143,28 @@ function isExported(ctx: Ctx, name: string): boolean {
   return ctx.all ? ctx.all.has(name) : !name.startsWith('_');
 }
 
-/** Names in a top-level `__all__ = [...]` / `(...)` made only of string literals; null otherwise. */
+/**
+ * Names in top-level `__all__ = [...]` / `(...)` and `__all__ += [...]` statements made only of
+ * string literals; null when any of them is not a literal.
+ */
 function literalAll(root: Node): Set<string> | null {
   let names: Set<string> | null = null;
   for (const stmt of root.namedChildren) {
     const assign = stmt.type === 'expression_statement' ? stmt.namedChildren[0] : null;
-    if (assign?.type !== 'assignment' || assign.childForFieldName('left')?.text !== '__all__')
+    const augmented = assign?.type === 'augmented_assignment';
+    if (
+      (assign?.type !== 'assignment' && !augmented) ||
+      assign.childForFieldName('left')?.text !== '__all__'
+    )
       continue;
+    if (augmented && assign.childForFieldName('operator')?.text !== '+=') return null;
     const right = assign.childForFieldName('right');
     if (!right || (right.type !== 'list' && right.type !== 'tuple')) return null;
     if (right.namedChildren.some((c) => c.type !== 'string')) return null;
-    names = new Set(right.namedChildren.map((c) => cleanPyString(c.text)));
+    const added = right.namedChildren.map((c) => cleanPyString(c.text));
+    // `+=` before any `=` extends an unknown list: treat as unknown.
+    if (augmented && !names) return null;
+    names = augmented ? new Set([...(names ?? []), ...added]) : new Set(added);
   }
   return names;
 }
