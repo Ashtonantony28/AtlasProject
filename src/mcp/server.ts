@@ -21,16 +21,18 @@ import {
   type DriftReport,
 } from '../core/drift/index.js';
 import {
+  affordableMaxTokens,
   budgeted,
   createAnthropicClient,
   createOfflineClient,
+  estimateInputTokens,
   findDoc,
   listDocs,
   TokenBudget,
   type LLMClient,
 } from '../core/synth/index.js';
 import { ask, DEFAULT_EXCERPT_LINES } from '../core/qa/index.js';
-import { loadConfig, writeDefaultConfig, type AtlasConfig } from '../core/config.js';
+import { loadConfig, resolvePaths, writeDefaultConfig, type AtlasConfig } from '../core/config.js';
 import { loadProject, requireIndexed } from '../core/project.js';
 import {
   askParams,
@@ -67,26 +69,60 @@ export function createMcpContext(opts: McpContextOptions): McpContext {
   // A missing root is an error (never created); an existing one gets `.atlas/index.db`.
   const { root, config, paths, docsDir } = loadProject(opts.root);
   const db = openDatabase(paths.dbPath);
-  const budget = new TokenBudget(config.tokenBudget);
-  let client: Promise<LLMClient> | undefined;
-  const make = (): Promise<LLMClient> =>
+  let client: { model: string; inner: Promise<LLMClient> } | undefined;
+  const make = (model: string): Promise<LLMClient> =>
     opts.llm
       ? Promise.resolve(opts.llm)
       : opts.offline
         ? Promise.resolve(createOfflineClient())
-        : createAnthropicClient(config.synthModel);
-  return {
+        : createAnthropicClient(model);
+  // Each call is charged to `ctx.budget` as it is when the call is made and when it returns.
+  const metered = (inner: LLMClient): LLMClient => ({
+    model: inner.model,
+    async complete(params) {
+      const maxTokens = affordableMaxTokens(ctx.budget, estimateInputTokens(params), params.maxTokens);
+      const res = await inner.complete({ ...params, maxTokens });
+      ctx.budget.record(res.inputTokens, res.outputTokens);
+      return res;
+    },
+  });
+  const ctx: McpContext = {
     db,
     root,
     config,
     docsDir,
-    budget,
+    budget: new TokenBudget(config.tokenBudget),
     llm: () => {
-      client ??= make().then((c) => budgeted(c, budget));
-      client.catch(() => (client = undefined));
-      return client;
+      const model = ctx.config.synthModel;
+      if (client?.model !== model) {
+        const entry = (client = { model, inner: make(model) });
+        entry.inner.catch(() => client === entry && (client = undefined));
+      }
+      return client.inner.then(metered);
     },
   };
+  return ctx;
+}
+
+/**
+ * Re-reads `.atlas/config.json` into `ctx`, like the CLI does per command. A new `tokenBudget`
+ * keeps the tokens spent so far; a new `synthModel` gets a new client on the next `ctx.llm()`.
+ * The open DB is not switched: a changed `indexPath` is an error until the server restarts.
+ */
+function reloadConfig(ctx: McpContext): AtlasConfig {
+  const config = loadConfig(ctx.root);
+  const { dbPath } = resolvePaths(ctx.root, config);
+  if (dbPath !== ctx.db.name) {
+    throw new Error(
+      `indexPath changed to '${config.indexPath}' after atlas mcp started; restart the server to use it (still serving ${ctx.db.name})`,
+    );
+  }
+  if (config.tokenBudget !== ctx.budget.cap) {
+    const { input, output } = ctx.budget.total();
+    ctx.budget = new TokenBudget(config.tokenBudget);
+    ctx.budget.record(input, output);
+  }
+  return (ctx.config = config);
 }
 
 function requireIndex(ctx: McpContext): void {
@@ -94,10 +130,11 @@ function requireIndex(ctx: McpContext): void {
 }
 
 // Like `atlas index`: writes a missing config and reads the current one on every call.
-// Concurrent calls queue in `indexRepo` (one run per DB at a time).
+// Concurrent calls queue in `indexRepo` (one run per DB at a time); a call with the same
+// options as a queued run that has not started shares that run.
 export async function handleIndexTool(ctx: McpContext, args: { force?: boolean }) {
   writeDefaultConfig(ctx.root);
-  const config = (ctx.config = loadConfig(ctx.root));
+  const config = reloadConfig(ctx);
   return indexRepo(ctx.db, ctx.root, {
     force: args.force ?? false,
     exclude: config.exclude,
@@ -231,6 +268,7 @@ export async function handleAskTool(
   args: { question: string; k?: number; expand?: number },
 ) {
   const { question, k, expand } = parseParams(AskParamsSchema, args);
+  reloadConfig(ctx);
   requireIndex(ctx);
   const llm = await ctx.llm();
   const result = await ask(ctx.db, llm, ctx.root, question, {

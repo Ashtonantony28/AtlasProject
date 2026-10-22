@@ -2,6 +2,7 @@ import type { Command } from 'commander';
 import { relative } from 'node:path';
 import { closeDatabase } from '../../core/db/index.js';
 import {
+  BudgetExhaustedError,
   createAnthropicClient,
   createOfflineClient,
   exportDocs,
@@ -76,6 +77,11 @@ export function registerDocsCommand(program: Command): void {
             const tag = e.kind === 'module' ? e.path : 'architecture';
             process.stdout.write(`  [${e.status}] ${tag}${e.reason ? ` (${e.reason})` : ''}\n`);
           },
+        }).catch((err: unknown) => {
+          // The cap came from --budget, so raising tokenBudget in the config would not help.
+          throw budget !== undefined && err instanceof BudgetExhaustedError
+            ? new BudgetExhaustedError(err.detail, 'raise --budget')
+            : err;
         });
         const exported = exportDocs(db, docsDir);
         process.stdout.write(

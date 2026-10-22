@@ -33,7 +33,9 @@ import {
   handleSymbolTool,
   type McpContext,
 } from '../../src/mcp/server.js';
+import { DEFAULT_CONFIG } from '../../src/core/config.js';
 import { gitStatus, makeGitRepo, SAMPLE } from '../cli/helpers.js';
+import { fakeAnthropic, message } from '../helpers/fakeAnthropic.js';
 
 const ROOT = resolve(__dirname, '../..');
 const TSX = join(ROOT, 'node_modules/.bin/tsx');
@@ -74,6 +76,11 @@ describe('MCP tool handlers', () => {
     cpSync(SAMPLE, root, { recursive: true });
     ctx = open();
   });
+  const editConfig = (patch: Record<string, unknown>): void => {
+    const cfg = join(root, '.atlas', 'config.json');
+    writeFileSync(cfg, JSON.stringify({ ...JSON.parse(readFileSync(cfg, 'utf8')), ...patch }));
+  };
+
   afterEach(() => {
     if (ctx.db.open) closeDatabase(ctx.db);
     vi.unstubAllEnvs();
@@ -122,6 +129,21 @@ describe('MCP tool handlers', () => {
     } finally {
       closeDatabase(par.db);
     }
+  });
+
+  it('parallel no-op atlas_index calls share runs: at most one running and one queued', async () => {
+    await handleIndexTool(ctx, {});
+    const single = counts(ctx.db);
+    const runRows = (): number =>
+      ctx.db.prepare('SELECT COUNT(*) FROM runs').pluck().get() as number;
+    const before = runRows();
+    const first = Array.from({ length: 6 }, () => handleIndexTool(ctx, {}));
+    await new Promise((r) => setTimeout(r, 0));
+    const later = Array.from({ length: 6 }, () => handleIndexTool(ctx, {}));
+    const stats = await Promise.all([...first, ...later]);
+    expect(runRows() - before).toBeLessThanOrEqual(2);
+    expect(stats.map((s) => s.filesIndexed)).toEqual(Array(12).fill(0));
+    expect(counts(ctx.db)).toEqual(single);
   });
 
   it('atlas_index queues behind another in-process index of the same DB file', async () => {
@@ -334,6 +356,40 @@ describe('MCP tool handlers', () => {
       expect(ctx.budget.remaining()).toBe(500);
     });
 
+    it('atlas_ask follows a config edit: a raised tokenBudget keeps the spend, a new synthModel a new client', async () => {
+      const fake = await fakeAnthropic((body) =>
+        message(body, {
+          content: [{ type: 'text', text: 'Circle.area [1]' }],
+          stop_reason: 'end_turn',
+          usage: { input_tokens: 300, output_tokens: 20 },
+        }),
+      );
+      vi.stubEnv('ANTHROPIC_BASE_URL', fake.url);
+      vi.stubEnv('ANTHROPIC_API_KEY', 'sk-ant-test');
+      try {
+        closeDatabase(ctx.db);
+        ctx = createMcpContext({ root });
+        expect((await handleAskTool(ctx, { question: 'circle area' })).model).toBe(ctx.config.synthModel);
+        editConfig({ tokenBudget: 99_000, synthModel: 'claude-test-model' });
+        const res = await handleAskTool(ctx, { question: 'circle area' });
+        expect(res.model).toBe('claude-test-model');
+        expect(fake.bodies.map((b) => b['model'])).toEqual([DEFAULT_CONFIG.synthModel, 'claude-test-model']);
+        expect(ctx.budget.total()).toMatchObject({ cap: 99_000, spent: 640 });
+        expect(res.budgetRemaining).toBe(99_000 - 640);
+      } finally {
+        await new Promise((r) => fake.server.close(r));
+      }
+    });
+
+    it('a changed indexPath fails atlas_ask and atlas_index until the server restarts', async () => {
+      editConfig({ indexPath: '.atlas/other.db' });
+      const restart = /indexPath changed to '\.atlas\/other\.db' after atlas mcp started; restart the server/;
+      await expect(handleAskTool(ctx, { question: 'circle area' })).rejects.toThrow(restart);
+      await expect(handleIndexTool(ctx, {})).rejects.toThrow(restart);
+      expect(existsSync(join(root, '.atlas', 'other.db'))).toBe(false);
+      expect(await handleSearchTool(ctx, { query: 'area', limit: 1 })).toHaveLength(1);
+    });
+
     it('atlas_ask without a key or --offline fails without leaking anything', async () => {
       closeDatabase(ctx.db);
       vi.stubEnv('ANTHROPIC_API_KEY', '');
@@ -369,6 +425,34 @@ describe('MCP server over an in-memory transport', () => {
     expect(tools.map((t) => t.name).sort()).toEqual(TOOLS);
     const search = tools.find((t) => t.name === 'atlas_search');
     expect(search?.inputSchema.required).toEqual(['query']);
+  });
+
+  it('a ping and a search sent while index runs are queued answer before the queue drains', async () => {
+    for (let i = 0; i < 40; i++)
+      writeFileSync(
+        join(dir, 'src', `gen${i}.ts`),
+        `export function gen${i}(): number { return ${i}; }\n`,
+      );
+    await client.callTool({ name: 'atlas_index', arguments: {} });
+    const order: string[] = [];
+    const runs = [true, false, true, false].map((force, i) =>
+      client
+        .callTool({ name: 'atlas_index', arguments: { force } })
+        .then(() => order.push(`index${i}`)),
+    );
+    const probes = new Promise<void>((done) =>
+      setTimeout(() => {
+        const ping = client.ping().then(() => order.push('ping'));
+        const search = client
+          .callTool({ name: 'atlas_search', arguments: { query: 'area' } })
+          .then(() => order.push('search'));
+        void Promise.all([ping, search]).then(() => done());
+      }, 0),
+    );
+    await Promise.all([...runs, probes]);
+    const drained = Math.max(...[0, 1, 2, 3].map((i) => order.indexOf(`index${i}`)));
+    expect(order.indexOf('ping')).toBeLessThan(drained);
+    expect(order.indexOf('search')).toBeLessThan(drained);
   });
 
   it('returns JSON text results', async () => {

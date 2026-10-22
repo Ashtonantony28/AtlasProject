@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/ingest/indexer.ts
-source_hash: c9f49e785f4ddde55c461c294b32be95608c66601003ffd12bc8f4ba333822d4
+source_hash: 5b4394090d998aa008b820136fd0cf1912b899b17e7e52fc03a17e34d684ddfd
 ---
 # module src/core/ingest/indexer.ts
 
@@ -13,10 +13,13 @@ source_hash: c9f49e785f4ddde55c461c294b32be95608c66601003ffd12bc8f4ba333822d4
 - `MAX_RESOLVER_DIAGNOSTICS` — variable (src/core/ingest/indexer.ts:75)
 - `IndexState` — interface (src/core/ingest/indexer.ts:78)
 - `lastState` — function (src/core/ingest/indexer.ts:86)
-- `queues` — variable (src/core/ingest/indexer.ts:104)
-- `dbFile` — function (src/core/ingest/indexer.ts:106)
-- `indexRepo` — function (src/core/ingest/indexer.ts:114)
-- `runIndex` — function (src/core/ingest/indexer.ts:135)
+- `Queue` — interface (src/core/ingest/indexer.ts:105)
+- `queues` — variable (src/core/ingest/indexer.ts:109)
+- `YIELD_MS` — variable (src/core/ingest/indexer.ts:112)
+- `dbFile` — function (src/core/ingest/indexer.ts:114)
+- `runKind` — function (src/core/ingest/indexer.ts:123)
+- `indexRepo` — function (src/core/ingest/indexer.ts:137)
+- `runIndex` — function (src/core/ingest/indexer.ts:167)
 
 References: `src/core/ingest/indexer.ts:30`, `src/core/ingest/indexer.ts:36`, `src/core/ingest/indexer.ts:43`, `src/core/ingest/indexer.ts:75`, `src/core/ingest/indexer.ts:78`.
 

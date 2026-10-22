@@ -72,7 +72,7 @@ describe('AUDIT-14 performance under load', () => {
   // synchronous behind microtask-only awaits), and SG29 chains queued runs with `.then`, so a
   // queue of N `atlas_index` calls blocks the MCP server's stdin for all N runs back to back:
   // a search, a ping or a cancellation sent meanwhile waits for the whole queue.
-  it.fails('A14-01: a timer set while three index runs are queued fires before the last run ends', async () => {
+  it('A14-01: a timer set while three index runs are queued fires before the last run ends', async () => {
     const root = join(dir, 'queue');
     writeDenseRepo(root, 30, 5);
     const db: DB = openDatabase(join(dir, 'queue.db'));
@@ -80,7 +80,9 @@ describe('AUDIT-14 performance under load', () => {
       await indexRepo(db, root, { skipEmbeddings: true });
       const order: string[] = [];
       const runs = [0, 1, 2].map((i) =>
-        indexRepo(db, root, { skipEmbeddings: true, force: true }).then(() => order.push(`run${i}`)),
+        indexRepo(db, root, { skipEmbeddings: true, force: true }).then(() =>
+          order.push(`run${i}`),
+        ),
       );
       setTimeout(() => order.push('timer'), 0);
       await Promise.all(runs);
