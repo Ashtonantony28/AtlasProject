@@ -4,9 +4,6 @@
 // asserts the correct behaviour and currently fails, reproducing one finding in AUDIT-20.md
 // (IDs A20-xx); when it is fixed it turns red and should become a plain `it`.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import Database from 'better-sqlite3';
-import * as sqliteVec from 'sqlite-vec';
-import { spawn } from 'node:child_process';
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -15,9 +12,7 @@ import {
   getAllEdges,
   getAllFiles,
   getAllSymbols,
-  MIGRATIONS,
   openDatabase,
-  runMigrations,
   type DB,
 } from '../../src/core/db/index.js';
 import { indexRepo, type IndexOptions } from '../../src/core/ingest/index.js';
@@ -321,91 +316,7 @@ describe('AUDIT-20 SG45 extractor stamps of unfinished runs', () => {
   });
 });
 
-// ---------------------------------------------------------------- SG45 migrations
-
-describe('AUDIT-20 SG45 migrations', () => {
-  it('G01: migrations run under a write lock taken before the version is re-read', () => {
-    const path = join(tmp(), 'index.db');
-    const a = new Database(path);
-    cleanup.push(() => a.close());
-    sqliteVec.load(a);
-    a.pragma('journal_mode = WAL');
-    // When A re-reads the version inside its transaction, B (another process, no wait) tries to
-    // migrate the same file. A must already hold the write lock, so B is refused, not A.
-    const prepare = a.prepare.bind(a);
-    let tried = false;
-    let other: unknown = 'not tried';
-    a.prepare = ((sql: string) => {
-      const stmt = prepare(sql);
-      if (!sql.includes('MAX(version)')) return stmt;
-      return {
-        get: (...args: unknown[]) => {
-          const v: unknown = stmt.get(...args);
-          if (a.inTransaction && !tried) {
-            tried = true;
-            const b = new Database(path, { timeout: 0 });
-            sqliteVec.load(b);
-            try {
-              runMigrations(b);
-              other = 'migrated';
-            } catch (err) {
-              other = (err as { code?: string }).code;
-            } finally {
-              b.close();
-            }
-          }
-          return v;
-        },
-      };
-    }) as typeof a.prepare;
-    expect(() => runMigrations(a)).not.toThrow();
-    expect(other).toBe('SQLITE_BUSY');
-    const v = prepare('SELECT MAX(version) AS v FROM _migrations').get() as { v: number };
-    expect(v.v).toBe(MIGRATIONS[MIGRATIONS.length - 1]!.version);
-  });
-
-  /** Another process holding the index's write lock (a long index transaction) for `ms`. */
-  async function holdWriteLock(path: string, ms: number): Promise<() => Promise<void>> {
-    const holder = spawn(
-      process.execPath,
-      [
-        '-e',
-        `const D = require(${JSON.stringify(require.resolve('better-sqlite3'))});
-         const db = new D(${JSON.stringify(path)});
-         db.pragma('journal_mode = WAL');
-         db.exec('BEGIN IMMEDIATE');
-         process.stdout.write('locked\\n');
-         setTimeout(() => { db.exec('COMMIT'); db.close(); }, ${ms});`,
-      ],
-      { stdio: ['ignore', 'pipe', 'inherit'] },
-    );
-    const exited = new Promise<void>((ok) => holder.once('exit', () => ok()));
-    cleanup.push(() => holder.kill());
-    await new Promise<void>((ok) => holder.stdout.once('data', () => ok()));
-    return () => exited;
-  }
-
-  it('G05: opening a fresh index while another process holds the write lock waits instead of failing', async () => {
-    const path = join(tmp(), 'index.db');
-    const done = await holdWriteLock(path, 400);
-    const t0 = Date.now();
-    const db = open(path); // blocks this thread until the holder commits
-    expect(Date.now() - t0).toBeGreaterThan(200);
-    const v = db.prepare('SELECT MAX(version) AS v FROM _migrations').get() as { v: number };
-    expect(v.v).toBe(MIGRATIONS[MIGRATIONS.length - 1]!.version);
-    await done();
-  });
-
-  it('G03: opening a migrated index takes no write lock, so it never waits behind a writer', async () => {
-    const path = join(tmp(), 'index.db');
-    closeDatabase(openDatabase(path));
-    const done = await holdWriteLock(path, 1500);
-    const t0 = Date.now();
-    open(path);
-    expect(Date.now() - t0).toBeLessThan(750);
-    await done();
-  });
-});
+// SG45 migrations: G01, G03 and G05 moved to test/db/locking.test.ts (SG65).
 
 // ---------------------------------------------------------------- SG50 carried edges
 
