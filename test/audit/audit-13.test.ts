@@ -150,7 +150,7 @@ describe('AUDIT-13 high', () => {
     expect(g.strong).toContain('app/use.py::<module> -imports-> app/conf.py::version');
   });
 
-  it.fails(
+  it(
     'A13-02 two index runs on one DB file that do not share the in-process queue (another process; here a symlinked path) do not duplicate symbols',
     async () => {
       const files: Record<string, string> = {};
@@ -171,7 +171,7 @@ describe('AUDIT-13 high', () => {
     },
   );
 
-  it.fails(
+  it(
     'A13-03 an index run interrupted after parsing (before the resolver ran) is re-resolved by the next plain run',
     async () => {
       const root = newRepo({

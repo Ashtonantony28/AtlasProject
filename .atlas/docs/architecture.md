@@ -1,13 +1,13 @@
 ---
 kind: architecture
 target: architecture
-source_hash: 1fb31edd5c658ca43e8d4db0654eb6b36b62a02bbbc89ed1a8bebb38f10e5eb4
+source_hash: 9f79bb353dfe9c726d89b592fceb6fe6076de0f7d6a4e5700addb9ade9e6fa17
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 197 files, 1331 symbols, 5968 edges
+**Totals:** 199 files, 1348 symbols, 6040 edges
 
 ## Modules
 
@@ -20,7 +20,6 @@ This codebase's modules collaborate through the graph above.
 - `fixtures/graph/py/pkg/sub/service.py` — python, loc=20, 2 symbols
 - `fixtures/graph/py/pkg/sub/tools.py` — python, loc=2, 1 symbols
 - `fixtures/graph/py/pkg/util.py` — python, loc=6, 2 symbols
-- `fixtures/graph/web/Button.tsx` — typescript, loc=5, 1 symbols
 - `fixtures/graph/web/app.tsx` — typescript, loc=18, 4 symbols
 - `fixtures/graph/web/cjs/Model.js` — javascript, loc=5, 2 symbols
 - `fixtures/graph/web/cjs/app.js` — javascript, loc=10, 2 symbols
@@ -29,7 +28,6 @@ This codebase's modules collaborate through the graph above.
 - `fixtures/graph/web/decoys.ts` — typescript, loc=15, 2 symbols
 - `fixtures/graph/web/geo.ts` — typescript, loc=15, 6 symbols
 - `fixtures/graph/web/handlers.js` — javascript, loc=18, 4 symbols
-- `fixtures/graph/web/ids.ts` — typescript, loc=5, 1 symbols
 - `fixtures/graph/web/legacy.cjs` — javascript, loc=8, 2 symbols
 - `fixtures/graph/web/measure.ts` — typescript, loc=8, 2 symbols
 - `fixtures/graph/web/routes.js` — javascript, loc=11, 3 symbols
@@ -60,18 +58,20 @@ This codebase's modules collaborate through the graph above.
 - `src/cli/commands/docsCmd.ts` — typescript, loc=100, 2 symbols
 - `src/cli/commands/driftCmd.ts` — typescript, loc=64, 2 symbols
 - `src/cli/commands/graphCmd.ts` — typescript, loc=70, 2 symbols
-- `src/cli/commands/indexCmd.ts` — typescript, loc=101, 6 symbols
+- `src/cli/commands/indexCmd.ts` — typescript, loc=103, 6 symbols
+- `src/cli/commands/init.ts` — typescript, loc=37, 2 symbols
+- `src/cli/commands/mcpCmd.ts` — typescript, loc=21, 2 symbols
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=383)
-- `src/core/db/repo.ts` (degree=354)
+- `src/core/db/database.ts` (degree=390)
+- `src/core/db/repo.ts` (degree=363)
 - `src/core/parse/ts.ts` (degree=296)
 - `src/mcp/server.ts` (degree=250)
+- `src/core/ingest/indexer.ts` (degree=186)
 - `src/core/graph/modules.ts` (degree=184)
-- `src/core/ingest/indexer.ts` (degree=176)
 - `src/core/synth/persist.ts` (degree=159)
-- `src/core/db/index.ts` (degree=108)
+- `src/core/db/index.ts` (degree=109)
 - `scripts/audit2-reindex.mjs` (degree=107)
 - `test/synth/completion.test.ts` (degree=107)
 

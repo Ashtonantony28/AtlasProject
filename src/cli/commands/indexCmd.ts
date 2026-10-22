@@ -47,7 +47,9 @@ export function registerIndexCommand(program: Command): void {
             ? `resolved ${stats.edges} edges (${stats.weakEdges} weak)` +
               (stats.resolveReason === 'resolver config changed'
                 ? ' after a resolver config change'
-                : '')
+                : stats.resolveReason === 'previous run interrupted'
+                  ? ' after an interrupted run'
+                  : '')
             : `edges: ${final.edges} (graph unchanged)`;
         process.stdout.write(
           [
