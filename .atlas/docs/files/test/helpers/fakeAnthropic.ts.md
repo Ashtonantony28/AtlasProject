@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/helpers/fakeAnthropic.ts
-source_hash: 03fcf30d0ff62a493478c228285d482f9c8037d0acea9830a989e96d316f3ed0
+source_hash: 38aaa54a5841830268cdd5ff465f486a7d9b7c5b75b8c6d54a9bca45378e8a48
 ---
 # module test/helpers/fakeAnthropic.ts
 

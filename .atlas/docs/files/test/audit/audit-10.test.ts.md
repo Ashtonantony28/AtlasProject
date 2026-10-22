@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/audit/audit-10.test.ts
-source_hash: a08fc1f5936434cce4a88e68e7c319c719874190742ac8cdce6392c7b9cc6abb
+source_hash: ffb2c65e18e9e9c5e36ae632f42643a05454630c88c89a49cefffbe0bf8e9750
 ---
 # module test/audit/audit-10.test.ts
 
@@ -10,20 +10,7 @@ source_hash: a08fc1f5936434cce4a88e68e7c319c719874190742ac8cdce6392c7b9cc6abb
 - `PROJECTS` — variable (test/audit/audit-10.test.ts:10)
 - `CountingMap` — class (test/audit/audit-10.test.ts:13)
 - `CountingMap.get` — method (test/audit/audit-10.test.ts:15)
-- `dir` — variable (test/audit/audit-10.test.ts:22)
-- `root` — variable (test/audit/audit-10.test.ts:23)
-- `byPath` — variable (test/audit/audit-10.test.ts:24)
-- `write` — function (test/audit/audit-10.test.ts:29)
-- `p` — variable (test/audit/audit-10.test.ts:35)
-- `resolver` — variable (test/audit/audit-10.test.ts:46)
-- `from` — variable (test/audit/audit-10.test.ts:47)
-- `N` — variable (test/audit/audit-10.test.ts:68)
-- `paths` — variable (test/audit/audit-10.test.ts:69)
-- `p` — variable (test/audit/audit-10.test.ts:77)
-- `m` — variable (test/audit/audit-10.test.ts:78)
-- `linear` — function (test/audit/audit-10.test.ts:80)
-- `specs` — variable (test/audit/audit-10.test.ts:96)
 
-References: `test/audit/audit-10.test.ts:10`, `test/audit/audit-10.test.ts:13`, `test/audit/audit-10.test.ts:15`, `test/audit/audit-10.test.ts:22`, `test/audit/audit-10.test.ts:23`.
+References: `test/audit/audit-10.test.ts:10`, `test/audit/audit-10.test.ts:13`, `test/audit/audit-10.test.ts:15`, `test/audit/audit-10.test.ts:10`, `test/audit/audit-10.test.ts:13`.
 
 _Generated offline (mock client)._

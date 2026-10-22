@@ -438,6 +438,29 @@ materialised and value nodes made them about 7× as many. Parse+insert median on
 
 No schema change: each index run stores `state` (`extractorVersion`, `resolverFingerprint`, extra resolver inputs, resolver diagnostics) in its `runs.stats_json`; the next run reads the last finished run's. A different or missing `extractorVersion` (`src/core/parse/version.ts`; the parse golden test refuses to regenerate without a bump) re-parses every file once without `--force`, and a file that fails to re-parse keeps its rows with a blank hash so it retries. This replaces "a migration that blanks `content_hash`" per parser fix, which SG11/SG18 forgot. Edges are rebuilt when a file changed or the resolver fingerprint differs: `RESOLVER_VERSION` plus every tsconfig/jsconfig, package.json (resolver fields only, so version bumps do not re-resolve), pnpm-workspace.yaml, pyproject.toml, setup.cfg and setup.py (presence) in a directory holding an indexed file or an ancestor, plus configs the last resolve read elsewhere (`extends` targets). One `readdir` per such directory instead of watching files; closes SG19's known gap. Resolver diagnostics go into `IndexStats` (first 20 + count, carried over on a no-op) and the CLI (first 10). Oversized files (optional `maxFileBytes`, default 1 MiB, not written by `init`) are reported per file and counted in `filesTooLarge` and `filesSkipped`, and are still pruned like an exclusion.
 
+## 2026-10-22 — SG26: function values are local scopes unless they are module wrappers
+
+A function value (arrow, `function` expression) met by the module-level walk is a local scope:
+its declarations are not symbols and its calls/values belong to the enclosing owner (A9-02). It
+is a **module wrapper**, walked as module scope, only when it is (1) the callee of a call, also
+through parentheses or `.call`/`.apply` (IIFE, `!function(){}()`), (2) an argument of a call
+whose callee is itself a function value (UMD: `(function (root, factory) {…})(this, function
+() {…})`, incl. rollup's parenthesised factory), or (3) the last argument of a call to the bare
+identifier `define` (AMD, incl. `define(function (require, exports, module) {…})`). Nothing
+else counts: `obj.define(…)`, webpack/browserify bundles and `describe`/`app.get`/`.then`
+callbacks are local. Methods of object literals that are not a scope (call arguments, arrays,
+returns) define nothing either. One property-definer shape is kept as API: `f(obj, 'name', fn)`
+with exactly three arguments (express `defineGetter`) and `Object/Reflect.defineProperty(obj,
+'name', { get|value: fn })` define method `obj.name` when `obj`'s head is a top-level symbol
+of the file and not an import binding (so `stub(fs, 'readFile', fn)` defines nothing). Also:
+chained assignments define the innermost target and alias every other member target (A9-12);
+`as const`/`satisfies` objects open a member scope (A9-07); `var app = exports =
+module.exports = {}` exports `app` (default export when the chain ends in an object), `export
+declare` is exported, Python `__all__ += [...]` extends a literal `__all__` (A9-11). Inner
+links of a chain are skipped by node id, not `node.parent` (O(depth) in tree-sitter 0.21).
+Express/got/trpc top-level variables+functions: 1789/5047/5683 → 547/486/2240; callback
+locals 69%/90%/61% → 0%. The extractor version (SG25) must be bumped with this change.
+
 ## 2026-10-22 — SG27: index cost stays linear on monorepos and deep `.gitignore` trees
 
 Python absolute imports probe only roots that hold the import's top-level name: one pass over

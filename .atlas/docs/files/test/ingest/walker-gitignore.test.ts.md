@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/ingest/walker-gitignore.test.ts
-source_hash: ab384fd0a36d02aba56feadc75ba96a14d4cb256ea1359c949c39c56b1c5c04a
+source_hash: 5e4b7f676c623100ea59ed42de80eadb443600ce87e0f1e1d7fea147d77dc133
 ---
 # module test/ingest/walker-gitignore.test.ts
 
@@ -14,12 +14,6 @@ source_hash: ab384fd0a36d02aba56feadc75ba96a14d4cb256ea1359c949c39c56b1c5c04a
 - `NAMES` — variable (test/ingest/walker-gitignore.test.ts:95)
 - `FILES` — variable (test/ingest/walker-gitignore.test.ts:96)
 - `randomTree` — function (test/ingest/walker-gitignore.test.ts:98)
-- `seed` — variable (test/ingest/walker-gitignore.test.ts:127)
-- `root` — variable (test/ingest/walker-gitignore.test.ts:128)
-- `got` — variable (test/ingest/walker-gitignore.test.ts:130)
-- `root` — variable (test/ingest/walker-gitignore.test.ts:139)
-- `w` — function (test/ingest/walker-gitignore.test.ts:141)
-- `got` — variable (test/ingest/walker-gitignore.test.ts:150)
 
 References: `test/ingest/walker-gitignore.test.ts:20`, `test/ingest/walker-gitignore.test.ts:26`, `test/ingest/walker-gitignore.test.ts:60`, `test/ingest/walker-gitignore.test.ts:68`, `test/ingest/walker-gitignore.test.ts:95`.
 

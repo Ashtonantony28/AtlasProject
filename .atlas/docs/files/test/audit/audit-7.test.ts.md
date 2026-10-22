@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/audit/audit-7.test.ts
-source_hash: af229643f357219da631965b1887850c30ae79f79be42fbc63a4941fcaac81a4
+source_hash: 7ae4d41466e84b8cf07a747cbbdd03489004ef6a7a72bb6f5cd96c1279ee3082
 ---
 # module test/audit/audit-7.test.ts
 
@@ -15,40 +15,6 @@ source_hash: af229643f357219da631965b1887850c30ae79f79be42fbc63a4941fcaac81a4
 - `indexed` — function (test/audit/audit-7.test.ts:69)
 - `mcp` — function (test/audit/audit-7.test.ts:75)
 - `fakeAnthropic` — function (test/audit/audit-7.test.ts:81)
-- `root` — variable (test/audit/audit-7.test.ts:91)
-- `fromCli` — variable (test/audit/audit-7.test.ts:93)
-- `fromMcp` — variable (test/audit/audit-7.test.ts:94)
-- `fake` — variable (test/audit/audit-7.test.ts:99)
-- `llm` — variable (test/audit/audit-7.test.ts:105)
-- `err` — variable (test/audit/audit-7.test.ts:106)
-- `fake` — variable (test/audit/audit-7.test.ts:118)
-- `llm` — variable (test/audit/audit-7.test.ts:123)
-- `root` — variable (test/audit/audit-7.test.ts:133)
-- `ctx` — variable (test/audit/audit-7.test.ts:134)
-- `seen` — variable (test/audit/audit-7.test.ts:135)
-- `total` — variable (test/audit/audit-7.test.ts:136)
-- `lastTruncated` — variable (test/audit/audit-7.test.ts:137)
-- `offset` — variable (test/audit/audit-7.test.ts:138)
-- `page` — variable (test/audit/audit-7.test.ts:139)
-- `root` — variable (test/audit/audit-7.test.ts:155)
-- `fake` — variable (test/audit/audit-7.test.ts:156)
-- `db` — variable (test/audit/audit-7.test.ts:163)
-- `empty` — variable (test/audit/audit-7.test.ts:165)
-- `report` — variable (test/audit/audit-7.test.ts:176)
-- `body` — variable (test/audit/audit-7.test.ts:187)
-- `root` — variable (test/audit/audit-7.test.ts:194)
-- `run` — variable (test/audit/audit-7.test.ts:198)
-- `root` — variable (test/audit/audit-7.test.ts:206)
-- `ctx` — variable (test/audit/audit-7.test.ts:207)
-- `client` — variable (test/audit/audit-7.test.ts:209)
-- `schema` — variable (test/audit/audit-7.test.ts:213)
-- `res` — variable (test/audit/audit-7.test.ts:217)
-- `root` — variable (test/audit/audit-7.test.ts:231)
-- `ctx` — variable (test/audit/audit-7.test.ts:232)
-- `root` — variable (test/audit/audit-7.test.ts:240)
-- `db` — variable (test/audit/audit-7.test.ts:242)
-- `handle` — variable (test/audit/audit-7.test.ts:246)
-- `res` — variable (test/audit/audit-7.test.ts:248)
 
 References: `test/audit/audit-7.test.ts:29`, `test/audit/audit-7.test.ts:30`, `test/audit/audit-7.test.ts:31`, `test/audit/audit-7.test.ts:42`, `test/audit/audit-7.test.ts:50`.
 
