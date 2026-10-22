@@ -1,7 +1,7 @@
 ---
 kind: file
 target: scripts/audit-repo.mjs
-source_hash: ab252dc0c1beebdd3772e779106c269b7c77053179cd31fbc0b9a2b0d6ae2e3b
+source_hash: ac094fa6136f75d41d67d301508dc4d949d430c34ae6d9f02060b21a932f9612
 ---
 # module scripts/audit-repo.mjs
 
