@@ -19,6 +19,7 @@ import {
   getFileByPath,
   nameBusy,
 } from '../db/index.js';
+import { immediate } from '../db/database.js';
 import { acquireIndexLock } from './lock.js';
 import { DEFAULT_MAX_BYTES, walkRepoReport, type WalkOptions } from './walker.js';
 import { sha256, countLoc } from './hash.js';
@@ -263,11 +264,14 @@ async function runIndex(
     anyFinished || !interrupted
       ? [prev.extractorVersion, ...stamps.filter((v) => v !== null)]
       : stamps;
-  const runId = startRun(db, null);
-  db.prepare('UPDATE runs SET stats_json = ? WHERE id = ?').run(
-    JSON.stringify({ state: { extractorVersion: EXTRACTOR_VERSION } }),
-    runId,
-  );
+  const runId = immediate(db, () => {
+    const id = startRun(db, null);
+    db.prepare('UPDATE runs SET stats_json = ? WHERE id = ?').run(
+      JSON.stringify({ state: { extractorVersion: EXTRACTOR_VERSION } }),
+      id,
+    );
+    return id;
+  });
   step.op = 'index write';
   const stats: IndexStats = {
     filesScanned: 0,
@@ -374,7 +378,7 @@ async function runIndex(
       continue;
     }
 
-    db.transaction(() => {
+    immediate(db, () => {
       // By path, not by the start-of-run snapshot: the row may be newer than the snapshot.
       const current = getFileByPath(db, file.relativePath);
       const carry = current ? carryEdges(db, current.id) : undefined;
@@ -431,7 +435,7 @@ async function runIndex(
           line: r.line,
         })),
       );
-    })();
+    });
     stats.symbols += parsed.symbols.length;
     stats.imports += parsed.imports.length;
     stats.filesIndexed++;
@@ -447,19 +451,19 @@ async function runIndex(
   await yieldIfDue(true);
   if (retry.length > 0) {
     const blank = db.prepare("UPDATE files SET content_hash = '' WHERE id = ?");
-    db.transaction(() => {
+    immediate(db, () => {
       for (const id of retry) blank.run(id);
-    })();
+    });
   }
 
   // Prune paths the walk no longer returns (deleted, renamed, now ignored or too large).
   if (existingByPath.size > 0) {
-    db.transaction(() => {
+    immediate(db, () => {
       for (const { id } of existingByPath.values()) {
         deleteEmbeddingsForFile(db, id);
         deleteFile(db, id);
       }
-    })();
+    });
     stats.filesRemoved = existingByPath.size;
   }
 
@@ -511,6 +515,6 @@ async function runIndex(
     resolverDiagnosticCount: diagnosticCount,
   };
   step.op = 'run stamp';
-  finishRun(db, runId, { ...stats, totals: counts(db), state });
+  immediate(db, () => finishRun(db, runId, { ...stats, totals: counts(db), state }));
   return stats;
 }

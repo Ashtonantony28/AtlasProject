@@ -597,3 +597,15 @@ reservations (prompt estimate + `max_tokens`) beside `ctx.budget`, so a config r
 replaces the budget (SG40) does not lose them; `TokenBudget` and the CLI's `budgeted` are
 unchanged.
 
+
+## 2026-10-22 — SG80: write transactions take the write lock up front and poll for it
+
+In WAL mode a deferred transaction that reads first gets `SQLITE_BUSY` at once, without the busy
+wait, when another connection holds the write lock (A23-01). Every write transaction that another
+process can race (index-run steps, `upsertDoc`, `deleteFile`'s tombstone) now goes through
+`immediate(db, fn)` in `core/db/database.ts`: `BEGIN IMMEDIATE`, retried every ~10 ms until the same
+5 s busy timeout. The retry replaces SQLite's own busy handler for the BEGIN only, because that
+handler sleeps up to 100 ms between tries and missed a writer's 20 ms gaps until the timeout ran out
+(about 1 in 6 A23-01 runs). `fn` never runs twice: only a BEGIN that failed is retried. `nameBusy`
+appends one remedy (`(another process is writing the index; retry when it finishes)`) and names an
+error once; `atlas docs` names its writes `docs write`.

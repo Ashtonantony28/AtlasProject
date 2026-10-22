@@ -1,6 +1,6 @@
 import type { Command } from 'commander';
 import { relative } from 'node:path';
-import { closeDatabase } from '../../core/db/index.js';
+import { closeDatabase, nameBusy } from '../../core/db/index.js';
 import {
   BudgetExhaustedError,
   createAnthropicClient,
@@ -67,17 +67,20 @@ export function registerDocsCommand(program: Command): void {
           ? createOfflineClient()
           : await createAnthropicClient(model);
 
-        importPersistedDocs(db, docsDir);
-        const stats = await synthesizeDocs(db, llm, {
-          root,
-          tokenBudget: budget ?? config.tokenBudget,
-          force: opts.force ?? false,
-          onProgress: (e) => {
-            if (!opts.verbose) return;
-            const tag = e.kind === 'module' ? e.path : 'architecture';
-            process.stdout.write(`  [${e.status}] ${tag}${e.reason ? ` (${e.reason})` : ''}\n`);
-          },
-        }).catch((err: unknown) => {
+        const stats = await (async () => {
+          importPersistedDocs(db, docsDir);
+          return synthesizeDocs(db, llm, {
+            root,
+            tokenBudget: budget ?? config.tokenBudget,
+            force: opts.force ?? false,
+            onProgress: (e) => {
+              if (!opts.verbose) return;
+              const tag = e.kind === 'module' ? e.path : 'architecture';
+              process.stdout.write(`  [${e.status}] ${tag}${e.reason ? ` (${e.reason})` : ''}\n`);
+            },
+          });
+        })().catch((err: unknown) => {
+          nameBusy(err, 'docs write');
           // The cap came from --budget, so raising tokenBudget in the config would not help.
           throw budget !== undefined && err instanceof BudgetExhaustedError
             ? new BudgetExhaustedError(err.detail, 'raise --budget')

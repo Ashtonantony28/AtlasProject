@@ -29,6 +29,7 @@ import {
   clearEdges,
 } from '../db/index.js';
 import type { EdgeKind, ImportRow, InsertEdgeInput, RefRow, SymbolRow } from '../db/index.js';
+import { immediate } from '../db/database.js';
 import { ModuleResolver } from './modules.js';
 
 interface FileCtx {
@@ -70,7 +71,7 @@ export interface ResolveStats {
 }
 
 export function resolveGraph(db: DB, opts: ResolveOptions): ResolveStats {
-  return db.transaction(() => resolveAll(db, opts.root))();
+  return immediate(db, () => resolveAll(db, opts.root));
 }
 
 function resolveAll(db: DB, root: string): ResolveStats {
