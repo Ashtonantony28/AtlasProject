@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   type DB,
@@ -14,7 +14,9 @@ import {
   finishRun,
   counts,
   getLastRunStats,
+  getFileByPath,
 } from '../db/index.js';
+import { acquireIndexLock } from './lock.js';
 import { DEFAULT_MAX_BYTES, walkRepoReport, type WalkOptions } from './walker.js';
 import { sha256, countLoc } from './hash.js';
 import { parseSourceOrThrow } from '../parse/parser.js';
@@ -56,7 +58,14 @@ export interface IndexStats {
   // (`from` is null for an index older than the recorded version).
   extractorUpgrade?: { from: number | null; to: number };
   // Why edges were rebuilt this run; null when the stored graph was kept.
-  resolveReason: 'forced' | 'files changed' | 'resolver config changed' | 'no edges' | null;
+  // 'previous run interrupted': an index run started after the last finished one never finished.
+  resolveReason:
+    | 'forced'
+    | 'files changed'
+    | 'previous run interrupted'
+    | 'resolver config changed'
+    | 'no edges'
+    | null;
   // Unreadable or malformed resolver configs, ambiguous workspace packages (first
   // MAX_RESOLVER_DIAGNOSTICS); from the last resolve when this run kept the graph.
   resolverDiagnostics: string[];
@@ -91,12 +100,27 @@ function lastState(db: DB): IndexState {
 }
 
 // Runs on one DB file (or in-memory connection) queue: each starts after the previous settles,
-// so no two runs snapshot `files` and insert the same symbols.
+// so no two runs snapshot `files` and insert the same symbols; other processes wait on the file lock.
 const queues = new Map<unknown, Promise<void>>();
 
+function dbFile(db: DB): string {
+  try {
+    return realpathSync(db.name);
+  } catch {
+    return resolve(db.name);
+  }
+}
+
 export function indexRepo(db: DB, root: string, opts: IndexOptions = {}): Promise<IndexStats> {
-  const key = db.memory ? db : resolve(db.name);
-  const run = (queues.get(key) ?? Promise.resolve()).then(() => runIndex(db, root, opts));
+  const key = db.memory ? db : dbFile(db);
+  const run = (queues.get(key) ?? Promise.resolve()).then(async () => {
+    const release = db.memory ? undefined : await acquireIndexLock(key as string);
+    try {
+      return await runIndex(db, root, opts);
+    } finally {
+      release?.();
+    }
+  });
   const tail = run.then(
     () => undefined,
     () => undefined,
@@ -111,6 +135,12 @@ export function indexRepo(db: DB, root: string, opts: IndexOptions = {}): Promis
 async function runIndex(db: DB, root: string, opts: IndexOptions): Promise<IndexStats> {
   const t0 = Date.now();
   const prev = lastState(db);
+  const interrupted =
+    db
+      .prepare(
+        'SELECT 1 FROM runs WHERE finished_at IS NULL AND id > (SELECT COALESCE(MAX(id), 0) FROM runs WHERE finished_at IS NOT NULL)',
+      )
+      .get() !== undefined;
   const runId = startRun(db, null);
   const stats: IndexStats = {
     filesScanned: 0,
@@ -216,11 +246,13 @@ async function runIndex(db: DB, root: string, opts: IndexOptions): Promise<Index
     }
 
     db.transaction(() => {
-      if (existing) {
-        deleteEmbeddingsForFile(db, existing.id);
-        deleteSymbolsForFile(db, existing.id);
-        deleteImportsForFile(db, existing.id);
-        deleteRefsForFile(db, existing.id);
+      // By path, not by the start-of-run snapshot: the row may be newer than the snapshot.
+      const current = getFileByPath(db, file.relativePath);
+      if (current) {
+        deleteEmbeddingsForFile(db, current.id);
+        deleteSymbolsForFile(db, current.id);
+        deleteImportsForFile(db, current.id);
+        deleteRefsForFile(db, current.id);
       }
       const fileId = upsertFile(db, {
         path: file.relativePath,
@@ -304,6 +336,7 @@ async function runIndex(db: DB, root: string, opts: IndexOptions): Promise<Index
   let resolverInputs = prev.resolverInputs;
   if (opts.force === true) stats.resolveReason = 'forced';
   else if (stats.filesIndexed > 0 || stats.filesRemoved > 0) stats.resolveReason = 'files changed';
+  else if (interrupted) stats.resolveReason = 'previous run interrupted';
   else if (currentTotals.edges === 0) stats.resolveReason = 'no edges';
   else if (resolverFingerprint(root, indexedPaths(), prev.resolverInputs).hash !== fingerprint)
     stats.resolveReason = 'resolver config changed';
