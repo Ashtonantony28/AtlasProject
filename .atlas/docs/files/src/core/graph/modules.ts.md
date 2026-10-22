@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/graph/modules.ts
-source_hash: f0a75d3b15a4f15a018347547493a8a00bb0fa4b792c6a9982cabfba8159ca24
+source_hash: 7cd96e72a71f5625868bf8f95fa3c67d5c7ce547d9cc4710b0367e832cc7b809
 ---
 # module src/core/graph/modules.ts
 
