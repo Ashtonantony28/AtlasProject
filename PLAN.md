@@ -59,7 +59,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 | SG19 | Resolve tsconfig `paths`/`baseUrl`, workspace packages and Python src layouts (A5-02, A5-07) | SG10 | Claude (thread) | proposed (from AUDIT-5) |
 | SG20 | Walker skip list follows `.gitignore` and config, not hard-coded names at any depth; BOM-safe doc front matter; ci-comment uses totals (A5-03, A5-08, A5-09, A7-04) | SG17 | Claude (thread) | proposed (from AUDIT-5) |
 | SG21 | LLM client works on current models: no sampling params, adequate `max_tokens`, `stop_reason` refusal/max_tokens never stored as a complete doc (A7-01, A7-03, A7-10) | SG7 | Claude (thread) | proposed (from AUDIT-7) |
-| SG22 | Graph paging keeps cross-page edges and reports `truncated` consistently; empty-index behaviour agrees across CLI and MCP (A7-02, A7-05, A7-12) | SG15 | Claude (thread) | proposed (from AUDIT-7) |
+| SG22 | Graph paging keeps cross-page edges and reports `truncated` consistently; empty-index behaviour agrees across CLI and MCP (A7-02, A7-05, A7-12) | SG15 | Claude (thread) | done |
 | SG23 | Perf budget tests run serially in their own vitest project so load cannot fail them; same limits (A6-06) | SG14 | Claude (thread) | proposed (from AUDIT-6) |
 
 ### SG0: Shared interfaces + bench harness

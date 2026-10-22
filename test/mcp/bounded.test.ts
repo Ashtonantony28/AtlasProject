@@ -76,13 +76,10 @@ describe('bounded MCP responses on an index larger than the limits', () => {
     expect(graph.totals.edges).toBeGreaterThan(graph.edges.length);
     expect(graph.truncated).toBe(true);
     const ids = new Set(graph.nodes.map((n) => n.id));
-    for (const e of graph.edges) {
-      if (e.src !== null) expect(ids.has(e.src)).toBe(true);
-      if (e.dst !== null) expect(ids.has(e.dst)).toBe(true);
-    }
+    for (const e of graph.edges) expect(ids.has(e.src!)).toBe(true);
     const rest = handleGraphTool(ctx, { offset: 1000 }) as GraphJson;
     expect(rest.nodes).toHaveLength(SYMBOLS - 1000);
-    expect(rest.truncated).toBe(false);
+    expect(rest.truncated).toBe(true);
     expect(rest.nodes[0]!.id).toBeGreaterThan(graph.nodes.at(-1)!.id);
     const capped = handleGraphTool(ctx, { limit: 50, edgeLimit: 3 }) as GraphJson;
     expect(capped.nodes).toHaveLength(50);

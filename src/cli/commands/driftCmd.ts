@@ -32,7 +32,7 @@ export function registerDriftCommand(program: Command): void {
         limit: numberArg(opts.limit),
         offset: numberArg(opts.offset),
       });
-      const { db, root } = openProjectIndex(opts.cwd ?? '.');
+      const { db, root } = openProjectIndex(opts.cwd ?? '.', { indexed: true });
       try {
         let full;
         try {

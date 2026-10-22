@@ -3,7 +3,7 @@
 
 import { existsSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { type DB, openDatabase } from './db/index.js';
+import { closeDatabase, counts, type DB, openDatabase } from './db/index.js';
 import { type AtlasConfig, loadConfig, resolvePaths, type ResolvedPaths } from './config.js';
 
 export interface Project {
@@ -29,15 +29,28 @@ export function loadProject(root: string): Project {
   return { root: abs, config, paths, docsDir: join(paths.atlasDir, 'docs') };
 }
 
-/** Open an existing index; never creates `.atlas/` or the DB. */
+/** Throws unless at least one file is indexed; `next` says how to fix it on this surface. */
+export function requireIndexed(db: DB, next = 'run `atlas index` first'): void {
+  if (counts(db).files === 0) throw new Error(`index is empty: ${next}`);
+}
+
+/** Open an existing index; never creates `.atlas/` or the DB. `indexed` also rejects an empty one. */
 export function openProjectIndex(
   root: string,
-  opts: { readonly?: boolean } = {},
+  { indexed, ...opts }: { readonly?: boolean; indexed?: boolean } = {},
 ): Project & { db: DB } {
   const project = loadProject(root);
   if (!existsSync(project.paths.dbPath)) {
     throw new Error(`no index at ${project.paths.dbPath}: run \`atlas index\` first`);
   }
   const db = openDatabase(project.paths.dbPath, { ...opts, fileMustExist: true });
+  if (indexed) {
+    try {
+      requireIndexed(db);
+    } catch (err) {
+      closeDatabase(db);
+      throw err;
+    }
+  }
   return { ...project, db };
 }

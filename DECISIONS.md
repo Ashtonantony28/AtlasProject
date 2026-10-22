@@ -375,3 +375,20 @@ ms/file. Warm parse alone: express 3.5 → 1.25, got 5.1 → 2.75. What is left 
 got's median file is tree-sitter's own parse (~1.3 ms cold), the cursor walk
 (~1.4 ms cold) and inserts (~0.8 ms, a third of it the FTS trigger), so heavy
 contention can still push got near 5.
+
+## 2026-10-22 — SG22: graph pages own their nodes' outgoing edges
+A7-02: a page used to return only edges with both endpoints on it, so paging
+lost almost every edge. Now an edge belongs to the page holding its `src` (its
+`dst` when `src` is null) and its far endpoint, which must be in scope, may be
+on another page; paging through all nodes yields each in-scope edge exactly
+once and `totals.edges` is their sum. Chosen over independently paged edges
+because it keeps the published params (`limit`/`edgeLimit`/`offset`) and
+fields unchanged, and over far-endpoint stubs to keep pages small. Unscoped
+pages select owned edges by id range with `LIMIT edgeLimit+1`; scoped pages
+read only `src IN page` rows (a subset of what they read before, so A6-01 is no
+worse; `totals.edges` still materialises the scope's edges). `truncated` now
+matches drift: true when `offset > 0`, more nodes follow, or `edgeLimit` cut
+the page. The dashboard names what was cut (symbols, or else edges) (A7-12).
+A7-05: `search`, `graph`, `ask` and `drift` reject an empty index like the MCP
+tools, via `openProjectIndex(…, { indexed: true })` / `requireIndexed`, with
+the same "index is empty: <next step>" message.

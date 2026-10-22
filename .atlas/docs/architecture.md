@@ -1,19 +1,18 @@
 ---
 kind: architecture
 target: architecture
-source_hash: 4fcc30dbd89765f400cea30d45e7e00978115b84082cbf2ebded4bc6422b745d
+source_hash: 1e9465ce39c517751a52fb546932867bf1ba392dfd5e1b93a4286a4a654f60eb
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 163 files, 1944 symbols, 4842 edges
+**Totals:** 164 files, 2002 symbols, 4970 edges
 
 ## Modules
 
 - `eslint.config.js` — javascript, loc=32, 0 symbols
 - `fixtures/graph/py/pkg/__init__.py` — python, loc=1, 0 symbols
-- `fixtures/graph/py/pkg/api/__init__.py` — python, loc=2, 0 symbols
 - `fixtures/graph/py/pkg/api/star_src.py` — python, loc=2, 1 symbols
 - `fixtures/graph/py/pkg/api/views.py` — python, loc=2, 1 symbols
 - `fixtures/graph/py/pkg/models.py` — python, loc=14, 5 symbols
@@ -31,18 +30,19 @@ This codebase's modules collaborate through the graph above.
 - `fixtures/graph/web/decoys.ts` — typescript, loc=15, 2 symbols
 - `fixtures/graph/web/ids.ts` — typescript, loc=5, 1 symbols
 - `fixtures/graph/web/legacy.cjs` — javascript, loc=8, 2 symbols
+- `fixtures/graph/web/lib/index.mts` — typescript, loc=3, 1 symbols
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=300)
+- `src/core/db/database.ts` (degree=307)
 - `src/core/db/repo.ts` (degree=265)
-- `src/mcp/server.ts` (degree=221)
+- `src/mcp/server.ts` (degree=239)
 - `src/core/parse/ts.ts` (degree=164)
 - `src/core/synth/persist.ts` (degree=147)
 - `src/core/ingest/indexer.ts` (degree=136)
+- `test/graph/paging.test.ts` (degree=134)
 - `test/audit/audit-4.test.ts` (degree=133)
 - `test/mcp/server.test.ts` (degree=120)
 - `test/audit/audit-3.test.ts` (degree=116)
-- `test/audit/audit-7.test.ts` (degree=111)
 
 _Generated offline (mock client)._

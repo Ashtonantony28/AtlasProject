@@ -155,7 +155,7 @@ describe('AUDIT-7 findings', () => {
     },
   );
 
-  it.fails(
+  it(
     'A7-02: paging atlas_graph through every node returns every edge in scope',
     async () => {
       const root = await indexed();
@@ -216,7 +216,7 @@ describe('AUDIT-7 findings', () => {
     expect(body).toMatch(/3 stale doc/);
   });
 
-  it.fails(
+  it(
     'A7-05: `drift` on an empty index fails like atlas_drift instead of passing',
     async () => {
       const root = sampleCopy();
