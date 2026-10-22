@@ -1,4 +1,7 @@
-import type { LLMClient } from './llmClient.js';
+import type { LLMCallParams, LLMClient } from './llmClient.js';
+
+/** Smallest output worth a call: one whose budget cannot pay this after its prompt is refused. */
+export const MIN_OUTPUT_TOKENS = 1024;
 
 /**
  * Simple, monotonic token budget enforcer. Subsystems call `charge()` before a
@@ -41,20 +44,39 @@ export class TokenBudget {
   }
 }
 
-/** Refuses any call whose input (~3 chars/token) + max output would exceed the budget. */
+/** Prompt estimate: ~3 chars/token over the system prompt and every message. */
+export function estimateInputTokens(params: Pick<LLMCallParams, 'system' | 'messages'>): number {
+  const chars =
+    (params.system?.length ?? 0) + params.messages.reduce((n, m) => n + m.content.length, 0);
+  return Math.ceil(chars / 3);
+}
+
+/**
+ * `maxTokens` capped to what the budget can pay after `inputTokens`. Throws when that is below
+ * MIN_OUTPUT_TOKENS (or `maxTokens`, if smaller).
+ */
+export function affordableMaxTokens(
+  budget: TokenBudget,
+  inputTokens: number,
+  maxTokens: number,
+): number {
+  const remaining = budget.remaining();
+  const floor = Math.min(maxTokens, MIN_OUTPUT_TOKENS);
+  if (remaining - inputTokens < floor) {
+    throw new Error(
+      `token budget exhausted: a call needs ~${inputTokens + floor} tokens (~${inputTokens} prompt + ${floor} output), ${remaining} of ${budget.cap} left; raise tokenBudget`,
+    );
+  }
+  return Math.min(maxTokens, remaining - inputTokens);
+}
+
+/** Caps each call's max_tokens to the remaining budget; refuses calls it cannot pay (see affordableMaxTokens). */
 export function budgeted(inner: LLMClient, budget: TokenBudget): LLMClient {
   return {
     model: inner.model,
     async complete(params) {
-      const chars =
-        (params.system?.length ?? 0) + params.messages.reduce((n, m) => n + m.content.length, 0);
-      const reserve = Math.ceil(chars / 3) + params.maxTokens;
-      if (reserve > budget.remaining()) {
-        throw new Error(
-          `token budget exhausted: call needs ~${reserve} tokens, ${budget.remaining()} of ${budget.cap} left`,
-        );
-      }
-      const res = await inner.complete(params);
+      const maxTokens = affordableMaxTokens(budget, estimateInputTokens(params), params.maxTokens);
+      const res = await inner.complete({ ...params, maxTokens });
       budget.record(res.inputTokens, res.outputTokens);
       return res;
     },

@@ -273,12 +273,12 @@ describe('synthesizeDocs never stores an incomplete completion (A7-03)', () => {
     for (const c of [...a.calls, ...b.calls]) expect(c).not.toHaveProperty('temperature');
   });
 
-  it('the budget still reserves the per-doc cap before each call', async () => {
+  it('a budget below one full call caps max_tokens instead of skipping', async () => {
     const { root, db } = await indexedDb();
     const llm = scripted({ content: '# ok' });
     const stats = await synthesizeDocs(db, llm, { root, tokenBudget: DOC_MAX_TOKENS });
-    expect(llm.calls).toHaveLength(0);
-    expect(stats.modulesSkipped).toBe(4);
+    expect(stats.modulesGenerated).toBe(4);
+    expect(llm.calls[0]?.maxTokens).toBeLessThan(DOC_MAX_TOKENS);
   });
 });
 

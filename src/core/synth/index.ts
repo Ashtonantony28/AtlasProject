@@ -8,7 +8,13 @@ export {
   DOC_MAX_TOKENS,
 } from './llmClient.js';
 export type { LLMClient, LLMResult, LLMCallParams, LLMMessage } from './llmClient.js';
-export { budgeted, TokenBudget } from './budget.js';
+export {
+  affordableMaxTokens,
+  budgeted,
+  estimateInputTokens,
+  MIN_OUTPUT_TOKENS,
+  TokenBudget,
+} from './budget.js';
 export {
   buildModuleContext,
   buildArchitectureContext,

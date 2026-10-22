@@ -206,7 +206,7 @@ describe('AUDIT-11 consistent surfaces (pinned)', () => {
 });
 
 describe('AUDIT-11 findings', () => {
-  it.fails(
+  it(
     'A11-01: a tokenBudget that validates either produces docs or fails, instead of skipping everything with exit 0',
     async () => {
       const root = await indexed();
@@ -225,7 +225,7 @@ describe('AUDIT-11 findings', () => {
     expect(counts(ctx.db).symbols).toBe(24);
   });
 
-  it.fails('A11-03: `docs` on an empty index fails like the other read commands, without an LLM call', async () => {
+  it('A11-03: `docs` on an empty index fails like the other read commands, without an LLM call', async () => {
     const root = sampleCopy();
     await cli(['init', '--cwd', root]);
     const run = await cli(['docs', '--offline', '--cwd', root]);
