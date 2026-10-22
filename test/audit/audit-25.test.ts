@@ -177,21 +177,18 @@ describe('A25-01 (high) a new index file is linked in already in WAL mode (SG65)
     return path;
   }
 
-  it.fails(
-    'A25-01 an index created where a deleted index left its WAL does not come up corrupt',
-    () => {
-      const path = leftoverWal(true);
-      // On this build: `database disk image is malformed`, on every later open too.
-      const db = open(path);
-      expect(db.pragma('integrity_check', { simple: true })).toBe('ok');
-      expect(counts(db).files).toBe(0);
-    },
-  );
+  it('A25-01 an index created where a deleted index left its WAL does not come up corrupt', () => {
+    const path = leftoverWal(true);
+    // Before SG90: `database disk image is malformed`, on every later open too.
+    const db = open(path);
+    expect(db.pragma('integrity_check', { simple: true })).toBe('ok');
+    expect(counts(db).files).toBe(0);
+  });
 
-  it.fails('A25-01 an index created where a deleted index left its WAL starts empty', () => {
+  it('A25-01 an index created where a deleted index left its WAL starts empty', () => {
     const path = leftoverWal(false);
     const db = open(path);
-    // On this build the deleted index's 500 rows come back.
+    // Before SG90 the deleted index's 500 rows came back.
     expect(counts(db).files).toBe(0);
   });
 

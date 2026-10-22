@@ -609,3 +609,16 @@ handler sleeps up to 100 ms between tries and missed a writer's 20 ms gaps until
 (about 1 in 6 A23-01 runs). `fn` never runs twice: only a BEGIN that failed is retried. `nameBusy`
 appends one remedy (`(another process is writing the index; retry when it finishes)`) and names an
 error once; `atlas docs` names its writes `docs write`.
+
+
+## 2026-10-22 — SG90: a stale WAL beside a deleted index is left to SQLite
+
+A `-wal` left by a killed run would be replayed into SG65's pre-made WAL-mode file after the user
+deletes `index.db` (malformed index, or the deleted rows back: A25-01). When `<db>-wal` exists,
+`openDatabase` skips the pre-made file: SQLite creates a 0-byte file and deletes the stale WAL
+itself under its own locks. Atlas never unlinks the WAL, because it cannot tell a stale one from the
+live WAL of a process that created the index a moment earlier. The cost is SG65's original race on
+that 0-byte file (two processes switching it to WAL get `SQLITE_BUSY` at once, and two first reads
+both deleting the WAL get `SQLITE_IOERR_DELETE_NOENT`), so the switch retries those two errors every
+10 ms up to the 5 s busy timeout while the file is still empty. A non-empty rollback-mode file held
+by another program still fails at once naming `journal mode`.
