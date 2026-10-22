@@ -124,6 +124,21 @@ describe('MCP tool handlers', () => {
     }
   });
 
+  it('parallel no-op atlas_index calls share runs: at most one running and one queued', async () => {
+    await handleIndexTool(ctx, {});
+    const single = counts(ctx.db);
+    const runRows = (): number =>
+      ctx.db.prepare('SELECT COUNT(*) FROM runs').pluck().get() as number;
+    const before = runRows();
+    const first = Array.from({ length: 6 }, () => handleIndexTool(ctx, {}));
+    await new Promise((r) => setTimeout(r, 0));
+    const later = Array.from({ length: 6 }, () => handleIndexTool(ctx, {}));
+    const stats = await Promise.all([...first, ...later]);
+    expect(runRows() - before).toBeLessThanOrEqual(2);
+    expect(stats.map((s) => s.filesIndexed)).toEqual(Array(12).fill(0));
+    expect(counts(ctx.db)).toEqual(single);
+  });
+
   it('atlas_index queues behind another in-process index of the same DB file', async () => {
     const other = openDatabase(join(root, '.atlas', 'index.db'));
     try {
@@ -369,6 +384,34 @@ describe('MCP server over an in-memory transport', () => {
     expect(tools.map((t) => t.name).sort()).toEqual(TOOLS);
     const search = tools.find((t) => t.name === 'atlas_search');
     expect(search?.inputSchema.required).toEqual(['query']);
+  });
+
+  it('a ping and a search sent while index runs are queued answer before the queue drains', async () => {
+    for (let i = 0; i < 40; i++)
+      writeFileSync(
+        join(dir, 'src', `gen${i}.ts`),
+        `export function gen${i}(): number { return ${i}; }\n`,
+      );
+    await client.callTool({ name: 'atlas_index', arguments: {} });
+    const order: string[] = [];
+    const runs = [true, false, true, false].map((force, i) =>
+      client
+        .callTool({ name: 'atlas_index', arguments: { force } })
+        .then(() => order.push(`index${i}`)),
+    );
+    const probes = new Promise<void>((done) =>
+      setTimeout(() => {
+        const ping = client.ping().then(() => order.push('ping'));
+        const search = client
+          .callTool({ name: 'atlas_search', arguments: { query: 'area' } })
+          .then(() => order.push('search'));
+        void Promise.all([ping, search]).then(() => done());
+      }, 0),
+    );
+    await Promise.all([...runs, probes]);
+    const drained = Math.max(...[0, 1, 2, 3].map((i) => order.indexOf(`index${i}`)));
+    expect(order.indexOf('ping')).toBeLessThan(drained);
+    expect(order.indexOf('search')).toBeLessThan(drained);
   });
 
   it('returns JSON text results', async () => {

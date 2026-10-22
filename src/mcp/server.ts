@@ -94,7 +94,8 @@ function requireIndex(ctx: McpContext): void {
 }
 
 // Like `atlas index`: writes a missing config and reads the current one on every call.
-// Concurrent calls queue in `indexRepo` (one run per DB at a time).
+// Concurrent calls queue in `indexRepo` (one run per DB at a time); a call with the same
+// options as a queued run that has not started shares that run.
 export async function handleIndexTool(ctx: McpContext, args: { force?: boolean }) {
   writeDefaultConfig(ctx.root);
   const config = (ctx.config = loadConfig(ctx.root));

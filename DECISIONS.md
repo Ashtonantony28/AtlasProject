@@ -555,3 +555,16 @@ resolver's import-first rule keeps those edges on the required module. `EXTRACTO
 (A13-01).
 
 
+
+
+## 2026-10-22 — SG34: index runs yield, and calls with the same options share a queued run
+
+`runIndex` awaits `new Promise(setImmediate)` after the walk, after the parse loop, before
+embedding, and in the per-file loop once 50 ms have passed since the last yield, and each queued
+run starts from a macrotask. So a search, ping or timer sent while runs are queued waits for one
+yield interval, not the whole queue, and tree-sitter's GC finalizers get a turn between files
+(A14-01). This narrows SG29's queue-over-coalesce choice: a call whose root and options (`force`,
+`skipEmbeddings`, walk options) equal those of a queued run that has not started returns that
+run's promise and stats, so at most one run per kind is running and one waiting (A14-02). Such a
+call read its config before joining, so the shared run still saw its arguments. Calls with an
+`onFile` callback never share. The resolver and embedder are still one synchronous block each.
