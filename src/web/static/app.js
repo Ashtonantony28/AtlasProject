@@ -33,10 +33,14 @@ async function init() {
 }
 
 function renderStats(stats, graph) {
-  // /api/graph is bounded; say so when the graph shows only part of the index.
-  const shown = graph?.truncated
-    ? ` · graph shows ${graph.nodes.length} of ${graph.totals.nodes} symbols`
-    : '';
+  // /api/graph is bounded; say what was cut. Cutting symbols cuts their edges too.
+  const shown = !graph?.truncated
+    ? ''
+    : graph.nodes.length < graph.totals.nodes
+      ? ` · graph shows ${graph.nodes.length} of ${graph.totals.nodes} symbols`
+      : graph.edges.length < graph.totals.edges
+        ? ` · graph shows ${graph.edges.length} of ${graph.totals.edges} edges`
+        : '';
   $('#stats').textContent = `${stats.files} files · ${stats.symbols} symbols · ${stats.edges} edges · ${stats.docs} docs${shown}`;
 }
 

@@ -158,6 +158,9 @@ error) instead of being ignored:
 - Read commands (`search`, `graph`, `docs`, `ask`, `drift`, `serve`) fail with
   "no index … run `atlas index` first" on an unindexed directory and "directory not found"
   for a bad `--cwd`, and create nothing.
+  `search`, `graph`, `ask` and `drift` also exit 1 with "index is empty: run
+  `atlas index` first" when no file is indexed (MCP: "index is empty: call
+  atlas_index first").
 
 ### MCP server
 
@@ -173,7 +176,11 @@ true` adds the text report; `strict` sets `failing` like `--strict`) and errors
 when there are no docs to check. `atlas_graph` (and the dashboard's
 `/api/graph`) returns at most 1000 nodes and 2000 edges by default, scoped with
 `file` or `symbol` + `depth`; `atlas graph` takes the same flags but exports
-everything unless `--limit` is given. `--cwd` must exist; like the CLI,
+everything unless `--limit` is given. A page holds `limit` nodes from `offset`
+and the edges whose `src` is among them (the `dst` may be on another page), so
+paging through every node returns every edge in `totals.edges` once;
+`truncated` is true whenever the response is not the whole scope, including
+every page after the first. `--cwd` must exist; like the CLI,
 the server writes only under `.atlas/`.
 
 ```json

@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/web/rendering.test.ts
-source_hash: 20ca613c127d5335c957a37866bdafc760362abf009c422944f97706a77df8e8
+source_hash: 3f27f17629e59d1792555cf0d14d86c7b4f3e535651d8790a7634e87c98b684f
 ---
 # module test/web/rendering.test.ts
 
@@ -22,11 +22,20 @@ source_hash: 20ca613c127d5335c957a37866bdafc760362abf009c422944f97706a77df8e8
 - `html` — variable (test/web/rendering.test.ts:108)
 - `runApp` — function (test/web/rendering.test.ts:116)
 - `doc` — variable (test/web/rendering.test.ts:135)
-- `doc` — variable (test/web/rendering.test.ts:142)
-- `items` — variable (test/web/rendering.test.ts:151)
-- `svgNodes` — variable (test/web/rendering.test.ts:163)
-- `svgEdges` — variable (test/web/rendering.test.ts:165)
-- `labels` — variable (test/web/rendering.test.ts:171)
+- `stats` — variable (test/web/rendering.test.ts:151)
+- `doc` — variable (test/web/rendering.test.ts:159)
+- `items` — variable (test/web/rendering.test.ts:168)
+- `svgNodes` — variable (test/web/rendering.test.ts:180)
+- `svgEdges` — variable (test/web/rendering.test.ts:182)
+- `labels` — variable (test/web/rendering.test.ts:188)
+- `doc` — variable (test/web/rendering.test.ts:196)
+- `items` — variable (test/web/rendering.test.ts:197)
+- `shapesItem` — variable (test/web/rendering.test.ts:198)
+- `body` — variable (test/web/rendering.test.ts:206)
+- `doc` — variable (test/web/rendering.test.ts:213)
+- `form` — variable (test/web/rendering.test.ts:215)
+- `items` — variable (test/web/rendering.test.ts:218)
+- `searchTab` — variable (test/web/rendering.test.ts:226)
 
 References: `test/web/rendering.test.ts:12`, `test/web/rendering.test.ts:13`, `test/web/rendering.test.ts:15`, `test/web/rendering.test.ts:24`, `test/web/rendering.test.ts:29`.
 

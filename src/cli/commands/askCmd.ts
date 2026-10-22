@@ -36,7 +36,7 @@ export function registerAskCommand(program: Command): void {
         k: numberArg(opts.k),
         expand: numberArg(opts.expand),
       });
-      const { db, root, config } = openProjectIndex(opts.cwd ?? '.');
+      const { db, root, config } = openProjectIndex(opts.cwd ?? '.', { indexed: true });
       try {
         const model = opts.model ?? config.synthModel;
         const inner = opts.offline ? createOfflineClient() : await createAnthropicClient(model);

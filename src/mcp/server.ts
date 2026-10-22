@@ -6,7 +6,6 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import {
   closeDatabase,
-  counts,
   getAllFiles,
   getAllSymbols,
   openDatabase,
@@ -32,7 +31,7 @@ import {
 } from '../core/synth/index.js';
 import { ask, DEFAULT_EXCERPT_LINES } from '../core/qa/index.js';
 import type { AtlasConfig } from '../core/config.js';
-import { loadProject } from '../core/project.js';
+import { loadProject, requireIndexed } from '../core/project.js';
 import {
   askParams,
   AskParamsSchema,
@@ -91,7 +90,7 @@ export function createMcpContext(opts: McpContextOptions): McpContext {
 }
 
 function requireIndex(ctx: McpContext): void {
-  if (counts(ctx.db).files === 0) throw new Error('index is empty: call atlas_index first');
+  requireIndexed(ctx.db, 'call atlas_index first');
 }
 
 export async function handleIndexTool(ctx: McpContext, args: { force?: boolean }) {

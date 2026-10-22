@@ -380,6 +380,23 @@ contention can still push got near 5.
 
 Requests send no `temperature`/`top_p`/`top_k` (current models and API `2026-10-21` reject them). Per-doc and `ask` `max_tokens` default to 16 000 (the non-streaming default; thinking counts toward it), so the budget reserves ~16k per call and a run stops ~16k short of `tokenBudget`. A `stop_reason` other than `end_turn`/`stop_sequence`, or empty text, is never stored: `docs` reports the target as failed and exits 1, `ask` errors.
 
+## 2026-10-22 — SG22: graph pages own their nodes' outgoing edges
+A7-02: a page used to return only edges with both endpoints on it, so paging
+lost almost every edge. Now an edge belongs to the page holding its `src` (its
+`dst` when `src` is null) and its far endpoint, which must be in scope, may be
+on another page; paging through all nodes yields each in-scope edge exactly
+once and `totals.edges` is their sum. Chosen over independently paged edges
+because it keeps the published params (`limit`/`edgeLimit`/`offset`) and
+fields unchanged, and over far-endpoint stubs to keep pages small. Unscoped
+pages select owned edges by id range with `LIMIT edgeLimit+1`; scoped pages
+read only `src IN page` rows (a subset of what they read before, so A6-01 is no
+worse; `totals.edges` still materialises the scope's edges). `truncated` now
+matches drift: true when `offset > 0`, more nodes follow, or `edgeLimit` cut
+the page. The dashboard names what was cut (symbols, or else edges) (A7-12).
+A7-05: `search`, `graph`, `ask` and `drift` reject an empty index like the MCP
+tools, via `openProjectIndex(…, { indexed: true })` / `requireIndexed`, with
+the same "index is empty: <next step>" message.
+
 ## 2026-10-22 — SG20: walk skips follow `.gitignore` and config, not names at any depth
 
 Only `.git`, `.atlas`, `node_modules` and `__pycache__` (never project source) and virtualenvs (a directory holding `pyvenv.cfg`) are skipped at any depth. `dist`, `build`, `coverage`, `venv`, `.next`, `.cache` are root-anchored entries in the default `exclude` (`.venv/**`, `venv/**`, `.next/**`, `.cache/**` added to the default value; no new keys), so `src/build/` is indexed and a user can drop an entry to index the root one. Nested `.gitignore` files are now read (deeper files override shallower ones, `exclude` is applied last), which keeps `packages/*/dist` out where a package ignores it. Persisted docs strip a leading BOM before parsing front matter; `ci-comment` validates its input and counts from `totals`, noting when the lists are a page.

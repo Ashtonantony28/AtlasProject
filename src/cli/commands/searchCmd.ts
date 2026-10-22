@@ -29,7 +29,7 @@ export function registerSearchCommand(program: Command): void {
         file: opts.file,
         limit: numberArg(opts.limit),
       });
-      const { db, config } = openProjectIndex(opts.cwd ?? '.');
+      const { db, config } = openProjectIndex(opts.cwd ?? '.', { indexed: true });
       try {
         const embedder = createEmbedder(config);
         const hits = await search(db, embedder, query, {
