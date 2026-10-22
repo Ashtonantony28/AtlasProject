@@ -569,6 +569,8 @@ run's promise and stats, so at most one run per kind is running and one waiting 
 call read its config before joining, so the shared run still saw its arguments. Calls with an
 `onFile` callback never share. The resolver and embedder are still one synchronous block each.
 
+
+
 ## 2026-10-22 — SG40: MCP calls follow the current config; a changed `indexPath` is an error
 
 `atlas_ask` re-reads `.atlas/config.json` per call, as `atlas_index` has since SG29. A changed
