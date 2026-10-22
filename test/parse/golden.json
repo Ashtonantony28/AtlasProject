@@ -2488,16 +2488,6 @@
     "exported": true
    },
    {
-    "kind": "function",
-    "name": "done",
-    "signature": "done = () => next()",
-    "startLine": 20,
-    "endLine": 20,
-    "docstring": null,
-    "qualifiedName": "done",
-    "exported": false
-   },
-   {
     "kind": "method",
     "name": "index",
     "signature": "index: (req) => render(req)",
@@ -2641,7 +2631,7 @@
     "line": 19
    },
    {
-    "fromQualifiedName": "done",
+    "fromQualifiedName": null,
     "name": "next",
     "receiver": "none",
     "object": null,
@@ -2734,56 +2724,6 @@
  "parse/walk.ts": {
   "language": "typescript",
   "symbols": [
-   {
-    "kind": "variable",
-    "name": "local",
-    "signature": "local = ns.make(ns.deep.read(1), new Map())",
-    "startLine": 7,
-    "endLine": 7,
-    "docstring": null,
-    "qualifiedName": "local",
-    "exported": false
-   },
-   {
-    "kind": "function",
-    "name": "inner",
-    "signature": "function inner(): number {",
-    "startLine": 8,
-    "endLine": 10,
-    "docstring": null,
-    "qualifiedName": "inner",
-    "exported": false
-   },
-   {
-    "kind": "class",
-    "name": "Nested",
-    "signature": "class Nested extends ns.Base<string> implements ns.Shape {",
-    "startLine": 11,
-    "endLine": 17,
-    "docstring": null,
-    "qualifiedName": "Nested",
-    "exported": false
-   },
-   {
-    "kind": "method",
-    "name": "field",
-    "signature": "field = () => this.run(inner())",
-    "startLine": 12,
-    "endLine": 12,
-    "docstring": null,
-    "qualifiedName": "Nested.field",
-    "exported": false
-   },
-   {
-    "kind": "method",
-    "name": "run",
-    "signature": "run(x: number): number {",
-    "startLine": 14,
-    "endLine": 16,
-    "docstring": null,
-    "qualifiedName": "Nested.run",
-    "exported": false
-   },
    {
     "kind": "variable",
     "name": "config",
@@ -3008,7 +2948,7 @@
     "line": 6
    },
    {
-    "fromQualifiedName": "local",
+    "fromQualifiedName": null,
     "name": "make",
     "receiver": "member",
     "object": "ns",
@@ -3016,7 +2956,7 @@
     "line": 7
    },
    {
-    "fromQualifiedName": "local",
+    "fromQualifiedName": null,
     "name": "read",
     "receiver": "member",
     "object": "ns.deep",
@@ -3024,7 +2964,7 @@
     "line": 7
    },
    {
-    "fromQualifiedName": "local",
+    "fromQualifiedName": null,
     "name": "Map",
     "receiver": "none",
     "object": null,
@@ -3032,7 +2972,7 @@
     "line": 7
    },
    {
-    "fromQualifiedName": "inner",
+    "fromQualifiedName": null,
     "name": "helper",
     "receiver": "none",
     "object": null,
@@ -3040,7 +2980,7 @@
     "line": 9
    },
    {
-    "fromQualifiedName": "inner",
+    "fromQualifiedName": null,
     "name": "get",
     "receiver": "member",
     "object": "local",
@@ -3048,23 +2988,7 @@
     "line": 9
    },
    {
-    "fromQualifiedName": "Nested",
-    "name": "Base",
-    "receiver": "member",
-    "object": "ns",
-    "kind": "extends",
-    "line": 11
-   },
-   {
-    "fromQualifiedName": "Nested",
-    "name": "Shape",
-    "receiver": "member",
-    "object": "ns",
-    "kind": "implements",
-    "line": 11
-   },
-   {
-    "fromQualifiedName": "Nested.field",
+    "fromQualifiedName": null,
     "name": "run",
     "receiver": "this",
     "object": null,
@@ -3072,7 +2996,7 @@
     "line": 12
    },
    {
-    "fromQualifiedName": "Nested.field",
+    "fromQualifiedName": null,
     "name": "inner",
     "receiver": "none",
     "object": null,
@@ -3080,7 +3004,7 @@
     "line": 12
    },
    {
-    "fromQualifiedName": "Nested.run",
+    "fromQualifiedName": null,
     "name": "run",
     "receiver": "super",
     "object": null,
@@ -3088,7 +3012,7 @@
     "line": 15
    },
    {
-    "fromQualifiedName": "Nested.run",
+    "fromQualifiedName": null,
     "name": "twice",
     "receiver": "member",
     "object": "ns",
@@ -3108,14 +3032,6 @@
     "name": "all",
     "receiver": "member",
     "object": "Promise",
-    "kind": "calls",
-    "line": 19
-   },
-   {
-    "fromQualifiedName": null,
-    "name": "inner",
-    "receiver": "none",
-    "object": null,
     "kind": "calls",
     "line": 19
    },

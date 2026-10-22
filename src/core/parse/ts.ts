@@ -99,6 +99,7 @@ interface Ctx {
   owner: string | null; // qualified name references are attributed to; null = module
   ns: boolean; // the enclosing scope is a namespace body: statements, members exported by `export`
   top: Map<string, boolean>; // top-level symbol names and their exported flag
+  chained: Set<number>; // ids of inner links of assignment chains, handled with the outermost
 }
 
 const FN_VALUES = new Set([
@@ -128,11 +129,15 @@ function inMembers(ctx: Ctx): boolean {
 
 function isExported(ctx: Ctx, node: Node, name: string): boolean {
   if (ctx.qualifier.length > 0)
-    return (
-      ctx.scopeExported &&
-      (ctx.ns ? node.parent?.type === 'export_statement' : isPublicMember(node))
-    );
-  return node.parent?.type === 'export_statement' || ctx.exportNames.has(name);
+    return ctx.scopeExported && (ctx.ns ? exportStatementOf(node) : isPublicMember(node));
+  return exportStatementOf(node) || ctx.exportNames.has(name);
+}
+
+/** The parent is an `export` statement, directly or through `declare` (`export declare function f()`). */
+function exportStatementOf(node: Node): boolean {
+  let p = node.parent;
+  if (p?.type === 'ambient_declaration') p = p.parent;
+  return p?.type === 'export_statement';
 }
 
 /** `node` gives signature and span; `outer` gives docstring and export status (e.g. the declaration around a declarator). */
@@ -470,13 +475,12 @@ function cjsObjectScope(assign: Node): string | null {
   if (assign.childForFieldName('right')?.type !== 'object' || !left) return null;
   if (isModuleExports(left)) return 'default';
   if (left.type !== 'member_expression') return null;
-  const obj = left.childForFieldName('object');
-  const isExports = (obj?.type === 'identifier' && obj.text === 'exports') || isModuleExports(obj);
-  return isExports ? (left.childForFieldName('property')?.text ?? null) : null;
+  return isExportsObject(left) ? (left.childForFieldName('property')?.text ?? null) : null;
 }
 
 const VISITED_ANYWHERE = [
   ...FN_NODES,
+  ...FN_VALUES,
   ...CLASS_NODES,
   ...INTERFACE_NODES,
   ...TYPE_NODES,
@@ -505,15 +509,102 @@ function peekRef(ctx: Ctx, cursor: Cursor, type: string): boolean {
     : false;
 }
 
-/** Not inside a function body, other than an immediately invoked one (`(function () {…})()`, `.call(this)`). */
+/** `node`'s parent, skipping parentheses. */
+function outerOf(node: Node): Node | null {
+  let c = node.parent;
+  while (c?.type === 'parenthesized_expression') c = c.parent;
+  return c;
+}
+
+/** `node` without the parentheses around it. */
+function unparenthesized(node: Node | null): Node | null {
+  while (node?.type === 'parenthesized_expression') node = node.namedChildren[0] ?? null;
+  return node;
+}
+
+/**
+ * A function value whose body is module scope (DECISIONS SG26): the callee of a call (IIFE,
+ * also through `.call`/`.apply`), an argument of a call whose callee is a function value (UMD
+ * factory, `(function (root, factory) {…})(this, function () {…})`), or the last argument of
+ * `define(…)` (AMD, incl. `define(function (require, exports, module) {…})`).
+ */
+function isModuleWrapper(fn: Node): boolean {
+  let c = outerOf(fn);
+  if (c?.type === 'arguments') {
+    const call = c.parent;
+    const callee = call?.childForFieldName('function') ?? null;
+    if (callee?.type === 'identifier')
+      return callee.text === 'define' && c.lastNamedChild?.id === withParens(fn).id;
+    return FN_VALUES.has(unparenthesized(callee)?.type ?? '');
+  }
+  const prop = c?.type === 'member_expression' ? c.childForFieldName('property')?.text : null;
+  if (prop === 'call' || prop === 'apply') c = c?.parent ?? null;
+  return c?.type === 'call_expression';
+}
+
+/** `fn` with the parentheses around it, if any. */
+function withParens(fn: Node): Node {
+  let n = fn;
+  while (n.parent?.type === 'parenthesized_expression') n = n.parent;
+  return n;
+}
+
+const DESCRIPTOR_CALLEES = new Set(['Object.defineProperty', 'Reflect.defineProperty']);
+const PROPERTY_NAME = /^[A-Za-z_$][\w$]*$/;
+
+/**
+ * `fn` defines property `obj.name` (DECISIONS SG26): it is the third and last argument of
+ * `f(obj, 'name', fn)` (express `defineGetter(req, 'protocol', function () {…})`), or the `get` /
+ * `value` of the descriptor in `Object.defineProperty(obj, 'name', { get() {…} })`. `obj` is
+ * a dotted path whose head is a top-level symbol of this file, not an import binding. Defines
+ * the method at module level and returns true; false for any other shape.
+ */
+function definedProperty(ctx: Ctx, fn: Node): boolean {
+  if (ctx.qualifier.length > 0) return false;
+  let holder = fn;
+  let descriptor = false;
+  if (fn.type === 'method_definition' || fn.parent?.type === 'pair') {
+    const member = fn.type === 'method_definition' ? fn : (fn.parent as Node);
+    const key = member.childForFieldName(member === fn ? 'name' : 'key')?.text;
+    if (key !== 'get' && key !== 'value') return false;
+    const object = member.parent;
+    if (object?.type !== 'object') return false;
+    holder = object;
+    descriptor = true;
+  }
+  const args = outerOf(holder);
+  if (args?.type !== 'arguments') return false;
+  const list = args.namedChildren.filter((c) => c.type !== 'comment');
+  if (list.length !== 3 || list[2]?.id !== withParens(holder).id) return false;
+  const nameArg = list[1];
+  const name = nameArg?.type === 'string' ? trimQuotes(nameArg.text) : '';
+  if (!PROPERTY_NAME.test(name)) return false;
+  const callee = args.parent?.childForFieldName('function') ?? null;
+  if (descriptor !== DESCRIPTOR_CALLEES.has((callee && dotted(callee)) ?? '')) return false;
+  const objPath = list[0] ? dotted(list[0])?.split('.') : null;
+  const head = objPath?.[0];
+  if (!objPath || !head || !ctx.top.has(head) || ctx.imports.some((i) => importBinding(i) === head))
+    return false;
+  const call = args.parent as Node;
+  const stmt = call.parent?.type === 'expression_statement' ? call.parent : call;
+  ctx.qualifier = objPath;
+  const sym = push(ctx, 'method', name, call, stmt);
+  ctx.qualifier = [];
+  sym.exported = ctx.top.get(head) ?? false;
+  collectCalls(ctx, fn, sym.qualifiedName);
+  return true;
+}
+
+/** The local name an import binds, if any. */
+function importBinding(i: ParsedImport): string | null {
+  const named = i.imported !== null && i.imported !== '*' && i.imported !== 'default';
+  return i.reexport ? null : (i.alias ?? (named ? i.imported : null));
+}
+
+/** Not inside a function body, other than a module wrapper's (`isModuleWrapper`). */
 function atModuleLevel(node: Node): boolean {
   for (let p = node.parent; p; p = p.parent) {
-    if (!FN_VALUES.has(p.type)) continue;
-    let c = p.parent;
-    while (c?.type === 'parenthesized_expression') c = c.parent;
-    const prop = c?.type === 'member_expression' ? c.childForFieldName('property')?.text : null;
-    if (prop === 'call' || prop === 'apply') c = c?.parent ?? null;
-    if (c?.type !== 'call_expression') return false;
+    if (FN_VALUES.has(p.type) && !isModuleWrapper(p)) return false;
   }
   return true;
 }
@@ -554,27 +645,90 @@ function defineValue(
   return true;
 }
 
+interface AssignedPath {
+  path: string[];
+  exported?: boolean;
+  /** `obj.x` / `C.prototype` on the left: an object literal on the right is a member scope. */
+  scope: boolean;
+}
+
+/** What assigning `value` to `left` at module level (`topLevel()`) defines, or null. */
+function assignedPath(
+  ctx: Ctx,
+  left: Node | null,
+  value: Node,
+  topLevel: () => boolean,
+): AssignedPath | null {
+  if (left?.type !== 'member_expression') return null;
+  if (isModuleExports(left)) return { path: [nameOf(value) ?? 'default'], scope: false };
+  const chain = dotted(left)?.split('.');
+  if (!chain || !topLevel()) return null;
+  if (chain[0] === 'exports' || (chain[0] === 'module' && chain[1] === 'exports'))
+    return { path: chain.slice(chain[0] === 'exports' ? 1 : 2), scope: false };
+  const path = chain.filter((p) => p !== 'prototype');
+  const head = path[0] as string;
+  const exported = ctx.top.get(head) ?? ctx.exportNames.has(head);
+  if (path.length === 1 && !(chain.length === 2 && value.type === 'object')) return null;
+  return { path, exported, scope: path.length === 1 };
+}
+
 /**
  * Module-level `module.exports = function () {}`, `exports.x = …`, `obj.m = …`,
- * `C.prototype.m = …` and `C.prototype = { … }`; true when it defined something.
+ * `C.prototype.m = …` and `C.prototype = { … }`; true when it defined something. In a chain
+ * (`res.contentType = res.type = function …`) the innermost target is defined and every other
+ * member target is an alias of it (A9-12).
  */
 function visitAssignment(ctx: Ctx, stack: Frame[], node: Node): boolean {
-  const left = node.childForFieldName('left');
-  const right = node.childForFieldName('right');
-  if (left?.type !== 'member_expression' || !right) return false;
-  if (isModuleExports(left))
-    return defineValue(ctx, stack, [nameOf(right) ?? 'default'], right, node);
-  const chain = dotted(left)?.split('.');
-  if (!chain || !atModuleLevel(node)) return false;
-  if (chain[0] === 'exports' || (chain[0] === 'module' && chain[1] === 'exports'))
-    return defineValue(ctx, stack, chain.slice(chain[0] === 'exports' ? 1 : 2), right, node);
-  const path = chain.filter((p) => p !== 'prototype');
-  const exported = ctx.top.get(path[0] as string) ?? ctx.exportNames.has(path[0] as string);
-  if (right.type === 'object' && path.length === 1 && chain.length === 2) {
-    visitScope(ctx, stack, path[0] as string, exported, right);
-    return true;
+  // An inner link of a chain was handled with the outermost one.
+  if (ctx.chained.has(node.id)) return false;
+  let top: boolean | undefined;
+  const topLevel = (): boolean => (top ??= atModuleLevel(node));
+  const assigns: Node[] = [];
+  let value: Node | null = node;
+  while (value?.type === 'assignment_expression') {
+    if (assigns.length > 0) ctx.chained.add(value.id);
+    assigns.push(value);
+    value = value.childForFieldName('right');
   }
-  return path.length > 1 && defineValue(ctx, stack, path, right, node, exported);
+  if (!value) return false;
+  const stmt = node.parent?.type === 'expression_statement' ? node.parent : node;
+  let main: ParsedSymbol | null = null;
+  let defined = false;
+  for (let i = assigns.length - 1; i >= 0; i--) {
+    const assign = assigns[i] as Node;
+    const target = assignedPath(ctx, assign.childForFieldName('left'), value, topLevel);
+    if (!target) continue;
+    if (!defined) {
+      const before = ctx.symbols.length;
+      if (target.scope) visitScope(ctx, stack, target.path[0] as string, !!target.exported, value);
+      else if (!defineValue(ctx, stack, target.path, value, assign, target.exported)) return false;
+      defined = true;
+      main = ctx.symbols[before] ?? null;
+      if (main && !main.docstring && assign !== node) main.docstring = extractLeadingComment(stmt);
+    } else if (main && !target.scope) {
+      defineAlias(ctx, main, target, assign, stmt);
+    }
+  }
+  return defined;
+}
+
+/** `main` under another name: same kind, no calls of its own. */
+function defineAlias(
+  ctx: Ctx,
+  main: ParsedSymbol,
+  target: AssignedPath,
+  node: Node,
+  stmt: Node,
+): void {
+  const saved = ctx.qualifier;
+  ctx.qualifier = target.path.slice(0, -1);
+  const name = target.path[target.path.length - 1] as string;
+  if (qualify(ctx, name) !== main.qualifiedName) {
+    const kind = main.kind === 'class' ? 'class' : target.path.length > 1 ? 'method' : 'function';
+    const sym = push(ctx, kind, name, node, stmt);
+    if (target.exported !== undefined) sym.exported = target.exported;
+  }
+  ctx.qualifier = saved;
 }
 
 /** Returns true when the node's named children are to be walked. */
@@ -622,6 +776,14 @@ function visit(node: Node, type: string, ctx: Ctx, stack: Frame[]): boolean {
     }
   }
 
+  // A function value's body is a local scope unless it is a module wrapper: its calls and
+  // values are the enclosing owner's, its declarations are not symbols (A9-02).
+  if (FN_VALUES.has(type)) {
+    if (isModuleWrapper(node)) return true;
+    if (!definedProperty(ctx, node)) collectCalls(ctx, node, ctx.owner);
+    return false;
+  }
+
   if (CALL_NODES.has(type)) {
     addCall(ctx, ctx.owner, node);
   }
@@ -638,14 +800,14 @@ function visit(node: Node, type: string, ctx: Ctx, stack: Frame[]): boolean {
     // `export default function () {}`, `export default class extends B {}`, `export default fn`.
     if (value && defineValue(ctx, stack, [nameOf(value) ?? 'default'], value, node)) return false;
     addValue(ctx, ctx.owner, value);
-    const scope =
-      value?.type === 'object'
-        ? 'default'
-        : type === 'assignment_expression'
-          ? cjsObjectScope(node)
-          : null;
+    const object = objectValue(value);
+    const scope = object
+      ? 'default'
+      : type === 'assignment_expression'
+        ? cjsObjectScope(node)
+        : null;
     if (scope) {
-      visitScope(ctx, stack, scope, true, value ?? node.childForFieldName('right'));
+      visitScope(ctx, stack, scope, true, object ?? node.childForFieldName('right'));
       return false;
     }
   }
@@ -663,7 +825,11 @@ function visit(node: Node, type: string, ctx: Ctx, stack: Frame[]): boolean {
 
   // Methods — don't descend.
   if (METHOD_NODES.has(type)) {
-    const name = nameOf(node);
+    if (definedProperty(ctx, node)) return false;
+    // At module level a method belongs to an object literal that is no scope (a call argument,
+    // an array element, a return value): like a callback, it defines nothing (A9-02).
+    const loose = ctx.qualifier.length === 0 && node.parent?.type === 'object';
+    const name = loose ? null : nameOf(node);
     const sym = name ? push(ctx, 'method', name, node) : null;
     collectCalls(ctx, node, sym?.qualifiedName ?? ctx.owner);
     return false;
@@ -729,8 +895,18 @@ function visitDeclarator(ctx: Ctx, stack: Frame[], node: Node, decl: Node): void
   const isFn = valueNode !== null && FN_VALUES.has(valueNode.type);
   const sym = push(ctx, isFn ? 'function' : 'variable', nameNode.text, decl, node);
   // Values are not walked for symbols: locals of `const f = () => {...}` are not top-level.
-  if (valueNode?.type === 'object') visitScope(ctx, stack, sym.name, sym.exported, valueNode);
+  let assigned = valueNode;
+  while (assigned?.type === 'assignment_expression') assigned = assigned.childForFieldName('right');
+  const object = objectValue(assigned);
+  if (object) visitScope(ctx, stack, sym.name, sym.exported, object);
   else collectCalls(ctx, decl, sym.qualifiedName);
+}
+
+/** An object literal, also under `as const` / `satisfies T` (A9-07); null for anything else. */
+function objectValue(node: Node | null): Node | null {
+  while (node?.type === 'as_expression' || node?.type === 'satisfies_expression')
+    node = node.namedChildren[0] ?? null;
+  return node?.type === 'object' ? node : null;
 }
 
 function isModuleExports(node: Node | null): boolean {
@@ -777,8 +953,7 @@ function collectCjsExport(assign: Node, names: Set<string>, rows: ParsedImport[]
       }
     }
   } else if (left.type === 'member_expression') {
-    const obj = left.childForFieldName('object');
-    if ((obj?.type === 'identifier' && obj.text === 'exports') || isModuleExports(obj)) {
+    if (isExportsObject(left)) {
       const prop = left.childForFieldName('property');
       if (prop) names.add(prop.text);
       if (right.type === 'identifier') names.add(right.text);
@@ -855,9 +1030,39 @@ function collectExports(root: Node, rows: ParsedImport[]): Set<string> {
     } else if (node.type === 'expression_statement') {
       const expr = node.namedChildren[0];
       if (expr?.type === 'assignment_expression') collectCjsExports(expr, names, rows);
+    } else if (node.type === 'lexical_declaration' || node.type === 'variable_declaration') {
+      for (const decl of node.namedChildren) collectCjsAlias(decl, names, rows);
     }
   }
   return names;
+}
+
+/**
+ * `var app = exports = module.exports = {}` (express `lib/application.js`): `app` is the
+ * exported object, and the default export when the chain ends in an object (A9-11).
+ */
+function collectCjsAlias(decl: Node, names: Set<string>, rows: ParsedImport[]): void {
+  const name = decl.type === 'variable_declarator' ? decl.childForFieldName('name') : null;
+  let value = decl.childForFieldName('value');
+  if (name?.type !== 'identifier' || value?.type !== 'assignment_expression') return;
+  collectCjsExports(value, names, rows);
+  let toModule = false;
+  let toExports = false;
+  while (value?.type === 'assignment_expression') {
+    const left = value.childForFieldName('left');
+    if (isModuleExports(left)) toModule = true;
+    else if (left?.type === 'member_expression') toExports ||= isExportsObject(left);
+    value = value.childForFieldName('right');
+  }
+  if (toModule || toExports) names.add(name.text);
+  if (toModule && value?.type === 'object')
+    rows.push(localExport(name.text, 'default', lineOf(decl)));
+}
+
+/** `exports.x` or `module.exports.x`. */
+function isExportsObject(left: Node): boolean {
+  const obj = left.childForFieldName('object');
+  return (obj?.type === 'identifier' && obj.text === 'exports') || isModuleExports(obj);
 }
 
 function collectImports(node: Node, ctx: Ctx): void {
@@ -1019,6 +1224,7 @@ export function parseTsLike(root: Node, language: LanguageId): ParseResult {
     owner: null,
     ns: false,
     top: new Map(),
+    chained: new Set(),
   };
   const diagnostics: ParseDiagnostic[] = [];
   try {
@@ -1038,9 +1244,8 @@ export function parseTsLike(root: Node, language: LanguageId): ParseResult {
   }
   const bound = new Set(ctx.top.keys());
   for (const i of ctx.imports) {
-    const named = i.imported !== null && i.imported !== '*' && i.imported !== 'default';
-    const local = i.alias ?? (named ? i.imported : null);
-    if (local && !i.reexport) bound.add(local);
+    const local = importBinding(i);
+    if (local) bound.add(local);
   }
   return {
     language,
