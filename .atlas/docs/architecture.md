@@ -1,13 +1,13 @@
 ---
 kind: architecture
 target: architecture
-source_hash: d1ea09c7dd3e149c46b1e14a90850d86938ac876ac6342594a96dc31f04d3c82
+source_hash: b6de5a085ce61cb49978289d51a1ac646777fbe41121a8cc64071569b54aaf2a
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 185 files, 2518 symbols, 6088 edges
+**Totals:** 188 files, 2577 symbols, 6223 edges
 
 ## Modules
 
@@ -46,6 +46,7 @@ This codebase's modules collaborate through the graph above.
 - `scripts/audit2-mcp-index.mjs` — javascript, loc=51, 13 symbols
 - `scripts/audit2-memory.mjs` — javascript, loc=84, 21 symbols
 - `scripts/audit2-reindex.mjs` — javascript, loc=146, 31 symbols
+- `scripts/audit3-patho.mjs` — javascript, loc=164, 29 symbols
 - `scripts/bench.mjs` — javascript, loc=93, 25 symbols
 - `scripts/copy-static.mjs` — javascript, loc=16, 3 symbols
 - `src/cli/commands/askCmd.ts` — typescript, loc=87, 2 symbols
@@ -56,21 +57,20 @@ This codebase's modules collaborate through the graph above.
 - `src/cli/commands/indexCmd.ts` — typescript, loc=101, 6 symbols
 - `src/cli/commands/init.ts` — typescript, loc=37, 2 symbols
 - `src/cli/commands/mcpCmd.ts` — typescript, loc=21, 2 symbols
-- `src/cli/commands/searchCmd.ts` — typescript, loc=72, 2 symbols
-- `src/cli/commands/serveCmd.ts` — typescript, loc=38, 2 symbols
 - `src/core/config.ts` — typescript, loc=134, 14 symbols
 - `src/core/db/database.ts` — typescript, loc=95, 9 symbols
 - `src/core/db/repo.ts` — typescript, loc=338, 39 symbols
+- `src/core/db/schema.ts` — typescript, loc=187, 3 symbols
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=354)
+- `src/core/db/database.ts` (degree=360)
 - `src/core/db/repo.ts` (degree=332)
 - `src/mcp/server.ts` (degree=257)
 - `src/core/parse/ts.ts` (degree=229)
-- `src/core/ingest/indexer.ts` (degree=172)
+- `src/core/ingest/indexer.ts` (degree=176)
+- `src/core/graph/modules.ts` (degree=168)
 - `src/core/synth/persist.ts` (degree=167)
-- `src/core/graph/modules.ts` (degree=165)
 - `test/synth/completion.test.ts` (degree=153)
 - `test/audit/audit-4.test.ts` (degree=137)
 - `test/graph/paging.test.ts` (degree=136)
