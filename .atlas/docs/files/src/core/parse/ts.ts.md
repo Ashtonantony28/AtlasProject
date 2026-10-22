@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/parse/ts.ts
-source_hash: 0368b5ae8e39a428c9ade93326bb98251fdf2758d962769c9c55eb96cb2acf3a
+source_hash: d84aaf2499ff1dc314e72e153345ef528b0994be66decf8a41b372f32c239516
 ---
 # module src/core/parse/ts.ts
 
@@ -36,7 +36,7 @@ source_hash: 0368b5ae8e39a428c9ade93326bb98251fdf2758d962769c9c55eb96cb2acf3a
 - `dotted` — function (src/core/parse/ts.ts:209)
 - `targetOf` — function (src/core/parse/ts.ts:223)
 - `addRef` — function (src/core/parse/ts.ts:250)
-- `parseTsLike` — function (src/core/parse/ts.ts:1216)
+- `parseTsLike` — function (src/core/parse/ts.ts:1240)
 
 References: `src/core/parse/ts.ts:25`, `src/core/parse/ts.ts:26`, `src/core/parse/ts.ts:28`, `src/core/parse/ts.ts:34`, `src/core/parse/ts.ts:36`.
 

@@ -1,13 +1,15 @@
 ---
 kind: file
 target: fixtures/parse/walk.js
-source_hash: cae3a2750fb19d5e18a185b0f3252bce0ff5aaee40c4ff0883e9b15b5d5ca039
+source_hash: 403c9070b0fc4eee47756428507c653db261558737e0c3f0d95f0815b3fab66d
 ---
 # module fixtures/parse/walk.js
 
 `module fixtures/parse/walk.js` exposes the following public surface:
 
 - `path` — variable (fixtures/parse/walk.js:2)
+- `j` — variable (fixtures/parse/walk.js:3)
+- `resolve` — variable (fixtures/parse/walk.js:3)
 - `createApp` — function (fixtures/parse/walk.js:5)
 - `helper` — function (fixtures/parse/walk.js:9)
 - `Model` — class (fixtures/parse/walk.js:13)
@@ -17,6 +19,6 @@ source_hash: cae3a2750fb19d5e18a185b0f3252bce0ff5aaee40c4ff0883e9b15b5d5ca039
 - `el` — variable (fixtures/parse/walk.js:32)
 - `calls` — function (fixtures/parse/walk.js:34)
 
-References: `fixtures/parse/walk.js:2`, `fixtures/parse/walk.js:5`, `fixtures/parse/walk.js:9`, `fixtures/parse/walk.js:13`, `fixtures/parse/walk.js:14`.
+References: `fixtures/parse/walk.js:2`, `fixtures/parse/walk.js:3`, `fixtures/parse/walk.js:3`, `fixtures/parse/walk.js:5`, `fixtures/parse/walk.js:9`.
 
 _Generated offline (mock client)._

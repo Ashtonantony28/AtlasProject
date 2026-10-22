@@ -1,7 +1,7 @@
 ---
 kind: file
 target: scripts/audit3-patho.mjs
-source_hash: 7009f62c62f3a3719c2f3b1df8c199c49a87bf204165be03d16d77246b97bf89
+source_hash: a87b417f0bf2e715ee1f8b18f8907f57a2f44801465082c3126f49baf020f3a9
 ---
 # module scripts/audit3-patho.mjs
 
@@ -10,6 +10,9 @@ source_hash: 7009f62c62f3a3719c2f3b1df8c199c49a87bf204165be03d16d77246b97bf89
 - `args` — variable (scripts/audit3-patho.mjs:23)
 - `runsIdx` — variable (scripts/audit3-patho.mjs:24)
 - `runs` — variable (scripts/audit3-patho.mjs:25)
+- `mode` — variable (scripts/audit3-patho.mjs:26)
+- `work` — variable (scripts/audit3-patho.mjs:26)
+- `sizes` — variable (scripts/audit3-patho.mjs:26)
 - `MODES` — variable (scripts/audit3-patho.mjs:27)
 - `r2` — function (scripts/audit3-patho.mjs:32)
 - `median` — function (scripts/audit3-patho.mjs:33)
@@ -28,13 +31,19 @@ source_hash: 7009f62c62f3a3719c2f3b1df8c199c49a87bf204165be03d16d77246b97bf89
 - `r` — variable (scripts/audit3-patho.mjs:111)
 - `dbPath` — variable (scripts/audit3-patho.mjs:112)
 - `db` — variable (scripts/audit3-patho.mjs:114)
+- `ms` — variable (scripts/audit3-patho.mjs:116)
+- `st` — variable (scripts/audit3-patho.mjs:116)
 - `resolvedImports` — variable (scripts/audit3-patho.mjs:123)
 - `t` — variable (scripts/audit3-patho.mjs:138)
 - `files` — variable (scripts/audit3-patho.mjs:139)
 - `r` — variable (scripts/audit3-patho.mjs:140)
+- `ms` — variable (scripts/audit3-patho.mjs:141)
+- `out` — variable (scripts/audit3-patho.mjs:141)
 - `out` — variable (scripts/audit3-patho.mjs:147)
 - `t` — variable (scripts/audit3-patho.mjs:151)
 - `files` — variable (scripts/audit3-patho.mjs:152)
 - `r` — variable (scripts/audit3-patho.mjs:153)
+- `ms` — variable (scripts/audit3-patho.mjs:154)
+- `res` — variable (scripts/audit3-patho.mjs:154)
 
 _Generated offline (mock client)._

@@ -889,6 +889,8 @@ function visitDeclarator(ctx: Ctx, stack: Frame[], node: Node, decl: Node): void
   const nameNode = decl.childForFieldName('name');
   const valueNode = decl.childForFieldName('value');
   if (!nameNode || nameNode.type !== 'identifier') {
+    // `const { a, b: c = 1, ...d } = f()`, `const [e, [g]] = h`: each bound name (A13-01).
+    for (const name of patternNames(nameNode)) push(ctx, 'variable', name.text, decl, node);
     collectCalls(ctx, valueNode, ctx.owner);
     return;
   }
@@ -900,6 +902,28 @@ function visitDeclarator(ctx: Ctx, stack: Frame[], node: Node, decl: Node): void
   const object = objectValue(assigned);
   if (object) visitScope(ctx, stack, sym.name, sym.exported, object);
   else collectCalls(ctx, decl, sym.qualifiedName);
+}
+
+/** The identifiers an object or array binding pattern binds, in source order. */
+function patternNames(pattern: Node | null): Node[] {
+  const names: Node[] = [];
+  const todo = pattern ? [pattern] : [];
+  for (let n = todo.pop(); n; n = todo.pop()) {
+    const t = n.type;
+    if (t === 'identifier' || t === 'shorthand_property_identifier_pattern') names.push(n);
+    else if (t === 'object_pattern' || t === 'array_pattern' || t === 'rest_pattern')
+      todo.push(...[...n.namedChildren].reverse());
+    else {
+      const inner =
+        t === 'pair_pattern'
+          ? n.childForFieldName('value')
+          : t === 'object_assignment_pattern' || t === 'assignment_pattern'
+            ? n.childForFieldName('left')
+            : null;
+      if (inner) todo.push(inner);
+    }
+  }
+  return names;
 }
 
 /** An object literal, also under `as const` / `satisfies T` (A9-07); null for anything else. */

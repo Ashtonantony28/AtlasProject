@@ -517,3 +517,15 @@ linear in depth. `_testOne` is not public API: `ignore` 6.x has no own-path test
 The SG27 parity tests now compare with `git ls-files -co --exclude-standard` instead of the
 pre-SG27 walk, which had the same defect. `EXTRACTOR_VERSION` is unchanged: newly walked files
 are picked up by the next index run.
+
+## 2026-10-22 — SG31: destructured top-level declarations and Python tuple targets are variables
+
+Each name a top-level (or namespace) `const`/`let`/`var` object or array pattern binds is a
+`variable` symbol spanning its declarator, exported like the declaration (`export const`, or a
+later `export { }`); renames bind the new name, defaults bind only their left side, and nested and
+rest patterns are walked. Python top-level `pattern_list`/`tuple_pattern`/`list_pattern` targets
+(with `*rest`) do the same under the usual `__all__`/underscore rules; attributes and subscripts
+bind nothing. Initializer calls stay the module's, as before: the value is shared, so no single
+name owns them. Destructured `require` gets variables like `const x = require()` already did; the
+resolver's import-first rule keeps those edges on the required module. `EXTRACTOR_VERSION` is 3
+(A13-01).
