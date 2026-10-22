@@ -244,7 +244,7 @@ describe('AUDIT-9 incremental indexing', () => {
 // ---------------------------------------------------------------- symbol extraction
 
 describe('AUDIT-9 symbols', () => {
-  it.fails(
+  it(
     'A9-02 locals of a callback passed at module level are not top-level symbols',
     async () => {
       const g = await graphOf({
@@ -264,7 +264,7 @@ describe('AUDIT-9 symbols', () => {
     },
   );
 
-  it.fails(
+  it(
     'A9-02 a callback local that shares a top-level name does not capture its incoming edges',
     async () => {
       const g = await graphOf({
@@ -278,7 +278,7 @@ describe('AUDIT-9 symbols', () => {
     },
   );
 
-  it.fails(
+  it(
     'A9-07 members of `as const` / `satisfies` objects are qualified symbols that resolve',
     async () => {
       const g = await graphOf({
@@ -299,7 +299,7 @@ describe('AUDIT-9 symbols', () => {
     },
   );
 
-  it.fails(
+  it(
     'A9-11 public API declared through `module.exports` aliases, `export declare` and `__all__ +=` is exported',
     async () => {
       const g = await graphOf({
@@ -318,7 +318,7 @@ describe('AUDIT-9 symbols', () => {
     },
   );
 
-  it.fails(
+  it(
     'A9-12 every name of a chained method assignment is a symbol (`req.get = req.header = fn`)',
     async () => {
       const g = await graphOf({

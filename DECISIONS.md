@@ -433,3 +433,26 @@ resolved edges to a function, method or class, and drift's neighbourhood hash pi
 `forEachOfType`'s native cut-off rose from 100 to 500 descendants, because native matches are
 materialised and value nodes made them about 7× as many. Parse+insert median on got went ~3.6 →
 ~4.2 ms/file (budget 5), and express stayed ~1.7.
+
+## 2026-10-22 — SG26: function values are local scopes unless they are module wrappers
+
+A function value (arrow, `function` expression) met by the module-level walk is a local scope:
+its declarations are not symbols and its calls/values belong to the enclosing owner (A9-02). It
+is a **module wrapper**, walked as module scope, only when it is (1) the callee of a call, also
+through parentheses or `.call`/`.apply` (IIFE, `!function(){}()`), (2) an argument of a call
+whose callee is itself a function value (UMD: `(function (root, factory) {…})(this, function
+() {…})`, incl. rollup's parenthesised factory), or (3) the last argument of a call to the bare
+identifier `define` (AMD, incl. `define(function (require, exports, module) {…})`). Nothing
+else counts: `obj.define(…)`, webpack/browserify bundles and `describe`/`app.get`/`.then`
+callbacks are local. Methods of object literals that are not a scope (call arguments, arrays,
+returns) define nothing either. One property-definer shape is kept as API: `f(obj, 'name', fn)`
+with exactly three arguments (express `defineGetter`) and `Object/Reflect.defineProperty(obj,
+'name', { get|value: fn })` define method `obj.name` when `obj`'s head is a top-level symbol
+of the file and not an import binding (so `stub(fs, 'readFile', fn)` defines nothing). Also:
+chained assignments define the innermost target and alias every other member target (A9-12);
+`as const`/`satisfies` objects open a member scope (A9-07); `var app = exports =
+module.exports = {}` exports `app` (default export when the chain ends in an object), `export
+declare` is exported, Python `__all__ += [...]` extends a literal `__all__` (A9-11). Inner
+links of a chain are skipped by node id, not `node.parent` (O(depth) in tree-sitter 0.21).
+Express/got/trpc top-level variables+functions: 1789/5047/5683 → 547/486/2240; callback
+locals 69%/90%/61% → 0%. The extractor version (SG25) must be bumped with this change.

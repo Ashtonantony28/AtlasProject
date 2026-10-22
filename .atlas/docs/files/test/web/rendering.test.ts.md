@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/web/rendering.test.ts
-source_hash: 3f27f17629e59d1792555cf0d14d86c7b4f3e535651d8790a7634e87c98b684f
+source_hash: 45e1c653cfc43e2aec57649e85a07f6a092caf903c62a666d9aa99b025140da1
 ---
 # module test/web/rendering.test.ts
 
@@ -18,24 +18,6 @@ source_hash: 3f27f17629e59d1792555cf0d14d86c7b4f3e535651d8790a7634e87c98b684f
 - `FIXTURE_SEARCH_HITS` — variable (test/web/rendering.test.ts:64)
 - `makeFetch` — function (test/web/rendering.test.ts:69)
 - `waitFor` — function (test/web/rendering.test.ts:96)
-- `dom` — variable (test/web/rendering.test.ts:106)
-- `html` — variable (test/web/rendering.test.ts:108)
-- `runApp` — function (test/web/rendering.test.ts:116)
-- `doc` — variable (test/web/rendering.test.ts:135)
-- `stats` — variable (test/web/rendering.test.ts:151)
-- `doc` — variable (test/web/rendering.test.ts:159)
-- `items` — variable (test/web/rendering.test.ts:168)
-- `svgNodes` — variable (test/web/rendering.test.ts:180)
-- `svgEdges` — variable (test/web/rendering.test.ts:182)
-- `labels` — variable (test/web/rendering.test.ts:188)
-- `doc` — variable (test/web/rendering.test.ts:196)
-- `items` — variable (test/web/rendering.test.ts:197)
-- `shapesItem` — variable (test/web/rendering.test.ts:198)
-- `body` — variable (test/web/rendering.test.ts:206)
-- `doc` — variable (test/web/rendering.test.ts:213)
-- `form` — variable (test/web/rendering.test.ts:215)
-- `items` — variable (test/web/rendering.test.ts:218)
-- `searchTab` — variable (test/web/rendering.test.ts:226)
 
 References: `test/web/rendering.test.ts:12`, `test/web/rendering.test.ts:13`, `test/web/rendering.test.ts:15`, `test/web/rendering.test.ts:24`, `test/web/rendering.test.ts:29`.
 

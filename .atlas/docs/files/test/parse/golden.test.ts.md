@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/parse/golden.test.ts
-source_hash: b82f626a93aa63d15aa33695c17e0d143f65c1fa804dd9d8100c64bf54aa7475
+source_hash: d3520ebff1e0fa8aa7df53906a7a7607bb2d0f9b24f0ba792eee913aeddc9ae5
 ---
 # module test/parse/golden.test.ts
 
@@ -10,9 +10,7 @@ source_hash: b82f626a93aa63d15aa33695c17e0d143f65c1fa804dd9d8100c64bf54aa7475
 - `ROOT` — variable (test/parse/golden.test.ts:11)
 - `GOLDEN` — variable (test/parse/golden.test.ts:12)
 - `parseFixtures` — function (test/parse/golden.test.ts:14)
-- `actual` — variable (test/parse/golden.test.ts:28)
-- `expected` — variable (test/parse/golden.test.ts:33)
 
-References: `test/parse/golden.test.ts:11`, `test/parse/golden.test.ts:12`, `test/parse/golden.test.ts:14`, `test/parse/golden.test.ts:28`, `test/parse/golden.test.ts:33`.
+References: `test/parse/golden.test.ts:11`, `test/parse/golden.test.ts:12`, `test/parse/golden.test.ts:14`, `test/parse/golden.test.ts:11`, `test/parse/golden.test.ts:12`.
 
 _Generated offline (mock client)._

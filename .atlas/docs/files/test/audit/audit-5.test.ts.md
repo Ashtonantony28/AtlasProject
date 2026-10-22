@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/audit/audit-5.test.ts
-source_hash: 39cc126c34198528fc5c449592634dbcb46277082cdef764d5ede1aa73250d2a
+source_hash: ec408ed92664095176ebe816addfa05d82d0eae156b5e36db8cd9a362e00f1c2
 ---
 # module test/audit/audit-5.test.ts
 
@@ -13,29 +13,9 @@ source_hash: 39cc126c34198528fc5c449592634dbcb46277082cdef764d5ede1aa73250d2a
 - `Graph` — interface (test/audit/audit-5.test.ts:47)
 - `graphOf` — function (test/audit/audit-5.test.ts:57)
 - `strongTo` — function (test/audit/audit-5.test.ts:87)
-- `EXPRESS_STYLE` — variable (test/audit/audit-5.test.ts:95)
-- `g` — variable (test/audit/audit-5.test.ts:107)
-- `g` — variable (test/audit/audit-5.test.ts:115)
-- `g` — variable (test/audit/audit-5.test.ts:122)
-- `ALIASED` — variable (test/audit/audit-5.test.ts:129)
-- `g` — variable (test/audit/audit-5.test.ts:140)
-- `g` — variable (test/audit/audit-5.test.ts:147)
-- `g` — variable (test/audit/audit-5.test.ts:166)
-- `g` — variable (test/audit/audit-5.test.ts:177)
-- `g` — variable (test/audit/audit-5.test.ts:188)
-- `g` — variable (test/audit/audit-5.test.ts:200)
-- `g` — variable (test/audit/audit-5.test.ts:216)
-- `g` — variable (test/audit/audit-5.test.ts:228)
-- `g` — variable (test/audit/audit-5.test.ts:243)
 - `driftAfter` — function (test/audit/audit-5.test.ts:254)
 - `staleOf` — function (test/audit/audit-5.test.ts:270)
 - `BASE` — variable (test/audit/audit-5.test.ts:277)
-- `files` — variable (test/audit/audit-5.test.ts:286)
-- `report` — variable (test/audit/audit-5.test.ts:319)
-- `p` — variable (test/audit/audit-5.test.ts:333)
-- `full` — variable (test/audit/audit-5.test.ts:349)
-- `md` — variable (test/audit/audit-5.test.ts:351)
-- `latin1` — function (test/audit/audit-5.test.ts:360)
 
 References: `test/audit/audit-5.test.ts:26`, `test/audit/audit-5.test.ts:31`, `test/audit/audit-5.test.ts:39`, `test/audit/audit-5.test.ts:47`, `test/audit/audit-5.test.ts:57`.
 

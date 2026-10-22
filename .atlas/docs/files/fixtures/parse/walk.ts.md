@@ -1,17 +1,12 @@
 ---
 kind: file
 target: fixtures/parse/walk.ts
-source_hash: e5a81d12167bce53366bb3913cc7b61fa682a382f60b98e422a1e67b25333c36
+source_hash: 779f8e46addf3f1d575595d1440b80c2c23ad74d6b558239ca4fadaa03cce41d
 ---
 # module fixtures/parse/walk.ts
 
 `module fixtures/parse/walk.ts` exposes the following public surface:
 
-- `local` — variable (fixtures/parse/walk.ts:7)
-- `inner` — function (fixtures/parse/walk.ts:8)
-- `Nested` — class (fixtures/parse/walk.ts:11)
-- `Nested.field` — method (fixtures/parse/walk.ts:12)
-- `Nested.run` — method (fixtures/parse/walk.ts:14)
 - `config` — variable (fixtures/parse/walk.ts:24)
 - `config.load` — method (fixtures/parse/walk.ts:25)
 - `config.save` — method (fixtures/parse/walk.ts:28)
@@ -30,6 +25,6 @@ source_hash: e5a81d12167bce53366bb3913cc7b61fa682a382f60b98e422a1e67b25333c36
 - `Calls` — class (fixtures/parse/walk.ts:55)
 - `Calls.all` — method (fixtures/parse/walk.ts:59)
 
-References: `fixtures/parse/walk.ts:7`, `fixtures/parse/walk.ts:8`, `fixtures/parse/walk.ts:11`, `fixtures/parse/walk.ts:12`, `fixtures/parse/walk.ts:14`.
+References: `fixtures/parse/walk.ts:24`, `fixtures/parse/walk.ts:25`, `fixtures/parse/walk.ts:28`, `fixtures/parse/walk.ts:32`, `fixtures/parse/walk.ts:33`.
 
 _Generated offline (mock client)._

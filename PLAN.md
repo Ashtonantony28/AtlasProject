@@ -63,7 +63,7 @@ Three unmerged branches diverge from base: `vibrant-hopper-34LWu` (chunked parse
 | SG23 | Perf budget tests run serially in their own vitest project so load cannot fail them; same limits (A6-06) | SG14 | Claude (thread) | done |
 | SG24 | Test hardening from AUDIT-8: unreadable-path and filter-fallback guarantees live in unit suites, drift paging cannot change the gate/exit code, A2-01 query-plan repro binds both params and becomes a plain test, coverage threshold in vitest config (A8-01, A8-02, A8-04, A8-05, A8-11) | SG17 | Claude (thread) | done |
 | SG25 | Index stays current across upgrades and config edits: a parser/extractor version and a resolver-config fingerprint force re-parse / re-resolve when they change; oversized files are counted and reported (A9-01, A9-03, A9-10, A9-13) | SG2 | Claude (thread) | proposed (from AUDIT-9) |
-| SG26 | Callback bodies are local scopes: locals of functions passed as call arguments are not top-level symbols (module-wrapper patterns like IIFE/UMD/AMD factories still are); chained method aliases, `as const`/`satisfies` members and CommonJS export flags are captured (A9-02, A9-07, A9-11, A9-12) | SG18 | Claude (thread) | proposed (from AUDIT-9) |
+| SG26 | Callback bodies are local scopes: locals of functions passed as call arguments are not top-level symbols (module-wrapper patterns like IIFE/UMD/AMD factories still are); chained method aliases, `as const`/`satisfies` members and CommonJS export flags are captured (A9-02, A9-07, A9-11, A9-12) | SG18 | Claude (thread) | done |
 
 ### SG0: Shared interfaces + bench harness
 - Migration v3 (`symbols.exported`), `ParsedSymbol.exported`, `createEmbedder`, FTS5 table `symbols_fts` (migration v3), plus contract tests that pin each item in §Interfaces.

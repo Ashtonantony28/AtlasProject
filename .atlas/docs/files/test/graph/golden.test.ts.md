@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/graph/golden.test.ts
-source_hash: b49f56a4118956bd97fb2c6bb5f4e54411ae1398d207a989000925d29dbb1565
+source_hash: a104832ed3efceb84d9cac0f887f121a897d22c1d8a96d224ce4986557386342
 ---
 # module test/graph/golden.test.ts
 
@@ -11,17 +11,7 @@ source_hash: b49f56a4118956bd97fb2c6bb5f4e54411ae1398d207a989000925d29dbb1565
 - `Expected` — interface (test/graph/golden.test.ts:18)
 - `expected` — variable (test/graph/golden.test.ts:24)
 - `keyOf` — function (test/graph/golden.test.ts:27)
-- `dir` — variable (test/graph/golden.test.ts:30)
-- `edges` — variable (test/graph/golden.test.ts:31)
-- `label` — variable (test/graph/golden.test.ts:32)
-- `db` — variable (test/graph/golden.test.ts:36)
-- `paths` — variable (test/graph/golden.test.ts:38)
-- `strong` — function (test/graph/golden.test.ts:51)
-- `got` — variable (test/graph/golden.test.ts:61)
-- `want` — variable (test/graph/golden.test.ts:66)
-- `decoys` — variable (test/graph/golden.test.ts:71)
-- `fromDecoys` — variable (test/graph/golden.test.ts:76)
 
-References: `test/graph/golden.test.ts:16`, `test/graph/golden.test.ts:18`, `test/graph/golden.test.ts:24`, `test/graph/golden.test.ts:27`, `test/graph/golden.test.ts:30`.
+References: `test/graph/golden.test.ts:16`, `test/graph/golden.test.ts:18`, `test/graph/golden.test.ts:24`, `test/graph/golden.test.ts:27`, `test/graph/golden.test.ts:16`.
 
 _Generated offline (mock client)._
