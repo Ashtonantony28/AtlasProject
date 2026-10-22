@@ -286,12 +286,7 @@ describe('AUDIT-8 findings', () => {
     },
   );
 
-  it.todo(
-    'A8-10 (M10): pageDriftReport sets `truncated` for a page that starts past entry 0 but ends at the end of both lists (M10 survives: drop `page.offset > 0 ||` in drift/detect.ts)',
-  );
-  it.todo(
-    'A8-10 (M18): an unreadable directory `lib/` keeps only rows under `lib/`; a deleted sibling `library.ts` is still pruned (M18 survives: match `path.slice(0, -1)` in ingest/indexer.ts)',
-  );
+  // A8-10 M10 and M18 are killed by test/drift/paging.test.ts and test/ingest/unreadable.test.ts (SG24).
   it.todo(
     'A8-10 (M15): the cursor call walk keeps member-chain order: `a.b.c.d()` in a small function body gives refs.object `a.b.c` (M15 survives: drop `.reverse()` in dottedAt, parse/ts.ts); add the form to fixtures/parse so golden.json pins it',
   );

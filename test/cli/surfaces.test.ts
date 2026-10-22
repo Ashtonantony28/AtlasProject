@@ -55,7 +55,7 @@ describe('docs from .atlas/docs on every surface (fresh clone)', () => {
     );
 
     const db = openDatabase(join(root, '.atlas', 'index.db'), { readonly: true, fileMustExist: true });
-    const handle = await startServer(db, root, { port: 44000 + Math.floor(Math.random() * 1000) });
+    const handle = await startServer(db, root, { port: 0 });
     try {
       const get = async (p: string) => (await fetch(`${handle.url}${p}`)).json();
       expect(await get('api/docs')).toEqual(fromMcp);

@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/cli/surfaces.test.ts
-source_hash: 88fb7a46284543b90f14c53bbc7007d62d8d27ab3fb4c9a4d2ca263508b265bc
+source_hash: 1898bb3fbfd2bef516b30a2f1334fdd7a15b661f5833793048b0ee946faa5616
 ---
 # module test/cli/surfaces.test.ts
 

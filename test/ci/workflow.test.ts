@@ -109,6 +109,18 @@ describe('CI workflow end-to-end (index → drift → ci-comment)', () => {
     expect(yml).not.toMatch(/index\.js docs\b/);
   });
 
+  it('runs the unit suite with the coverage gate, then the perf budgets on their own', () => {
+    const yml = readFileSync(new URL('../../.github/workflows/atlas.yml', import.meta.url), 'utf8');
+    const pkg = JSON.parse(
+      readFileSync(new URL('../../package.json', import.meta.url), 'utf8'),
+    ) as { scripts: Record<string, string> };
+    expect(pkg.scripts['test:perf']).toBe('vitest run -c vitest.perf.config.ts');
+    expect(pkg.scripts['test:coverage']).toBe('vitest run --coverage');
+    const cov = yml.indexOf('npm run test:coverage');
+    expect(cov).toBeGreaterThan(0);
+    expect(yml.indexOf('npm run test:perf')).toBeGreaterThan(cov);
+  });
+
   it('triggers on PRs to any branch and pushes to the default branch, without an API key', () => {
     const yml = readFileSync(
       new URL('../../.github/workflows/atlas.yml', import.meta.url),

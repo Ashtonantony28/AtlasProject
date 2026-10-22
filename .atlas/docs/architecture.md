@@ -1,13 +1,13 @@
 ---
 kind: architecture
 target: architecture
-source_hash: 0a0871d3142f6e8d5d0486f05b4d38bc32bcb6d46924dfb50a2d4eafbee6a07c
+source_hash: 8fe67dc9ca530914eccb5c117ad7517e0e33a833e0b8a47c06cc7cbc07b81de1
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 170 files, 2242 symbols, 5474 edges
+**Totals:** 174 files, 2296 symbols, 5661 edges
 
 ## Modules
 
@@ -32,9 +32,6 @@ This codebase's modules collaborate through the graph above.
 - `fixtures/graph/web/store.ts` — typescript, loc=1, 1 symbols
 - `fixtures/graph/web/strings.ts` — typescript, loc=7, 2 symbols
 - `fixtures/graph/web/ui/Base.ts` — typescript, loc=8, 3 symbols
-- `fixtures/graph/web/ui/Panel.tsx` — typescript, loc=3, 1 symbols
-- `fixtures/graph/web/ui/cycle.ts` — typescript, loc=5, 1 symbols
-- `fixtures/graph/web/ui/extra.ts` — typescript, loc=3, 1 symbols
 - `fixtures/graph/web/widget.ts` — typescript, loc=38, 9 symbols
 - `fixtures/parse/walk.js` — javascript, loc=40, 8 symbols
 - `fixtures/parse/walk.ts` — typescript, loc=79, 22 symbols
@@ -61,16 +58,19 @@ This codebase's modules collaborate through the graph above.
 - `src/cli/commands/indexCmd.ts` — typescript, loc=67, 2 symbols
 - `src/cli/commands/init.ts` — typescript, loc=37, 2 symbols
 - `src/cli/commands/mcpCmd.ts` — typescript, loc=21, 2 symbols
+- `src/cli/commands/searchCmd.ts` — typescript, loc=72, 2 symbols
+- `src/cli/commands/serveCmd.ts` — typescript, loc=38, 2 symbols
+- `src/core/config.ts` — typescript, loc=132, 14 symbols
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=323)
-- `src/core/db/repo.ts` (degree=288)
-- `src/mcp/server.ts` (degree=248)
+- `src/core/db/database.ts` (degree=335)
+- `src/core/db/repo.ts` (degree=304)
+- `src/mcp/server.ts` (degree=252)
 - `src/core/parse/ts.ts` (degree=164)
 - `src/core/synth/persist.ts` (degree=163)
 - `test/synth/completion.test.ts` (degree=153)
-- `src/core/ingest/indexer.ts` (degree=145)
+- `src/core/ingest/indexer.ts` (degree=151)
 - `test/graph/paging.test.ts` (degree=134)
 - `src/core/graph/modules.ts` (degree=133)
 - `test/audit/audit-4.test.ts` (degree=133)
