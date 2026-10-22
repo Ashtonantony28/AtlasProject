@@ -2,7 +2,7 @@
 // re-resolved by the next plain run).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { spawn } from 'node:child_process';
-import { cpSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
@@ -177,6 +177,37 @@ describe('SG33 interrupted index runs', () => {
         closeDatabase(cdb);
       }
       expect(after.edges).toContain('src/m0.ts::f0_0 -calls-> src/m1.ts::f1_0');
+    } finally {
+      closeDatabase(db);
+    }
+  });
+});
+
+describe('SG50 edges of re-parsed files until the resolve', () => {
+  it('an edit keeps the edges of symbols that survive it and drops those of removed ones', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'atlas-sg50-'));
+    dirs.push(dir);
+    writeFileSync(join(dir, 'a.ts'), 'export function f() {}\nexport function g() {}\n');
+    writeFileSync(
+      join(dir, 'b.ts'),
+      "import { f, g } from './a';\nexport function h() { f(); g(); }\nexport function i() { h(); }\n",
+    );
+    const db = openDatabase(join(dir, '.atlas', 'index.db'));
+    try {
+      await indexRepo(db, dir, { skipEmbeddings: true });
+      const before = snapshot(db).edges;
+      expect(before).toContain('b.ts::h -calls-> a.ts::g');
+      // Both files re-parsed, `g` removed, then killed before the resolve: the state a reader
+      // sees at the run's yield after the parse loop.
+      writeFileSync(join(dir, 'a.ts'), '\nexport function f() {}\nexport function k() {}\n');
+      writeFileSync(join(dir, 'b.ts'), `\n${readFileSync(join(dir, 'b.ts'), 'utf8')}`);
+      crash.nextResolve = true;
+      await expect(indexRepo(db, dir, { skipEmbeddings: true })).rejects.toThrow('killed');
+      expect(snapshot(db).edges).toEqual(before.filter((e) => !e.includes('a.ts::g')));
+      expect((await indexRepo(db, dir, { skipEmbeddings: true })).resolveReason).toBe(
+        'previous run interrupted',
+      );
+      expect(snapshot(db).edges).toContain('b.ts::h -calls-> null (weak)');
     } finally {
       closeDatabase(db);
     }
