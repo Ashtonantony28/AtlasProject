@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/synth/llmClient.ts
-source_hash: ab9c27ac8c50ad22ca442b82dfc34e59282968cbc75086c6d0d3b2ac854f3313
+source_hash: d43a1684f45d5cab25230ff05de1f9663f585440f6d2c8ca1a7ca78ff63c9c78
 ---
 # module src/core/synth/llmClient.ts
 
