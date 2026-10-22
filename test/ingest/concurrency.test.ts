@@ -1,5 +1,5 @@
-// SG32 (cross-process index runs serialise on a file lock) and SG33 (an interrupted run is
-// re-resolved by the next plain run).
+// SG32 (cross-process index runs serialise on a file lock), SG33 (an interrupted run is
+// re-resolved by the next plain run) and SG80 (index runs and `atlas docs` wait out another writer).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { spawn } from 'node:child_process';
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -9,15 +9,22 @@ import {
   closeDatabase,
   counts,
   getAllEdges,
+  getLastRun,
   getAllSymbols,
   openDatabase,
   type DB,
 } from '../../src/core/db/index.js';
-import { indexRepo } from '../../src/core/ingest/index.js';
+import { indexRepo, type IndexOptions } from '../../src/core/ingest/index.js';
 import { acquireIndexLock } from '../../src/core/ingest/lock.js';
 import { writeBigRepo } from '../helpers/bigRepo.js';
+import { lockHolder } from '../helpers/lockHolder.js';
+import { runCli } from '../cli/helpers.js';
 
-const crash = vi.hoisted(() => ({ nextResolve: false }));
+const crash = vi.hoisted(() => ({
+  nextResolve: false,
+  beforeResolve: undefined as (() => void) | undefined,
+  afterResolve: undefined as (() => void) | undefined,
+}));
 vi.mock('../../src/core/graph/resolver.js', async (importOriginal) => {
   const real = await importOriginal<typeof import('../../src/core/graph/resolver.js')>();
   return {
@@ -27,7 +34,10 @@ vi.mock('../../src/core/graph/resolver.js', async (importOriginal) => {
         crash.nextResolve = false;
         throw new Error('killed before resolve');
       }
-      return real.resolveGraph(...args);
+      crash.beforeResolve?.();
+      const stats = real.resolveGraph(...args);
+      crash.afterResolve?.();
+      return stats;
     },
   };
 });
@@ -39,6 +49,7 @@ const CLI = join(ROOT, 'src/cli/index.ts');
 const dirs: string[] = [];
 afterEach(() => {
   crash.nextResolve = false;
+  crash.beforeResolve = crash.afterResolve = undefined;
   for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
 });
 
@@ -212,4 +223,153 @@ describe('SG50 edges of re-parsed files until the resolve', () => {
       closeDatabase(db);
     }
   });
+});
+
+const REMEDY = '(another process is writing the index; retry when it finishes)';
+const busy = (step: string): RegExp =>
+  new RegExp(`^${step}: database is locked ${REMEDY.replace(/[()]/g, '\\$&')}$`);
+
+describe('SG80 index runs and `atlas docs` wait out another writer', () => {
+  function small(): string {
+    const dir = mkdtempSync(join(tmpdir(), 'atlas-sg80-'));
+    dirs.push(dir);
+    writeFileSync(join(dir, 'a.ts'), 'export function f() {}\n');
+    writeFileSync(join(dir, 'b.ts'), "import { f } from './a';\nexport function g() { f(); }\n");
+    writeFileSync(join(dir, 'c.ts'), "import { g } from './b';\nexport function h() { g(); }\n");
+    return dir;
+  }
+
+  function sample(): string {
+    const dir = mkdtempSync(join(tmpdir(), 'atlas-sg80-'));
+    dirs.push(dir);
+    cpSync(join(ROOT, 'fixtures/sample/src'), join(dir, 'src'), { recursive: true });
+    return dir;
+  }
+
+  async function cli(args: string[]): Promise<{ err: string; ms: number }> {
+    const out = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    const t0 = Date.now();
+    try {
+      await runCli(args);
+      return { err: '', ms: Date.now() - t0 };
+    } catch (e) {
+      return { err: (e as Error).message, ms: Date.now() - t0 };
+    } finally {
+      out.mockRestore();
+    }
+  }
+
+  // Where another connection takes the write lock, for 1 s, during a forced run.
+  const STEPS = [
+    'run stamp', // before the run starts
+    'index write', // between two files' writes
+    'prune', // after the last file, before its deleted file is pruned
+    'graph resolve',
+    'embeddings write',
+    'finish stamp', // after the resolve of a run without embeddings
+  ] as const;
+
+  it.each(STEPS)('an index run waits out a ~1 s hold taken before its %s', async (step) => {
+    const dir = small();
+    const path = join(dir, '.atlas', 'index.db');
+    const db = openDatabase(path);
+    const holder = await lockHolder(path);
+    try {
+      await indexRepo(db, dir, { skipEmbeddings: true });
+      if (step === 'prune') rmSync(join(dir, 'c.ts'));
+      let heldAt = 0;
+      const hold = (): void => {
+        heldAt = Date.now();
+        holder.hold(1000);
+      };
+      let parsed = 0;
+      const opts: IndexOptions = {
+        force: true,
+        skipEmbeddings: step !== 'embeddings write',
+        onFile: () => {
+          parsed++;
+          if ((step === 'index write' && parsed === 1) || (step === 'prune' && parsed === 2))
+            hold();
+        },
+      };
+      if (step === 'graph resolve') crash.beforeResolve = hold;
+      if (step === 'embeddings write' || step === 'finish stamp') crash.afterResolve = hold;
+      if (step === 'run stamp') hold();
+
+      const stats = await indexRepo(db, dir, opts);
+      expect(heldAt).toBeGreaterThan(0);
+      expect(Date.now() - heldAt).toBeGreaterThan(900);
+      expect(stats.filesIndexed).toBe(step === 'prune' ? 2 : 3);
+      expect(stats.filesRemoved).toBe(step === 'prune' ? 1 : 0);
+      expect(stats.edges).toBeGreaterThan(0);
+      if (step === 'embeddings write') expect(stats.embeddings).toBeGreaterThan(0);
+      expect(getLastRun(db)?.finished_at).not.toBeNull();
+    } finally {
+      await holder.close();
+      closeDatabase(db);
+    }
+  });
+
+  it('a hold past the busy timeout fails the run naming its step, the cause and the remedy', async () => {
+    const dir = small();
+    const path = join(dir, '.atlas', 'index.db');
+    const db = openDatabase(path);
+    const holder = await lockHolder(path);
+    try {
+      let parsed = 0;
+      const t0 = Date.now();
+      await expect(
+        indexRepo(db, dir, {
+          skipEmbeddings: true,
+          onFile: () => void (++parsed === 1 && holder.hold(6500)),
+        }),
+      ).rejects.toThrow(busy('index write'));
+      expect(Date.now() - t0).toBeGreaterThan(4900);
+    } finally {
+      await holder.close();
+      closeDatabase(db);
+    }
+  }, 20_000);
+
+  it('`atlas index` and `atlas docs` succeed while another connection holds the lock for ~1 s', async () => {
+    const dir = sample();
+    const path = join(dir, '.atlas', 'index.db');
+    expect((await cli(['index', dir])).err).toBe('');
+    const holder = await lockHolder(path);
+    try {
+      holder.hold(1000);
+      const index = await cli(['index', '--force', dir]);
+      expect(index.err).toBe('');
+      expect(index.ms).toBeGreaterThan(800);
+
+      holder.hold(1000);
+      const docs = await cli(['docs', '--offline', '--cwd', dir]);
+      expect(docs.err).toBe('');
+      expect(docs.ms).toBeGreaterThan(800);
+      expect(withDb(dir, (db) => counts(db).docs)).toBeGreaterThan(0);
+    } finally {
+      await holder.close();
+    }
+  });
+
+  it('`atlas docs` and `atlas index` held past the busy timeout fail naming the step, the cause and the remedy', async () => {
+    const dir = sample();
+    const path = join(dir, '.atlas', 'index.db');
+    expect((await cli(['index', dir])).err).toBe('');
+    const holder = await lockHolder(path);
+    try {
+      holder.hold(6000);
+      const docs = await cli(['docs', '--offline', '--cwd', dir]);
+      expect(docs.err).toMatch(busy('docs write'));
+      expect(docs.ms).toBeGreaterThan(4900);
+      await holder.released();
+
+      holder.hold(6000);
+      const index = await cli(['index', dir]);
+      expect(index.err).toMatch(busy('run stamp'));
+      expect(index.ms).toBeGreaterThan(4900);
+    } finally {
+      await holder.close();
+    }
+  }, 30_000);
 });

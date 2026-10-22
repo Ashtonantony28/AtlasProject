@@ -3,6 +3,7 @@ import {
   getAllSymbols,
   getAllFiles,
 } from '../db/index.js';
+import { immediate } from '../db/database.js';
 import { upsertEmbedding, countEmbeddings } from './store.js';
 import { buildSymbolText, makeSourceLoader } from './textForSymbol.js';
 import type { Embedder } from './embedder.js';
@@ -74,7 +75,7 @@ export async function embedAllSymbols(
       return buildSymbolText(sym, { path: file?.path ?? '' }, source);
     });
     const vecs = await embedder.embed(texts);
-    const tx = db.transaction(() => {
+    immediate(db, () => {
       for (let k = 0; k < chunk.length; k++) {
         const sym = chunk[k]!;
         const vec = vecs[k]!;
@@ -82,7 +83,6 @@ export async function embedAllSymbols(
         stats.generated++;
       }
     });
-    tx();
     opts.onProgress?.(stats.generated, targets.length);
   }
 

@@ -118,7 +118,9 @@ describe('AUDIT-24 SG65 naming SQLITE_BUSY', () => {
     for (const code of ['SQLITE_BUSY', 'SQLITE_BUSY_SNAPSHOT', 'SQLITE_BUSY_RECOVERY']) {
       const err = new Database.SqliteError('database is locked', code);
       nameBusy(err, 'migrations');
-      expect(err.message, code).toBe('migrations: database is locked');
+      expect(err.message, code).toBe(
+        'migrations: database is locked (another process is writing the index; retry when it finishes)',
+      );
     }
     const other = new Database.SqliteError('UNIQUE constraint failed: t.v', 'SQLITE_CONSTRAINT');
     nameBusy(other, 'index write');
@@ -128,26 +130,24 @@ describe('AUDIT-24 SG65 naming SQLITE_BUSY', () => {
     expect(plain.message).toBe('database is locked');
   });
 
-  it.fails(
-    'A24-01: `atlas docs` that outwaits the busy timeout names the step that got SQLITE_BUSY',
-    async () => {
-      vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
-      const dir = makeGitRepo('atlas-a24-');
-      dirs.push(dir);
-      await runCli(['index', dir]);
-      // Another process (here a stand-in for a long `atlas index` resolve) holds the write lock
-      // longer than the 5 s busy wait.
-      await holdWriteLock(join(dir, '.atlas', 'index.db'), 8000);
-      const t0 = Date.now();
-      const err = await runCli(['docs', '--offline', '--cwd', dir]).then(
-        () => null,
-        (e: Error) => e,
-      );
-      expect(Date.now() - t0).toBeGreaterThan(4500);
-      expect(err?.message).toMatch(/^[a-z ]+: database is locked$/);
-    },
-    30_000,
-  );
+  it('A24-01: `atlas docs` that outwaits the busy timeout names the step that got SQLITE_BUSY', async () => {
+    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    const dir = makeGitRepo('atlas-a24-');
+    dirs.push(dir);
+    await runCli(['index', dir]);
+    // Another process (here a stand-in for a long `atlas index` resolve) holds the write lock
+    // longer than the 5 s busy wait.
+    await holdWriteLock(join(dir, '.atlas', 'index.db'), 8000);
+    const t0 = Date.now();
+    const err = await runCli(['docs', '--offline', '--cwd', dir]).then(
+      () => null,
+      (e: Error) => e,
+    );
+    expect(Date.now() - t0).toBeGreaterThan(4500);
+    expect(err?.message).toMatch(
+      /^docs write: database is locked \(another process is writing the index; retry when it finishes\)$/,
+    );
+  }, 30_000);
 });
 
 describe('AUDIT-24 SG55 embedding text', () => {

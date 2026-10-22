@@ -1,25 +1,25 @@
 ---
 kind: file
 target: src/core/graph/resolver.ts
-source_hash: 816ed801293be66aa041843690c94f9bb859cc23e0f467c58a0d648ce8ba92c4
+source_hash: bd72d6b87a3be770908fff61dc779bb8dfe5011505b55a1db2d0106a5bc15f63
 ---
 # module src/core/graph/resolver.ts
 
 `module src/core/graph/resolver.ts` exposes the following public surface:
 
-- `FileCtx` — interface (src/core/graph/resolver.ts:34)
-- `Binding` — type (src/core/graph/resolver.ts:47)
-- `ResolveOptions` — interface (src/core/graph/resolver.ts:54)
-- `ResolveStats` — interface (src/core/graph/resolver.ts:59)
-- `resolveGraph` — function (src/core/graph/resolver.ts:72)
-- `resolveAll` — function (src/core/graph/resolver.ts:76)
-- `EXTERNAL` — variable (src/core/graph/resolver.ts:379)
-- `VALUE_KINDS` — variable (src/core/graph/resolver.ts:380)
-- `localNameOf` — function (src/core/graph/resolver.ts:383)
-- `groupByFile` — function (src/core/graph/resolver.ts:392)
-- `refMeta` — function (src/core/graph/resolver.ts:402)
-- `ownerOf` — function (src/core/graph/resolver.ts:409)
+- `FileCtx` — interface (src/core/graph/resolver.ts:35)
+- `Binding` — type (src/core/graph/resolver.ts:48)
+- `ResolveOptions` — interface (src/core/graph/resolver.ts:55)
+- `ResolveStats` — interface (src/core/graph/resolver.ts:60)
+- `resolveGraph` — function (src/core/graph/resolver.ts:73)
+- `resolveAll` — function (src/core/graph/resolver.ts:77)
+- `EXTERNAL` — variable (src/core/graph/resolver.ts:380)
+- `VALUE_KINDS` — variable (src/core/graph/resolver.ts:381)
+- `localNameOf` — function (src/core/graph/resolver.ts:384)
+- `groupByFile` — function (src/core/graph/resolver.ts:393)
+- `refMeta` — function (src/core/graph/resolver.ts:403)
+- `ownerOf` — function (src/core/graph/resolver.ts:410)
 
-References: `src/core/graph/resolver.ts:34`, `src/core/graph/resolver.ts:47`, `src/core/graph/resolver.ts:54`, `src/core/graph/resolver.ts:59`, `src/core/graph/resolver.ts:72`.
+References: `src/core/graph/resolver.ts:35`, `src/core/graph/resolver.ts:48`, `src/core/graph/resolver.ts:55`, `src/core/graph/resolver.ts:60`, `src/core/graph/resolver.ts:73`.
 
 _Generated offline (mock client)._

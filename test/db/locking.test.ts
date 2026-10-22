@@ -1,5 +1,6 @@
-// SG45 (migrations under one `BEGIN IMMEDIATE` with a busy wait; no lock on a migrated index) and
-// SG65 (a fresh index is created in WAL mode; `SQLITE_BUSY` names the operation that hit it).
+// SG45 (migrations under one `BEGIN IMMEDIATE` with a busy wait; no lock on a migrated index),
+// SG65 (a fresh index is created in WAL mode; `SQLITE_BUSY` names the operation that hit it) and
+// SG80 (write transactions take the write lock up front and wait out another writer).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import * as sqliteVec from 'sqlite-vec';
@@ -9,11 +10,17 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
   closeDatabase,
+  deleteFile,
+  getDocTombstones,
   MIGRATIONS,
   openDatabase,
   runMigrations,
+  upsertDoc,
+  upsertFile,
   type DB,
 } from '../../src/core/db/index.js';
+import { immediate } from '../../src/core/db/database.js';
+import { lockHolder, type LockHolder } from '../helpers/lockHolder.js';
 
 // Records, for each connection opened, the file's journal version byte (2 = WAL) at that moment.
 const opened = vi.hoisted(() => [] as { path: string; version: number | null }[]);
@@ -130,7 +137,9 @@ describe('SG45 migrations across connections', () => {
     holder.pragma('journal_mode = WAL');
     holder.exec('BEGIN IMMEDIATE');
     const t0 = Date.now();
-    expect(() => openDatabase(path)).toThrow(/^migrations: database is locked$/);
+    expect(() => openDatabase(path)).toThrow(
+      /^migrations: database is locked \(another process is writing the index; retry when it finishes\)$/,
+    );
     expect(Date.now() - t0).toBeGreaterThan(4500);
   });
 
@@ -159,7 +168,9 @@ describe('SG65 opening a fresh index', () => {
     const path = join(tmp(), 'index.db');
     await holdWriteLock(path, 10_000, false);
     const t0 = Date.now();
-    expect(() => openDatabase(path)).toThrow(/^journal mode: database is locked$/);
+    expect(() => openDatabase(path)).toThrow(
+      /^journal mode: database is locked \(another process is writing the index; retry when it finishes\)$/,
+    );
     expect(Date.now() - t0).toBeLessThan(1000);
   });
 
@@ -208,5 +219,165 @@ describe('SG65 opening a fresh index', () => {
           .filter((l) => l.startsWith('ERR')),
       ),
     ).toEqual([]);
+  });
+});
+
+describe('SG80 write transactions wait out another writer', () => {
+  const BARE = /^database is locked$/;
+
+  async function setup(): Promise<{ db: DB; path: string; holder: LockHolder }> {
+    const path = join(tmp(), 'index.db');
+    const db = open(path);
+    const holder = await lockHolder(path);
+    cleanup.push(() => void holder.close());
+    return { db, path, holder };
+  }
+
+  // A transaction that reads, then writes (as the per-file, prune, finish-stamp and doc writes do).
+  const readThenWrite = (db: DB, id: number) => (): void => {
+    db.prepare('SELECT COUNT(*) FROM docs').get();
+    upsertDoc(db, { target_kind: 'file', target_id: id, content: 'c', source_hash: 'h' });
+  };
+  const docIds = (db: DB): number[] =>
+    db
+      .prepare("SELECT target_id FROM docs WHERE target_kind = 'file' ORDER BY target_id")
+      .pluck()
+      .all() as number[];
+  const busyTimeout = (db: DB): unknown => db.pragma('busy_timeout', { simple: true });
+
+  it('a deferred transaction that reads first gets SQLITE_BUSY at once (why SG80 uses `immediate`)', async () => {
+    const { db, holder } = await setup();
+    holder.hold(1500);
+    const t0 = Date.now();
+    let err: unknown;
+    try {
+      db.transaction(readThenWrite(db, 1))();
+    } catch (e) {
+      err = e;
+    }
+    expect(Date.now() - t0).toBeLessThan(500);
+    expect((err as { code?: string }).code).toBe('SQLITE_BUSY');
+    expect((err as Error).message).toMatch(BARE);
+    await holder.released();
+  });
+
+  it('`immediate` waits for a lock held for ~1 s, then runs `fn` once and commits', async () => {
+    const { db, holder } = await setup();
+    let calls = 0;
+    holder.hold(1000);
+    const t0 = Date.now();
+    immediate(db, () => {
+      calls++;
+      readThenWrite(db, 1)();
+    });
+    expect(Date.now() - t0).toBeGreaterThan(800);
+    expect(Date.now() - t0).toBeLessThan(4000);
+    expect(calls).toBe(1);
+    expect(docIds(db)).toEqual([1]);
+    expect(busyTimeout(db)).toBe(5000);
+  });
+
+  it('`immediate` gives up with SQLITE_BUSY after the busy timeout, without running `fn`', async () => {
+    const { db, holder } = await setup();
+    let calls = 0;
+    holder.hold(6500);
+    const t0 = Date.now();
+    let err: unknown;
+    try {
+      immediate(db, () => void calls++);
+    } catch (e) {
+      err = e;
+    }
+    expect(Date.now() - t0).toBeGreaterThan(4900);
+    expect(Date.now() - t0).toBeLessThan(6000);
+    expect((err as { code?: string }).code).toBe('SQLITE_BUSY');
+    expect(calls).toBe(0);
+    expect(busyTimeout(db)).toBe(5000);
+    await holder.released();
+  }, 15_000);
+
+  it('`immediate` takes the lock in a writer’s short gaps (SQLite’s busy handler sleeps through them)', async () => {
+    const path = join(tmp(), 'index.db');
+    const db = open(path);
+    // Another process holds the lock for 250 ms at a time, releasing it for 25 ms in between.
+    const writer = spawn(
+      process.execPath,
+      [
+        '-e',
+        `const D = require(${JSON.stringify(require.resolve('better-sqlite3'))});
+         const db = new D(${JSON.stringify(path)}, { timeout: 5000 });
+         const end = Date.now() + 8000;
+         let first = true;
+         (function cycle() {
+           if (Date.now() > end) return db.close();
+           db.exec('BEGIN IMMEDIATE');
+           if (first) { process.stdout.write('locked\\n'); first = false; }
+           setTimeout(() => { db.exec('COMMIT'); setTimeout(cycle, 25); }, 250);
+         })();`,
+      ],
+      { stdio: ['ignore', 'pipe', 'inherit'] },
+    );
+    cleanup.push(() => writer.kill());
+    await new Promise<void>((ok) => writer.stdout.once('data', () => ok()));
+    const waits: number[] = [];
+    for (let i = 1; i <= 12; i++) {
+      const t0 = Date.now();
+      immediate(db, readThenWrite(db, i));
+      waits.push(Date.now() - t0);
+      await new Promise((r) => setTimeout(r, 100)); // the writer takes the lock back
+    }
+    expect(docIds(db)).toHaveLength(12);
+    // Each write waits out at most the hold in progress, never a second one.
+    expect(Math.max(...waits), waits.join(' ')).toBeLessThan(400);
+  });
+
+  it('`immediate` inside another transaction runs in a savepoint', () => {
+    const db = open(join(tmp(), 'index.db'));
+    db.transaction(() => {
+      immediate(db, readThenWrite(db, 1));
+      expect(() =>
+        immediate(db, () => {
+          readThenWrite(db, 2)();
+          throw new Error('inner');
+        }),
+      ).toThrow('inner');
+    }).immediate();
+    expect(docIds(db)).toEqual([1]);
+  });
+
+  it('`immediate` does not retry an SQLITE_BUSY thrown by `fn` itself', () => {
+    const db = open(join(tmp(), 'index.db'));
+    let calls = 0;
+    const busy = new Database.SqliteError('database is locked', 'SQLITE_BUSY');
+    expect(() =>
+      immediate(db, () => {
+        calls++;
+        throw busy;
+      }),
+    ).toThrow(busy);
+    expect(calls).toBe(1);
+    expect(busyTimeout(db)).toBe(5000);
+  });
+
+  it('doc writes (`upsertDoc`) and drift tombstones (`deleteFile`) wait out a ~1 s hold', async () => {
+    const { db, holder } = await setup();
+    const fileId = upsertFile(db, {
+      path: 'a.ts',
+      language: 'typescript',
+      content_hash: 'x',
+      loc: 1,
+    });
+    upsertDoc(db, { target_kind: 'file', target_id: fileId, content: 'old', source_hash: 'h0' });
+
+    holder.hold(1000);
+    let t0 = Date.now();
+    upsertDoc(db, { target_kind: 'file', target_id: fileId, content: 'doc', source_hash: 'h1' });
+    expect(Date.now() - t0).toBeGreaterThan(800);
+
+    holder.hold(1000);
+    t0 = Date.now();
+    deleteFile(db, fileId);
+    expect(Date.now() - t0).toBeGreaterThan(800);
+    expect(getDocTombstones(db)).toEqual([{ path: 'a.ts', content: 'doc', source_hash: 'h1' }]);
   });
 });

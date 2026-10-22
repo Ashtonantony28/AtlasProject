@@ -198,6 +198,7 @@ is locked`, after a 5 s busy wait that a 10k-file resolve transaction can outlas
   - Repro (CLI): index a copy of `fixtures/sample`, hold `BEGIN IMMEDIATE` on its `.atlas/index.db` from another
     process for 8 s, and run `npx tsx src/cli/index.ts docs --offline --cwd <dir>`. It prints
     `atlas: database is locked` and exits 1 after 6.6 s. It does not say which step.
+- Status: fixed by SG80 (merged after this audit); `docs` writes are named `docs write` with the busy remedy, and the test is now a plain `it`.
 - Repro (test): `it.fails` `A24-01` in `audit-24.test.ts`. Run as a plain `it` it fails:
   `AssertionError: expected 'database is locked' to match /^[a-z ]+: database is locked$/` (after 5.4 s).
 - Fix: name the docs writes (for example `docs write`), and either take the index lock for `docs` writes or

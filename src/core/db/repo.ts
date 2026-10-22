@@ -1,7 +1,7 @@
 // Typed query helpers around the SQLite index. Thin wrappers over prepared
 // statements; keep query logic centralized so subsystems don't drift on schema.
 
-import { prepareCached, type DB } from './database.js';
+import { immediate, prepareCached, type DB } from './database.js';
 import type {
   FileRow,
   SymbolRow,
@@ -278,29 +278,32 @@ export interface UpsertDocInput {
   source_hash: string;
 }
 
+// Reads, then writes: takes the write lock up front so another writer is waited out (SG80).
 export function upsertDoc(db: DB, input: UpsertDocInput): number {
   const now = new Date().toISOString();
-  const existing = db
-    .prepare('SELECT id FROM docs WHERE target_kind = ? AND target_id = ?')
-    .get(input.target_kind, input.target_id) as { id: number } | undefined;
+  return immediate(db, () => {
+    const existing = db
+      .prepare('SELECT id FROM docs WHERE target_kind = ? AND target_id = ?')
+      .get(input.target_kind, input.target_id) as { id: number } | undefined;
 
-  if (existing) {
-    db.prepare('UPDATE docs SET content = ?, source_hash = ?, generated_at = ? WHERE id = ?').run(
-      input.content,
-      input.source_hash,
-      now,
-      existing.id,
-    );
-    return existing.id;
-  }
+    if (existing) {
+      db.prepare('UPDATE docs SET content = ?, source_hash = ?, generated_at = ? WHERE id = ?').run(
+        input.content,
+        input.source_hash,
+        now,
+        existing.id,
+      );
+      return existing.id;
+    }
 
-  const info = db
-    .prepare(
-      `INSERT INTO docs (target_kind, target_id, content, source_hash, generated_at)
-       VALUES (?, ?, ?, ?, ?)`,
-    )
-    .run(input.target_kind, input.target_id, input.content, input.source_hash, now);
-  return Number(info.lastInsertRowid);
+    const info = db
+      .prepare(
+        `INSERT INTO docs (target_kind, target_id, content, source_hash, generated_at)
+           VALUES (?, ?, ?, ?, ?)`,
+      )
+      .run(input.target_kind, input.target_id, input.content, input.source_hash, now);
+    return Number(info.lastInsertRowid);
+  });
 }
 
 export function getDoc(db: DB, targetKind: string, targetId: number): DocRow | undefined {
@@ -399,10 +402,12 @@ export function counts(db: DB): {
 // Removes a file and its file-level doc (leaving a tombstone); symbols, imports
 // and edges cascade. vec0 embeddings do not cascade: call deleteEmbeddingsForFile first.
 export function deleteFile(db: DB, fileId: number): void {
-  db.prepare(
-    `UPDATE docs SET target_kind = '${TOMBSTONE_KIND}',
-       content = json_object('path', (SELECT path FROM files WHERE id = ?), 'content', content)
-     WHERE target_kind = 'file' AND target_id = ?`,
-  ).run(fileId, fileId);
-  db.prepare('DELETE FROM files WHERE id = ?').run(fileId);
+  immediate(db, () => {
+    db.prepare(
+      `UPDATE docs SET target_kind = '${TOMBSTONE_KIND}',
+         content = json_object('path', (SELECT path FROM files WHERE id = ?), 'content', content)
+       WHERE target_kind = 'file' AND target_id = ?`,
+    ).run(fileId, fileId);
+    db.prepare('DELETE FROM files WHERE id = ?').run(fileId);
+  });
 }
