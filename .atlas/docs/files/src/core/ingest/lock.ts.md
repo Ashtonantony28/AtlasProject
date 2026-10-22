@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/ingest/lock.ts
-source_hash: 3fe2e22213c8776f7a13b60b2e2da7fbcaeae8eb8a3681ef9002297334071aa8
+source_hash: c566e311625958faa9569628ba08b5e501b81fa5cd6cbbcca41ff846f8930fcd
 ---
 # module src/core/ingest/lock.ts
 
