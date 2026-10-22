@@ -2,11 +2,13 @@ import { readFileSync, realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   type DB,
+  type EdgeKind,
   upsertFile,
   insertSymbols,
   insertImports,
   insertRefs,
-  deleteSymbolsForFile,
+  insertEdges,
+  prepareCached,
   deleteImportsForFile,
   deleteRefsForFile,
   deleteFile,
@@ -164,6 +166,56 @@ export function indexRepo(db: DB, root: string, opts: IndexOptions = {}): Promis
   return run;
 }
 
+type SymbolKey = { id: number; kind: string; name: string; qualified_name: string | null };
+
+/**
+ * Deleting a re-parsed file's symbols cascades to every edge touching them, and edges come back
+ * only in `resolveGraph`; the run yields in between (SG34). So the edges are re-pointed at the
+ * new symbols with the same kind and name (by occurrence), and readers keep the previous graph
+ * until the resolve transaction replaces it (A17-03). Edges of vanished symbols are dropped.
+ */
+function carryEdges(db: DB, fileId: number): (() => void) | undefined {
+  const symbols = (): SymbolKey[] =>
+    prepareCached(
+      db,
+      "SELECT id, kind, name, qualified_name FROM symbols WHERE file_id = ? AND kind != 'module' ORDER BY id",
+    ).all(fileId) as SymbolKey[];
+  const edges = prepareCached(
+    db,
+    `SELECT src_symbol, dst_symbol, kind, weak, meta FROM edges
+       WHERE src_symbol IN (SELECT id FROM symbols WHERE file_id = ? AND kind != 'module')
+          OR dst_symbol IN (SELECT id FROM symbols WHERE file_id = ? AND kind != 'module')`,
+  ).all(fileId, fileId) as {
+    src_symbol: number | null;
+    dst_symbol: number | null;
+    kind: EdgeKind;
+    weak: number;
+    meta: string | null;
+  }[];
+  if (edges.length === 0) return undefined;
+  const old = symbols();
+  return () => {
+    const key = (s: SymbolKey): string => `${s.kind}\0${s.qualified_name ?? s.name}`;
+    const fresh = new Map<string, number[]>();
+    for (const s of symbols()) fresh.set(key(s), [...(fresh.get(key(s)) ?? []), s.id]);
+    const remap = new Map<number, number | undefined>(
+      old.map((s) => [s.id, fresh.get(key(s))?.shift()]),
+    );
+    const to = (id: number | null): number | null | undefined =>
+      id !== null && remap.has(id) ? remap.get(id) : id;
+    insertEdges(
+      db,
+      edges.flatMap((e) => {
+        const src = to(e.src_symbol);
+        const dst = to(e.dst_symbol);
+        return src === undefined || dst === undefined
+          ? []
+          : [{ src_symbol: src, dst_symbol: dst, kind: e.kind, weak: e.weak === 1, meta: e.meta }];
+      }),
+    );
+  };
+}
+
 async function runIndex(db: DB, root: string, opts: IndexOptions): Promise<IndexStats> {
   const t0 = Date.now();
   let lastYield = t0;
@@ -288,9 +340,13 @@ async function runIndex(db: DB, root: string, opts: IndexOptions): Promise<Index
     db.transaction(() => {
       // By path, not by the start-of-run snapshot: the row may be newer than the snapshot.
       const current = getFileByPath(db, file.relativePath);
+      const carry = current ? carryEdges(db, current.id) : undefined;
       if (current) {
         deleteEmbeddingsForFile(db, current.id);
-        deleteSymbolsForFile(db, current.id);
+        // The module symbol is the resolver's (no parser emits one): keep it, and its edges.
+        prepareCached(db, "DELETE FROM symbols WHERE file_id = ? AND kind != 'module'").run(
+          current.id,
+        );
         deleteImportsForFile(db, current.id);
         deleteRefsForFile(db, current.id);
       }
@@ -314,6 +370,7 @@ async function runIndex(db: DB, root: string, opts: IndexOptions): Promise<Index
           exported: sym.exported,
         })),
       );
+      carry?.();
       insertImports(
         db,
         parsed.imports.map((imp) => ({

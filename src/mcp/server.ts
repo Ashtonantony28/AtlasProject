@@ -76,14 +76,26 @@ export function createMcpContext(opts: McpContextOptions): McpContext {
       : opts.offline
         ? Promise.resolve(createOfflineClient())
         : createAnthropicClient(model);
-  // Each call is charged to `ctx.budget` as it is when the call is made and when it returns.
+  // Each call reserves its most (prompt estimate + max_tokens) against `ctx.budget` as it is when
+  // the call is made, so parallel calls cannot overspend (A17-02); it settles to the actual usage,
+  // charged to `ctx.budget` as it is when the call returns.
+  let reserved = 0;
   const metered = (inner: LLMClient): LLMClient => ({
     model: inner.model,
     async complete(params) {
-      const maxTokens = affordableMaxTokens(ctx.budget, estimateInputTokens(params), params.maxTokens);
-      const res = await inner.complete({ ...params, maxTokens });
-      ctx.budget.record(res.inputTokens, res.outputTokens);
-      return res;
+      const input = estimateInputTokens(params);
+      const left = new TokenBudget(ctx.budget.cap);
+      left.record(ctx.budget.total().spent + reserved, 0);
+      const maxTokens = affordableMaxTokens(left, input, params.maxTokens);
+      const hold = input + maxTokens;
+      reserved += hold;
+      try {
+        const res = await inner.complete({ ...params, maxTokens });
+        ctx.budget.record(res.inputTokens, res.outputTokens);
+        return res;
+      } finally {
+        reserved -= hold;
+      }
     },
   });
   const ctx: McpContext = {
