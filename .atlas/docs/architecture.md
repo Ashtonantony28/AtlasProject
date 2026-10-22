@@ -1,24 +1,20 @@
 ---
 kind: architecture
 target: architecture
-source_hash: 9f79bb353dfe9c726d89b592fceb6fe6076de0f7d6a4e5700addb9ade9e6fa17
+source_hash: d3c802df7e482e01ea0a88fb9ee55a3e07c39cbed41570023075a9d3aeba3c5d
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 199 files, 1348 symbols, 6040 edges
+**Totals:** 203 files, 1389 symbols, 6185 edges
 
 ## Modules
 
-- `fixtures/graph/py/pkg/api/star_src.py` — python, loc=2, 1 symbols
-- `fixtures/graph/py/pkg/api/views.py` — python, loc=2, 1 symbols
 - `fixtures/graph/py/pkg/hooks.py` — python, loc=13, 3 symbols
 - `fixtures/graph/py/pkg/models.py` — python, loc=14, 5 symbols
 - `fixtures/graph/py/pkg/repo.py` — python, loc=23, 6 symbols
-- `fixtures/graph/py/pkg/star_use.py` — python, loc=5, 1 symbols
 - `fixtures/graph/py/pkg/sub/service.py` — python, loc=20, 2 symbols
-- `fixtures/graph/py/pkg/sub/tools.py` — python, loc=2, 1 symbols
 - `fixtures/graph/py/pkg/util.py` — python, loc=6, 2 symbols
 - `fixtures/graph/web/app.tsx` — typescript, loc=18, 4 symbols
 - `fixtures/graph/web/cjs/Model.js` — javascript, loc=5, 2 symbols
@@ -51,6 +47,8 @@ This codebase's modules collaborate through the graph above.
 - `scripts/audit2-memory.mjs` — javascript, loc=84, 26 symbols
 - `scripts/audit2-reindex.mjs` — javascript, loc=146, 37 symbols
 - `scripts/audit3-patho.mjs` — javascript, loc=164, 38 symbols
+- `scripts/audit4-fresh.mjs` — javascript, loc=87, 16 symbols
+- `scripts/audit4-mcp-queue.mjs` — javascript, loc=121, 20 symbols
 - `scripts/bench.mjs` — javascript, loc=93, 25 symbols
 - `scripts/copy-static.mjs` — javascript, loc=16, 3 symbols
 - `src/cli/commands/askCmd.ts` — typescript, loc=87, 2 symbols
@@ -61,17 +59,19 @@ This codebase's modules collaborate through the graph above.
 - `src/cli/commands/indexCmd.ts` — typescript, loc=103, 6 symbols
 - `src/cli/commands/init.ts` — typescript, loc=37, 2 symbols
 - `src/cli/commands/mcpCmd.ts` — typescript, loc=21, 2 symbols
+- `src/cli/commands/searchCmd.ts` — typescript, loc=72, 2 symbols
+- `src/cli/commands/serveCmd.ts` — typescript, loc=38, 2 symbols
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=390)
-- `src/core/db/repo.ts` (degree=363)
+- `src/core/db/database.ts` (degree=395)
+- `src/core/db/repo.ts` (degree=365)
 - `src/core/parse/ts.ts` (degree=296)
 - `src/mcp/server.ts` (degree=250)
-- `src/core/ingest/indexer.ts` (degree=186)
+- `src/core/ingest/indexer.ts` (degree=188)
 - `src/core/graph/modules.ts` (degree=184)
 - `src/core/synth/persist.ts` (degree=159)
-- `src/core/db/index.ts` (degree=109)
+- `src/core/db/index.ts` (degree=110)
 - `scripts/audit2-reindex.mjs` (degree=107)
 - `test/synth/completion.test.ts` (degree=107)
 

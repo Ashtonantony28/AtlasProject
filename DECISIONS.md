@@ -553,3 +553,4 @@ bind nothing. Initializer calls stay the module's, as before: the value is share
 name owns them. Destructured `require` gets variables like `const x = require()` already did; the
 resolver's import-first rule keeps those edges on the required module. `EXTRACTOR_VERSION` is 3
 (A13-01).
+
