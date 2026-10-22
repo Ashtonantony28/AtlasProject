@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/graph/resolver.ts
-source_hash: b89ea49628fc54c7015548b65974da61e35614bbe50799c8619c1292602ae0bd
+source_hash: a3d4dfc86c2d5a3cb872ef55285665148727e14577525ac66b50be8b7f85ff72
 ---
 # module src/core/graph/resolver.ts
 
@@ -11,20 +11,14 @@ source_hash: b89ea49628fc54c7015548b65974da61e35614bbe50799c8619c1292602ae0bd
 - `Binding` — type (src/core/graph/resolver.ts:45)
 - `ResolveOptions` — interface (src/core/graph/resolver.ts:52)
 - `ResolveStats` — interface (src/core/graph/resolver.ts:57)
-- `resolveGraph` — function (src/core/graph/resolver.ts:65)
-- `resolveAll` — function (src/core/graph/resolver.ts:69)
-- `EXTERNAL` — variable (src/core/graph/resolver.ts:353)
-- `localNameOf` — function (src/core/graph/resolver.ts:356)
-- `groupByFile` — function (src/core/graph/resolver.ts:365)
-- `refMeta` — function (src/core/graph/resolver.ts:375)
-- `ownerOf` — function (src/core/graph/resolver.ts:382)
-- `TS_EXTS` — variable (src/core/graph/resolver.ts:390)
-- `TS_CANDIDATES` — variable (src/core/graph/resolver.ts:391)
-- `resolveModule` — function (src/core/graph/resolver.ts:394)
-- `resolveSubmodule` — function (src/core/graph/resolver.ts:406)
-- `resolvePython` — function (src/core/graph/resolver.ts:421)
-- `normalizePosix` — function (src/core/graph/resolver.ts:447)
+- `resolveGraph` — function (src/core/graph/resolver.ts:67)
+- `resolveAll` — function (src/core/graph/resolver.ts:71)
+- `EXTERNAL` — variable (src/core/graph/resolver.ts:363)
+- `localNameOf` — function (src/core/graph/resolver.ts:366)
+- `groupByFile` — function (src/core/graph/resolver.ts:375)
+- `refMeta` — function (src/core/graph/resolver.ts:385)
+- `ownerOf` — function (src/core/graph/resolver.ts:392)
 
-References: `src/core/graph/resolver.ts:32`, `src/core/graph/resolver.ts:45`, `src/core/graph/resolver.ts:52`, `src/core/graph/resolver.ts:57`, `src/core/graph/resolver.ts:65`.
+References: `src/core/graph/resolver.ts:32`, `src/core/graph/resolver.ts:45`, `src/core/graph/resolver.ts:52`, `src/core/graph/resolver.ts:57`, `src/core/graph/resolver.ts:67`.
 
 _Generated offline (mock client)._
