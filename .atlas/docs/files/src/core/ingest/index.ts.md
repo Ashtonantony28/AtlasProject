@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/ingest/index.ts
-source_hash: 1fc1e4b731c453457a6232f7d24e2426e90b62fe29e355bd4080d0f3db3045e9
+source_hash: 30198a8413170d75a4f50420232509c79cc7e77c7d545b0e71debdac2feba5b8
 ---
 # module src/core/ingest/index.ts
 
