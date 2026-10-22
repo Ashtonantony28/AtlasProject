@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/synth/synthesize.ts
-source_hash: e391e478a16ce0c1058a5ae5bfd0452a9eb38cbba2251ca29bd3243c35a0e323
+source_hash: 79cd0d10d425a88329152f4591e3696e41a40be886addb80e2430d9b896014bd
 ---
 # module src/core/synth/synthesize.ts
 
@@ -11,9 +11,10 @@ source_hash: e391e478a16ce0c1058a5ae5bfd0452a9eb38cbba2251ca29bd3243c35a0e323
 - `ARCHITECTURE_SYSTEM` — variable (src/core/synth/synthesize.ts:23)
 - `SynthesizeOptions` — interface (src/core/synth/synthesize.ts:31)
 - `SynthesizeOptions.onProgress` — method (src/core/synth/synthesize.ts:38)
-- `SynthesizeStats` — interface (src/core/synth/synthesize.ts:41)
-- `synthesizeDocs` — function (src/core/synth/synthesize.ts:52)
+- `DocStatus` — type (src/core/synth/synthesize.ts:42)
+- `SynthesizeStats` — interface (src/core/synth/synthesize.ts:44)
+- `synthesizeDocs` — function (src/core/synth/synthesize.ts:59)
 
-References: `src/core/synth/synthesize.ts:15`, `src/core/synth/synthesize.ts:23`, `src/core/synth/synthesize.ts:31`, `src/core/synth/synthesize.ts:38`, `src/core/synth/synthesize.ts:41`.
+References: `src/core/synth/synthesize.ts:15`, `src/core/synth/synthesize.ts:23`, `src/core/synth/synthesize.ts:31`, `src/core/synth/synthesize.ts:38`, `src/core/synth/synthesize.ts:42`.
 
 _Generated offline (mock client)._

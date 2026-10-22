@@ -376,6 +376,10 @@ got's median file is tree-sitter's own parse (~1.3 ms cold), the cursor walk
 (~1.4 ms cold) and inserts (~0.8 ms, a third of it the FTS trigger), so heavy
 contention can still push got near 5.
 
+## 2026-10-22 — SG21: no sampling params, 16k max_tokens, incomplete completions are failures
+
+Requests send no `temperature`/`top_p`/`top_k` (current models and API `2026-10-21` reject them). Per-doc and `ask` `max_tokens` default to 16 000 (the non-streaming default; thinking counts toward it), so the budget reserves ~16k per call and a run stops ~16k short of `tokenBudget`. A `stop_reason` other than `end_turn`/`stop_sequence`, or empty text, is never stored: `docs` reports the target as failed and exits 1, `ask` errors.
+
 ## 2026-10-22 — SG22: graph pages own their nodes' outgoing edges
 A7-02: a page used to return only edges with both endpoints on it, so paging
 lost almost every edge. Now an edge belongs to the page holding its `src` (its

@@ -1,5 +1,5 @@
 import type { DB } from '../db/index.js';
-import type { LLMClient } from '../synth/index.js';
+import { ASK_MAX_TOKENS, incompleteReason, type LLMClient } from '../synth/index.js';
 import { checkCitations, type CitationCheck } from './citations.js';
 import { retrieveForQuery, type RetrievedSnippet } from './retrieve.js';
 
@@ -69,9 +69,10 @@ export async function ask(
   const res = await llm.complete({
     system: SYSTEM,
     messages: [{ role: 'user', content: prompt }],
-    maxTokens: opts.maxTokens ?? 800,
-    temperature: 0.1,
+    maxTokens: opts.maxTokens ?? ASK_MAX_TOKENS,
   });
+  const reason = incompleteReason(res);
+  if (reason) throw new Error(`no answer: the model returned an incomplete response (${reason})`);
 
   const checks = checkCitations(res.content, citations);
   return {

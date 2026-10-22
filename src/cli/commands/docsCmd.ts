@@ -79,13 +79,19 @@ export function registerDocsCommand(program: Command): void {
         const exported = exportDocs(db, docsDir);
         process.stdout.write(
           [
-            `modules: generated ${stats.modulesGenerated}, cached ${stats.modulesCached}, skipped ${stats.modulesSkipped}`,
+            `modules: generated ${stats.modulesGenerated}, cached ${stats.modulesCached}, skipped ${stats.modulesSkipped}, failed ${stats.modulesFailed}`,
             `persisted: ${exported.total} docs in ${relative(root, docsDir)} (${exported.written} written, ${exported.removed} removed)`,
-            `architecture: ${stats.architectureGenerated ? 'generated' : 'cached/skipped'}`,
+            `architecture: ${stats.architectureGenerated ? 'generated' : stats.architectureFailed ? 'failed' : 'cached/skipped'}`,
             `tokens: ${stats.inputTokens} in, ${stats.outputTokens} out (budget remaining ${stats.budgetRemaining})`,
             `client: ${llm.model}  duration: ${stats.durationMs}ms`,
           ].join('\n') + '\n',
         );
+        if (stats.failures.length > 0) {
+          for (const f of stats.failures) {
+            process.stderr.write(`atlas docs: ${f.target}: not stored (${f.reason})\n`);
+          }
+          process.exitCode = 1;
+        }
       } finally {
         closeDatabase(db);
       }
