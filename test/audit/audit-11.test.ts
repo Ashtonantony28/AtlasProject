@@ -217,7 +217,7 @@ describe('AUDIT-11 findings', () => {
     },
   );
 
-  it.fails('A11-02: concurrent atlas_index calls do not duplicate symbols', async () => {
+  it('A11-02: concurrent atlas_index calls do not duplicate symbols', async () => {
     const root = sampleCopy();
     const ctx = mcp(root);
     await Promise.all([handleIndexTool(ctx, {}), handleIndexTool(ctx, {})]);
@@ -243,7 +243,7 @@ describe('AUDIT-11 findings', () => {
     );
   });
 
-  it.fails('A11-05: atlas_index applies config edits made after the MCP server started', async () => {
+  it('A11-05: atlas_index applies config edits made after the MCP server started', async () => {
     const root = await indexed();
     const ctx = mcp(root);
     writeConfig(root, { maxFileBytes: 500 });

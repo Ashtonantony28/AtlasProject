@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   type DB,
   upsertFile,
@@ -89,11 +90,25 @@ function lastState(db: DB): IndexState {
   };
 }
 
-export async function indexRepo(
-  db: DB,
-  root: string,
-  opts: IndexOptions = {},
-): Promise<IndexStats> {
+// Runs on one DB file (or in-memory connection) queue: each starts after the previous settles,
+// so no two runs snapshot `files` and insert the same symbols.
+const queues = new Map<unknown, Promise<void>>();
+
+export function indexRepo(db: DB, root: string, opts: IndexOptions = {}): Promise<IndexStats> {
+  const key = db.memory ? db : resolve(db.name);
+  const run = (queues.get(key) ?? Promise.resolve()).then(() => runIndex(db, root, opts));
+  const tail = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  queues.set(key, tail);
+  void tail.then(() => {
+    if (queues.get(key) === tail) queues.delete(key);
+  });
+  return run;
+}
+
+async function runIndex(db: DB, root: string, opts: IndexOptions): Promise<IndexStats> {
   const t0 = Date.now();
   const prev = lastState(db);
   const runId = startRun(db, null);

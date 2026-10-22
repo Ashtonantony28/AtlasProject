@@ -490,3 +490,15 @@ plausible; a smaller window mostly buys `max_tokens` cut-offs, which the SG21 st
 still reports. `docs` throws that error when the budget cannot pay its first call (no silent
 exit 0) and still skips the remaining targets once some docs were generated. `docs` now refuses an
 empty index via `requireIndexed` before any client is made (A11-03).
+
+## 2026-10-22 — SG29: index runs queue per DB, and `atlas_index` reads the config per call
+
+Concurrent index runs are serialised in `indexRepo` itself, not only in the MCP server: a
+module-level queue keyed by the DB file's resolved path (or the connection, for `:memory:`)
+starts each run after the previous one settles, whether it resolved or threw. Queuing was chosen
+over coalescing because calls can differ (`force`, config read at call time) and each caller
+should get the stats of a run that saw its arguments; a queued no-op run is cheap (hash skips).
+Keying by file path also covers a second connection to the same DB in one process; separate
+processes still rely on SQLite's lock. `atlas_index` now does what `atlas index` does before
+indexing: writes the default config when missing, then loads it and stores it in `ctx.config`,
+so later `atlas_search` calls use the same embedder settings as the index (A11-02, A11-05, A7-08).
