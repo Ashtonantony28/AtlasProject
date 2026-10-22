@@ -9,7 +9,7 @@ import {
 } from '../db/index.js';
 import { sha256 } from '../ingest/index.js';
 import { DOC_MAX_TOKENS, incompleteReason, type LLMClient } from './llmClient.js';
-import { TokenBudget } from './budget.js';
+import { affordableMaxTokens, estimateInputTokens, TokenBudget } from './budget.js';
 import { modulePrompt, architecturePrompt } from './context.js';
 
 const MODULE_SYSTEM = `You are a senior engineer writing concise, accurate module documentation for a code intelligence tool.
@@ -78,8 +78,9 @@ export async function synthesizeDocs(
     durationMs: 0,
   };
 
-  // A doc is cached iff sha256(prompt) matches its source_hash. A call runs
-  // only if its worst case (~3 chars/token in, perDocMax out) fits the budget.
+  // A doc is cached iff sha256(prompt) matches its source_hash. Each call's max_tokens is
+  // capped to what the budget can pay; a budget too small for the first call is an error.
+  let calls = 0;
   const generate = async (
     kind: 'module' | 'architecture',
     system: string,
@@ -93,15 +94,17 @@ export async function synthesizeDocs(
       opts.onProgress?.({ kind, ...path, status: 'cached' });
       return 'cached';
     }
-    if (budget.remaining() < Math.ceil((system.length + prompt.length) / 3) + perDocMax) {
+    const messages = [{ role: 'user' as const, content: prompt }];
+    let maxTokens: number;
+    try {
+      maxTokens = affordableMaxTokens(budget, estimateInputTokens({ system, messages }), perDocMax);
+    } catch (err) {
+      if (calls === 0) throw err;
       opts.onProgress?.({ kind, ...path, status: 'skipped', reason: 'token budget exhausted' });
       return 'skipped';
     }
-    const res = await llm.complete({
-      system,
-      messages: [{ role: 'user', content: prompt }],
-      maxTokens: perDocMax,
-    });
+    calls++;
+    const res = await llm.complete({ system, messages, maxTokens });
     budget.record(res.inputTokens, res.outputTokens);
     stats.inputTokens += res.inputTokens;
     stats.outputTokens += res.outputTokens;

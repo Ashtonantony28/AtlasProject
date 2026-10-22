@@ -17,8 +17,10 @@ import {
 } from '../../src/core/db/index.js';
 import { indexRepo } from '../../src/core/ingest/index.js';
 import {
+  ASK_MAX_TOKENS,
   budgeted,
   createOfflineClient,
+  MIN_OUTPUT_TOKENS,
   synthesizeDocs,
   TokenBudget,
   type LLMCallParams,
@@ -290,7 +292,7 @@ describe('AUDIT-4 findings', () => {
       }
     });
 
-    it('A4-05: the ask budget accepts a call that exactly fits and refuses one token less', async () => {
+    it('A4-05: the ask budget caps max_tokens, down to exactly MIN_OUTPUT_TOKENS, and refuses one token less', async () => {
       const db = openDatabase(join(root, '.atlas', 'index.db'));
       dbs.push(db);
       const seen: LLMCallParams[] = [];
@@ -308,28 +310,22 @@ describe('AUDIT-4 findings', () => {
       };
       const question = 'how is the area of a circle computed?';
       await ask(db, fake, root, question);
-      const reserve = reserveOf(seen[0]!);
+      const input = reserveOf(seen[0]!) - seen[0]!.maxTokens;
+      expect(seen[0]?.maxTokens).toBe(ASK_MAX_TOKENS);
       seen.length = 0;
 
-      const exact = new TokenBudget(reserve);
+      const exact = new TokenBudget(input + MIN_OUTPUT_TOKENS);
       await expect(ask(db, budgeted(fake, exact), root, question)).resolves.toMatchObject({
         answer: 'ok',
       });
-      expect(seen).toHaveLength(1);
+      expect(seen[0]?.maxTokens).toBe(MIN_OUTPUT_TOKENS);
       expect(exact.remaining()).toBe(0);
 
-      const short = new TokenBudget(reserve - 1);
+      const short = new TokenBudget(input + MIN_OUTPUT_TOKENS - 1);
       await expect(ask(db, budgeted(fake, short), root, question)).rejects.toThrow(
         /token budget exhausted/,
       );
       expect(seen).toHaveLength(1);
-
-      const twice = new TokenBudget(2 * reserve - 1);
-      const llm = budgeted(fake, twice);
-      await ask(db, llm, root, question);
-      expect(twice.remaining()).toBe(reserve - 1);
-      await expect(ask(db, llm, root, question)).rejects.toThrow(/token budget exhausted/);
-      expect(seen).toHaveLength(2);
     });
   });
 });

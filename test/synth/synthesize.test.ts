@@ -114,12 +114,14 @@ describe('synthesizeDocs (offline)', () => {
     closeDatabase(db);
   });
 
-  it('respects a tight token budget by skipping work, not crashing', async () => {
+  it('refuses a budget too small for any doc, storing nothing', async () => {
     const db = openDatabase(join(dir, 'index.db'));
     await indexRepo(db, FIXTURE);
     const llm = createOfflineClient();
-    const stats = await synthesizeDocs(db, llm, { root: FIXTURE, tokenBudget: 50 });
-    expect(stats.modulesSkipped).toBeGreaterThan(0);
+    await expect(synthesizeDocs(db, llm, { root: FIXTURE, tokenBudget: 50 })).rejects.toThrow(
+      /token budget exhausted/,
+    );
+    expect(getAllDocs(db)).toHaveLength(0);
     closeDatabase(db);
   });
 
