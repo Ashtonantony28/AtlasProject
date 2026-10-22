@@ -583,3 +583,17 @@ handle, and moving the index is rare. Read tools keep serving the open DB. The b
 remedy names where the cap came from: `raise --budget` for `docs --budget`, otherwise
 `raise tokenBudget` (A15-01, A15-03).
 
+## 2026-10-22 — SG50: re-parsed files keep their edges until the resolve; MCP LLM calls reserve
+
+A17-03 is fixed in the indexer, not by making MCP read tools wait for a run: the read handlers
+are synchronous (`atlas_graph`, `atlas_symbol`, `atlas_drift`) and other processes (`atlas serve`,
+CLI `drift`) read the same file, so only a DB that is whole at every yield helps all readers. The
+per-file transaction re-points the edges touching a re-parsed file's old symbols at its new ones
+(same kind and qualified name, by occurrence; edges of vanished symbols are dropped) and keeps the
+file's module symbol, which only the resolver creates. Readers see the previous graph until
+`resolveGraph` replaces every edge in one transaction. An interrupted run leaves that graph too,
+and SG33 re-resolves it. For A17-02 the MCP session keeps a running total of in-flight
+reservations (prompt estimate + `max_tokens`) beside `ctx.budget`, so a config reload that
+replaces the budget (SG40) does not lose them; `TokenBudget` and the CLI's `budgeted` are
+unchanged.
+

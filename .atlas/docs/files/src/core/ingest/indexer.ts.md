@@ -1,26 +1,28 @@
 ---
 kind: file
 target: src/core/ingest/indexer.ts
-source_hash: 8f904e0361056dde40929cc965f309c7f48d8a6bdf8138e12e24980adb33e4ca
+source_hash: f053d737309c02b15e6e50ca939c87092e340e8e35a38ad55d70ca0ab88e48bf
 ---
 # module src/core/ingest/indexer.ts
 
 `module src/core/ingest/indexer.ts` exposes the following public surface:
 
-- `IndexOptions` — interface (src/core/ingest/indexer.ts:30)
-- `IndexOptions.onFile` — method (src/core/ingest/indexer.ts:36)
-- `IndexStats` — interface (src/core/ingest/indexer.ts:43)
-- `MAX_RESOLVER_DIAGNOSTICS` — variable (src/core/ingest/indexer.ts:75)
-- `IndexState` — interface (src/core/ingest/indexer.ts:78)
-- `lastState` — function (src/core/ingest/indexer.ts:86)
-- `Queue` — interface (src/core/ingest/indexer.ts:105)
-- `queues` — variable (src/core/ingest/indexer.ts:109)
-- `YIELD_MS` — variable (src/core/ingest/indexer.ts:112)
-- `dbFile` — function (src/core/ingest/indexer.ts:114)
-- `runKind` — function (src/core/ingest/indexer.ts:123)
-- `indexRepo` — function (src/core/ingest/indexer.ts:137)
-- `runIndex` — function (src/core/ingest/indexer.ts:167)
+- `IndexOptions` — interface (src/core/ingest/indexer.ts:32)
+- `IndexOptions.onFile` — method (src/core/ingest/indexer.ts:38)
+- `IndexStats` — interface (src/core/ingest/indexer.ts:45)
+- `MAX_RESOLVER_DIAGNOSTICS` — variable (src/core/ingest/indexer.ts:77)
+- `IndexState` — interface (src/core/ingest/indexer.ts:80)
+- `lastState` — function (src/core/ingest/indexer.ts:88)
+- `Queue` — interface (src/core/ingest/indexer.ts:107)
+- `queues` — variable (src/core/ingest/indexer.ts:111)
+- `YIELD_MS` — variable (src/core/ingest/indexer.ts:114)
+- `dbFile` — function (src/core/ingest/indexer.ts:116)
+- `runKind` — function (src/core/ingest/indexer.ts:125)
+- `indexRepo` — function (src/core/ingest/indexer.ts:139)
+- `SymbolKey` — type (src/core/ingest/indexer.ts:169)
+- `carryEdges` — function (src/core/ingest/indexer.ts:177)
+- `runIndex` — function (src/core/ingest/indexer.ts:219)
 
-References: `src/core/ingest/indexer.ts:30`, `src/core/ingest/indexer.ts:36`, `src/core/ingest/indexer.ts:43`, `src/core/ingest/indexer.ts:75`, `src/core/ingest/indexer.ts:78`.
+References: `src/core/ingest/indexer.ts:32`, `src/core/ingest/indexer.ts:38`, `src/core/ingest/indexer.ts:45`, `src/core/ingest/indexer.ts:77`, `src/core/ingest/indexer.ts:80`.
 
 _Generated offline (mock client)._
