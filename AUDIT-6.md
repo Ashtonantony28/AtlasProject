@@ -117,9 +117,9 @@ No request errored and no client disconnected. Every single request is now bound
 
 ## Findings
 
-Counts: **Critical 0, High 0, Medium 4, Low 1.**
+Counts: **Critical 0, High 0, Medium 5, Low 1.**
 
-No frozen budget fails. None of the new paths below is super-linear; each is linear in the repository on a request that should cost O(page). None breaks a client at the measured scale. So none meets the High bar.
+No frozen budget fails in isolation (A6-06 covers a flake under suite load). None of the new paths below is super-linear; each is linear in the repository on a request that should cost O(page). None breaks a client at the measured scale. So none meets the High bar.
 
 ### Medium
 
@@ -168,6 +168,11 @@ No frozen budget fails. None of the new paths below is super-linear; each is lin
   - Each call also reads every doc body only to report `chars`.
 - **Repro:** `node scripts/audit2-load.mjs <repo>` (`mcp.docsList`, `http.docsList`).
 - **Cause:** `src/mcp/server.ts:214-223` and `src/web/server.ts:113-125` map `listDocs(...)` with no `limit`/`offset`. Possible fix: page it with `limit`/`offset` and `totals`, like `driftParams`.
+
+#### A6-06: The 50 ms search p95 gate in `test/vector/hybrid.test.ts` flakes under the full suite
+- **Evidence:** run alone it measures 22–28 ms. Under `npm test` (parallel workers) it usually measures 32–34 ms, but 2 of 6 full runs went over 50 ms and failed (one at 977 ms total test time). A frozen budget that fails on load rather than on a regression blocks unrelated PRs.
+- **Repro:** `for i in 1 2 3 4 5 6; do npm test 2>&1 | grep -E "search p95 at|Tests "; done`
+- **Cause:** the latency loop shares 4 vCPUs with the other vitest workers. Possible fix: run budget tests in a separate serial vitest project (`npm run test:perf`, also in CI), with warm-up, keeping the 50 ms limit unchanged.
 
 ### Low
 
