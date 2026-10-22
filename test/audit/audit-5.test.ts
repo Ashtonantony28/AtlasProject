@@ -167,7 +167,7 @@ describe('AUDIT-5 graph', () => {
     },
   );
 
-  it.fails(
+  it(
     'A5-03 source directories named `build` (or `dist`, `coverage`) below the root are indexed',
     async () => {
       const g = await graphOf({
@@ -316,7 +316,7 @@ describe('AUDIT-5 drift', () => {
     }
   });
 
-  it.fails('A5-03 an edit under `src/build/` is reported by drift', async () => {
+  it('A5-03 an edit under `src/build/` is reported by drift', async () => {
     const { db, root, docsDir } = await driftAfter(
       {
         ...BASE,
@@ -335,7 +335,7 @@ describe('AUDIT-5 drift', () => {
     }
   });
 
-  it.fails('A5-08 a persisted doc saved with a UTF-8 BOM is still checked', async () => {
+  it('A5-08 a persisted doc saved with a UTF-8 BOM is still checked', async () => {
     const { db, root, docsDir } = await driftAfter(BASE, (r) =>
       writeFileSync(join(r, 'a.ts'), 'export function foo(): number { return 42; }\n'),
     );
@@ -348,7 +348,7 @@ describe('AUDIT-5 drift', () => {
     }
   });
 
-  it.fails(
+  it(
     'A5-09 the CI comment counts every stale doc, not just the page it was given',
     async () => {
       const { db, root } = await driftAfter(BASE, (r) => {

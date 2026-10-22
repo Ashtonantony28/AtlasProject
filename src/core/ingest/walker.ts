@@ -34,36 +34,42 @@ export interface WalkResult {
 
 const DEFAULT_MAX_BYTES = 1024 * 1024;
 
-// Common always-skip directories. Lightweight defensive defaults.
-const ALWAYS_SKIP = new Set([
-  '.git',
-  '.atlas',
-  'node_modules',
-  '.venv',
-  'venv',
-  '__pycache__',
-  'dist',
-  'build',
-  'coverage',
-  '.next',
-  '.cache',
-]);
+// Directory names that never hold project source, skipped at any depth. Everything else
+// (`dist`, `build`, `coverage`, …) is left to `.gitignore` and the config `exclude`.
+const ALWAYS_SKIP = new Set(['.git', '.atlas', 'node_modules', '__pycache__']);
 
-function loadGitignore(root: string): ReturnType<typeof ignore> {
-  const ig = ignore();
-  const gi = join(root, '.gitignore');
-  if (existsSync(gi)) {
-    try {
-      ig.add(readFileSync(gi, 'utf8'));
-    } catch {
-      // ignore parse failures; treat as no .gitignore
-    }
+type Ignore = ReturnType<typeof ignore>;
+
+// A set of gitignore rules and the directory (relative POSIX, `''` = root) they apply to.
+interface Rules {
+  base: string;
+  ig: Ignore;
+}
+
+function readGitignore(dir: string): Ignore | null {
+  const gi = join(dir, '.gitignore');
+  if (!existsSync(gi)) return null;
+  try {
+    return ignore().add(readFileSync(gi, 'utf8'));
+  } catch {
+    return null;
   }
-  return ig;
+}
+
+// Gitignore precedence: deeper files override shallower ones; the config `exclude` comes last.
+function isIgnored(rules: Rules[], rel: string): boolean {
+  let ignored = false;
+  for (const { base, ig } of rules) {
+    const r = ig.test(base ? rel.slice(base.length + 1) : rel);
+    if (r.ignored) ignored = true;
+    else if (r.unignored) ignored = false;
+  }
+  return ignored;
 }
 
 /**
- * Walk `root` for supported source files, honoring .gitignore and ALWAYS_SKIP.
+ * Walk `root` for supported source files, honoring every `.gitignore` in the tree, the
+ * `exclude` globs, ALWAYS_SKIP and virtualenvs (directories holding `pyvenv.cfg`).
  * Returns relative POSIX paths (with `/` separators) for portability.
  */
 export function walkRepo(root: string, opts: WalkOptions = {}): WalkedFile[] {
@@ -73,17 +79,15 @@ export function walkRepo(root: string, opts: WalkOptions = {}): WalkedFile[] {
 /** Like `walkRepo`, but also reports what could not be read, so callers never mistake it for a deletion. */
 export function walkRepoReport(root: string, opts: WalkOptions = {}): WalkResult {
   const max = opts.maxBytes ?? DEFAULT_MAX_BYTES;
-  const ig = loadGitignore(root);
-  if (opts.exclude && opts.exclude.length > 0) {
-    ig.add(opts.exclude);
-  }
+  const exclude: Rules[] =
+    opts.exclude && opts.exclude.length > 0 ? [{ base: '', ig: ignore().add(opts.exclude) }] : [];
   const inc = opts.include && opts.include.length > 0 ? ignore().add(opts.include) : null;
   const langs = opts.languages ? new Set(opts.languages) : null;
   const out: WalkedFile[] = [];
   const unreadable: UnreadableEntry[] = [];
   const toRel = (abs: string): string => relative(root, abs).split(sep).join('/');
 
-  const visit = (dir: string): void => {
+  const visit = (dir: string, inherited: Rules[]): void => {
     let entries: import('node:fs').Dirent[];
     try {
       entries = readdirSync(dir, { withFileTypes: true });
@@ -92,16 +96,20 @@ export function walkRepoReport(root: string, opts: WalkOptions = {}): WalkResult
       unreadable.push({ path: rel ? `${rel}/` : '', reason: (err as Error).message });
       return;
     }
+    const own = readGitignore(dir);
+    const parents = own ? [...inherited, { base: toRel(dir), ig: own }] : inherited;
+    const rules = [...parents, ...exclude];
     for (const e of entries) {
       const abs = join(dir, e.name);
       const rel = toRel(abs);
       if (!rel) continue;
       if (e.isDirectory()) {
         if (ALWAYS_SKIP.has(e.name)) continue;
-        if (ig.ignores(rel + '/')) continue;
-        visit(abs);
+        if (isIgnored(rules, rel + '/')) continue;
+        if (existsSync(join(abs, 'pyvenv.cfg'))) continue;
+        visit(abs, parents);
       } else if (e.isFile()) {
-        if (ig.ignores(rel)) continue;
+        if (isIgnored(rules, rel)) continue;
         if (inc && !inc.ignores(rel)) continue;
         const lang = detectLanguage(e.name);
         if (!lang || (langs && !langs.has(lang))) continue;
@@ -123,7 +131,7 @@ export function walkRepoReport(root: string, opts: WalkOptions = {}): WalkResult
     }
   };
 
-  visit(root);
+  visit(root, []);
   out.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
   return { files: out, unreadable };
 }

@@ -13,8 +13,10 @@ import { join } from 'node:path';
 import { closeDatabase, getAllDocs, getAllFiles, openDatabase } from '../../src/core/db/index.js';
 import { indexRepo } from '../../src/core/ingest/index.js';
 import {
+  countDocs,
   createOfflineClient,
   exportDocs,
+  listDocs,
   importPersistedDocs,
   readPersistedDocs,
   synthesizeDocs,
@@ -132,5 +134,75 @@ describe('persisted docs (.atlas/docs)', () => {
 
   it('a missing docs dir reads as no docs', () => {
     expect(readPersistedDocs(join(dir, 'nope'))).toEqual([]);
+  });
+
+  describe('front matter that does not parse (A5-08)', () => {
+    const arch = () => join(docsDir, 'architecture.md');
+    const mathDoc = () => join(docsDir, 'files/src/math.ts.md');
+    const prepend = (p: string, prefix: string) =>
+      writeFileSync(p, prefix + readFileSync(p, 'utf8'));
+
+    it('parses docs saved with a UTF-8 BOM, with or without CRLF line endings', async () => {
+      const before = readPersistedDocs(docsDir);
+      prepend(mathDoc(), '\uFEFF');
+      writeFileSync(arch(), `\uFEFF${readFileSync(arch(), 'utf8').replace(/\n/g, '\r\n')}`);
+      expect(readPersistedDocs(docsDir)).toEqual(before);
+      const db = await freshDb('bom');
+      expect(detectDrift(db, { root, docs: readPersistedDocs(docsDir) }).stale).toEqual([]);
+      closeDatabase(db);
+    });
+
+    it('a BOM doc is still reported stale after its source changes', async () => {
+      prepend(mathDoc(), '\uFEFF');
+      writeFileSync(join(root, 'src/math.ts'), 'export function add2(): number { return 1; }\n');
+      const db = await freshDb('bom-stale');
+      const report = detectDrift(db, { root, docs: readPersistedDocs(docsDir) });
+      expect(report.stale.map((s) => s.targetPath)).toContain('src/math.ts');
+      expect(report.failing).toBe(true);
+      closeDatabase(db);
+    });
+
+    it('a hand-broken doc is kept by path with no hash, so drift reports it stale', async () => {
+      writeFileSync(mathDoc(), '# math\n\nNo front matter here; mentions add.\n');
+      writeFileSync(arch(), '--\nkind: architecture\n');
+      const docs = readPersistedDocs(docsDir);
+      expect(docs.find((d) => d.target === 'src/math.ts')).toMatchObject({
+        kind: 'file',
+        sourceHash: '',
+        content: '# math\n\nNo front matter here; mentions add.\n',
+      });
+      expect(docs.find((d) => d.kind === 'architecture')?.sourceHash).toBe('');
+      const db = await freshDb('broken');
+      const report = detectDrift(db, { root, docs });
+      expect(report.stale.map((s) => [s.targetPath, s.storedHash]).sort()).toEqual([
+        ['architecture', ''],
+        ['src/math.ts', ''],
+      ]);
+      expect(report.failing).toBe(true);
+      closeDatabase(db);
+    });
+
+    it('a broken doc is not imported as a cache hit, and is rewritten by the next export', async () => {
+      writeFileSync(mathDoc(), 'garbage\n');
+      const db = await freshDb('broken-import');
+      expect(importPersistedDocs(db, docsDir)).toBe(4);
+      const stats = await synthesizeDocs(db, createOfflineClient(), { root, tokenBudget: 200_000 });
+      expect(stats.modulesGenerated).toBe(1);
+      exportDocs(db, docsDir);
+      expect(readFileSync(mathDoc(), 'utf8').startsWith('---\n')).toBe(true);
+      expect(detectDrift(db, { root, docs: readPersistedDocs(docsDir) }).stale).toEqual([]);
+      closeDatabase(db);
+    });
+
+    it('listDocs and countDocs agree on a broken doc; stray markdown outside files/ is ignored', async () => {
+      writeFileSync(mathDoc(), 'garbage\n');
+      writeFileSync(join(docsDir, 'NOTES.md'), 'not a doc\n');
+      const db = openDatabase(join(dir, 'empty.db'));
+      const listed = listDocs(db, docsDir);
+      expect(listed.map((d) => d.target)).not.toContain('NOTES');
+      expect(listed).toHaveLength(countDocs(db, docsDir));
+      expect(listed.find((d) => d.target === 'src/math.ts')?.content).toBe('garbage\n');
+      closeDatabase(db);
+    });
   });
 });

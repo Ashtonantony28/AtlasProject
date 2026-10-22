@@ -397,6 +397,10 @@ A7-05: `search`, `graph`, `ask` and `drift` reject an empty index like the MCP
 tools, via `openProjectIndex(…, { indexed: true })` / `requireIndexed`, with
 the same "index is empty: <next step>" message.
 
+## 2026-10-22 — SG20: walk skips follow `.gitignore` and config, not names at any depth
+
+Only `.git`, `.atlas`, `node_modules` and `__pycache__` (never project source) and virtualenvs (a directory holding `pyvenv.cfg`) are skipped at any depth. `dist`, `build`, `coverage`, `venv`, `.next`, `.cache` are root-anchored entries in the default `exclude` (`.venv/**`, `venv/**`, `.next/**`, `.cache/**` added to the default value; no new keys), so `src/build/` is indexed and a user can drop an entry to index the root one. Nested `.gitignore` files are now read (deeper files override shallower ones, `exclude` is applied last), which keeps `packages/*/dist` out where a package ignores it. Persisted docs strip a leading BOM before parsing front matter; `ci-comment` validates its input and counts from `totals`, noting when the lists are a page.
+
 ## 2026-10-22 — SG23/SG24: perf budgets run serially; coverage gate on src/core
 Wall-clock budgets (search p95 ≤ 50 ms, cached synthesis and drift ≤ 1 s, limits
 unchanged) moved to `test/perf/` and run only under `npm run test:perf`

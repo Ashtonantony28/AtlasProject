@@ -90,7 +90,7 @@ describe('the same values fail on every surface', () => {
     const root = await indexed();
     const db = openDatabase(join(root, '.atlas', 'index.db'), { readonly: true, fileMustExist: true });
     const ctx = createMcpContext({ root, offline: true });
-    const handle = await startServer(db, root, { port: 43000 + Math.floor(Math.random() * 1000) });
+    const handle = await startServer(db, root, { port: 0 });
     try {
       const cases: Array<{ cli: string[]; qs: string; mcp: Record<string, unknown>; msg: RegExp }> = [
         { cli: ['area', '--limit', 'abc'], qs: 'q=area&limit=abc', mcp: { query: 'area', limit: Number.NaN }, msg: /limit must be/ },

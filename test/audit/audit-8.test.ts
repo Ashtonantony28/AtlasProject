@@ -270,7 +270,7 @@ describe('AUDIT-8 findings', () => {
     });
   });
 
-  it.fails(
+  it(
     'A8-07: /api/stats `docs` (countDocs) equals the docs list when .atlas/docs holds a stray file',
     async () => {
       const { root, db } = repo({ 'a.ts': 'export function a(): number { return 1; }\n' });

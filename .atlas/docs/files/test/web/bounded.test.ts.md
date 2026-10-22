@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/web/bounded.test.ts
-source_hash: 3b34b9c232c9e62181df4243cdacf098365c34a20f8ad98083d03efe7b3dee94
+source_hash: 7b4210cecdced15c2fbe1d703e9d34cd862834a7110ef7e319335f5dffc29940
 ---
 # module test/web/bounded.test.ts
 

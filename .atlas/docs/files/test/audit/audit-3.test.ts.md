@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/audit/audit-3.test.ts
-source_hash: a9b311830d27434ae3fd8eeaab0bdefa691737fa20c78daadadee79d5887c86e
+source_hash: 0dde9d12c676d01315e1a9d26eb0ceb2692685cec9f41045d212c0b5ddb7d63c
 ---
 # module test/audit/audit-3.test.ts
 
@@ -17,16 +17,46 @@ source_hash: a9b311830d27434ae3fd8eeaab0bdefa691737fa20c78daadadee79d5887c86e
 - `withDocs` — function (test/audit/audit-3.test.ts:91)
 - `mcp` — function (test/audit/audit-3.test.ts:97)
 - `withServer` — function (test/audit/audit-3.test.ts:103)
-- `root` — variable (test/audit/audit-3.test.ts:120)
-- `fromCli` — variable (test/audit/audit-3.test.ts:121)
-- `fromHttp` — variable (test/audit/audit-3.test.ts:122)
-- `ctx` — variable (test/audit/audit-3.test.ts:123)
-- `fromMcp` — variable (test/audit/audit-3.test.ts:124)
-- `root` — variable (test/audit/audit-3.test.ts:130)
-- `q` — variable (test/audit/audit-3.test.ts:131)
-- `names` — function (test/audit/audit-3.test.ts:132)
-- `fromCli` — variable (test/audit/audit-3.test.ts:134)
-- `fromHttp` — variable (test/audit/audit-3.test.ts:135)
+- `root` — variable (test/audit/audit-3.test.ts:119)
+- `fromCli` — variable (test/audit/audit-3.test.ts:120)
+- `fromHttp` — variable (test/audit/audit-3.test.ts:121)
+- `ctx` — variable (test/audit/audit-3.test.ts:122)
+- `fromMcp` — variable (test/audit/audit-3.test.ts:123)
+- `root` — variable (test/audit/audit-3.test.ts:129)
+- `q` — variable (test/audit/audit-3.test.ts:130)
+- `names` — function (test/audit/audit-3.test.ts:131)
+- `fromCli` — variable (test/audit/audit-3.test.ts:133)
+- `fromHttp` — variable (test/audit/audit-3.test.ts:134)
+- `ctx` — variable (test/audit/audit-3.test.ts:137)
+- `fromMcp` — variable (test/audit/audit-3.test.ts:138)
+- `root` — variable (test/audit/audit-3.test.ts:145)
+- `q` — variable (test/audit/audit-3.test.ts:146)
+- `fromCli` — variable (test/audit/audit-3.test.ts:147)
+- `ctx` — variable (test/audit/audit-3.test.ts:148)
+- `root` — variable (test/audit/audit-3.test.ts:158)
+- `run` — variable (test/audit/audit-3.test.ts:160)
+- `ctx` — variable (test/audit/audit-3.test.ts:162)
+- `root` — variable (test/audit/audit-3.test.ts:171)
+- `db` — variable (test/audit/audit-3.test.ts:172)
+- `run` — variable (test/audit/audit-3.test.ts:177)
+- `report` — variable (test/audit/audit-3.test.ts:178)
+- `strict` — variable (test/audit/audit-3.test.ts:190)
+- `root` — variable (test/audit/audit-3.test.ts:199)
+- `dirMode` — variable (test/audit/audit-3.test.ts:201)
+- `dbMode` — variable (test/audit/audit-3.test.ts:203)
+- `root` — variable (test/audit/audit-3.test.ts:211)
+- `ctx` — variable (test/audit/audit-3.test.ts:217)
+- `fromMcp` — variable (test/audit/audit-3.test.ts:218)
+- `shown` — variable (test/audit/audit-3.test.ts:221)
+- `stats` — variable (test/audit/audit-3.test.ts:222)
+- `root` — variable (test/audit/audit-3.test.ts:229)
+- `ctx` — variable (test/audit/audit-3.test.ts:234)
+- `run` — variable (test/audit/audit-3.test.ts:236)
+- `root` — variable (test/audit/audit-3.test.ts:243)
+- `run` — variable (test/audit/audit-3.test.ts:244)
+- `root` — variable (test/audit/audit-3.test.ts:251)
+- `run` — variable (test/audit/audit-3.test.ts:253)
+- `status` — variable (test/audit/audit-3.test.ts:254)
 
 References: `test/audit/audit-3.test.ts:31`, `test/audit/audit-3.test.ts:32`, `test/audit/audit-3.test.ts:41`, `test/audit/audit-3.test.ts:47`, `test/audit/audit-3.test.ts:53`.
 

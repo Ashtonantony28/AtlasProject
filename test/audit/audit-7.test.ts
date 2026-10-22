@@ -172,7 +172,7 @@ describe('AUDIT-7 findings', () => {
     },
   );
 
-  it.fails('A7-04: ci-comment reports totals, not the length of a paged list', () => {
+  it('A7-04: ci-comment reports totals, not the length of a paged list', () => {
     const report: DriftReport = {
       stale: [
         { kind: 'file', targetId: 1, targetPath: 'a.ts', storedHash: 'aaaaaaaa', currentHash: 'bbbbbbbb' },
