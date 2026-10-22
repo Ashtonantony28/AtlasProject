@@ -103,38 +103,35 @@ const fiveFiles = (): Record<string, string> =>
 // ---------------------------------------------------------------- migrations (A16-01)
 
 describe('AUDIT-16 high', () => {
-  it.fails(
-    'A16-01: a connection whose migration check races another opener does not fail on `_migrations.version`',
-    () => {
-      const path = join(tmp(), 'index.db');
-      // Connection A opens the fresh file as openDatabase does, and reads "nothing applied".
-      // Before it writes, connection B (another `atlas index` / `atlas mcp` process) opens the
-      // same file and applies every migration. This is the interleaving that makes
-      // test/ingest/concurrency.test.ts fail with "UNIQUE constraint failed: _migrations.version".
-      const a = new Database(path);
-      cleanup.push(() => a.close());
-      sqliteVec.load(a);
-      a.pragma('journal_mode = WAL');
-      const prepare = a.prepare.bind(a);
-      let raced = false;
-      a.prepare = ((sql: string) => {
-        const stmt = prepare(sql);
-        if (raced || !sql.includes('MAX(version)')) return stmt;
-        return {
-          get: (...args: unknown[]) => {
-            const stale: unknown = stmt.get(...args);
-            raced = true;
-            closeDatabase(openDatabase(path));
-            return stale;
-          },
-        };
-      }) as typeof a.prepare;
+  it('A16-01: a connection whose migration check races another opener does not fail on `_migrations.version`', () => {
+    const path = join(tmp(), 'index.db');
+    // Connection A opens the fresh file as openDatabase does, and reads "nothing applied".
+    // Before it writes, connection B (another `atlas index` / `atlas mcp` process) opens the
+    // same file and applies every migration. This is the interleaving that makes
+    // test/ingest/concurrency.test.ts fail with "UNIQUE constraint failed: _migrations.version".
+    const a = new Database(path);
+    cleanup.push(() => a.close());
+    sqliteVec.load(a);
+    a.pragma('journal_mode = WAL');
+    const prepare = a.prepare.bind(a);
+    let raced = false;
+    a.prepare = ((sql: string) => {
+      const stmt = prepare(sql);
+      if (raced || !sql.includes('MAX(version)')) return stmt;
+      return {
+        get: (...args: unknown[]) => {
+          const stale: unknown = stmt.get(...args);
+          raced = true;
+          closeDatabase(openDatabase(path));
+          return stale;
+        },
+      };
+    }) as typeof a.prepare;
 
-      expect(() => runMigrations(a)).not.toThrow();
-      const v = prepare('SELECT MAX(version) AS v FROM _migrations').get() as { v: number };
-      expect(v.v).toBe(MIGRATIONS[MIGRATIONS.length - 1]!.version);
-    },
-  );
+    expect(() => runMigrations(a)).not.toThrow();
+    const v = prepare('SELECT MAX(version) AS v FROM _migrations').get() as { v: number };
+    expect(v.v).toBe(MIGRATIONS[MIGRATIONS.length - 1]!.version);
+  });
 });
 
 // ---------------------------------------------------------------- index lock (SG32)
@@ -279,23 +276,20 @@ describe('AUDIT-16 interrupted runs', () => {
     expect((await indexRepo(db, root, opts)).resolveReason).toBeNull();
   });
 
-  it.fails(
-    'A16-05: after an interrupted first index, the next run reports the interruption, not an extractor upgrade',
-    async () => {
-      const root = repo(fiveFiles());
-      const db = open(join(root, '.atlas', 'index.db'));
-      fault.nextResolve = true;
-      await expect(indexRepo(db, root, { skipEmbeddings: true })).rejects.toThrow(
-        'killed before resolve',
-      );
-      // The rows were written by this extractor a moment ago; `atlas index` instead prints
-      // "index was written by an older Atlas; re-parsed every file with extractor v3".
-      const next = await indexRepo(db, root, { skipEmbeddings: true });
-      expect(next.extractorUpgrade).toBeUndefined();
-      expect(next.filesIndexed).toBe(0);
-      expect(next.resolveReason).toBe('previous run interrupted');
-    },
-  );
+  it('A16-05: after an interrupted first index, the next run reports the interruption, not an extractor upgrade', async () => {
+    const root = repo(fiveFiles());
+    const db = open(join(root, '.atlas', 'index.db'));
+    fault.nextResolve = true;
+    await expect(indexRepo(db, root, { skipEmbeddings: true })).rejects.toThrow(
+      'killed before resolve',
+    );
+    // The rows were written by this extractor a moment ago; `atlas index` instead prints
+    // "index was written by an older Atlas; re-parsed every file with extractor v3".
+    const next = await indexRepo(db, root, { skipEmbeddings: true });
+    expect(next.extractorUpgrade).toBeUndefined();
+    expect(next.filesIndexed).toBe(0);
+    expect(next.resolveReason).toBe('previous run interrupted');
+  });
 });
 
 // ---------------------------------------------------------------- per-file writes (SG32)
