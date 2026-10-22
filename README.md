@@ -136,8 +136,10 @@ directories are skipped at any depth, as is any virtualenv (a directory holding
 `pyvenv.cfg`).
 
 Other keys: `tokenBudget` (positive integer, default 200000), `synthModel`,
-`embeddingModel` (default `local-hash-v1`) and `indexPath` (default
-`.atlas/index.db`; it must resolve inside `.atlas/`, or every command fails).
+`embeddingModel` (default `local-hash-v1`), `indexPath` (default
+`.atlas/index.db`; it must resolve inside `.atlas/`, or every command fails) and
+the optional `maxFileBytes` (positive integer, default 1048576): larger source
+files are not indexed, and `atlas index` counts them (`--verbose` lists them).
 
 ### Command notes
 
@@ -145,6 +147,14 @@ The CLI, the dashboard API and the MCP tools validate parameters with one
 shared schema, so a bad value fails everywhere (CLI exit 1, HTTP 400, MCP
 error) instead of being ignored:
 
+- `index` re-parses only changed files, except after an Atlas upgrade that changed
+  extraction (it then re-parses everything once and says so). Edges are rebuilt
+  when a file changed or a resolver input did (`tsconfig.json`/`jsconfig.json`
+  and their `extends`, `package.json` `name`/`workspaces`/`main`/`module`/`exports`,
+  `pnpm-workspace.yaml`, `pyproject.toml`/`setup.cfg`/`setup.py`), so `--force`
+  is never needed for correctness. Resolver diagnostics (malformed configs,
+  ambiguous workspace packages) are printed (first 10) and returned in full
+  (first 20) by `atlas_index`.
 - `search`: `--limit` 1–100 (default 10); `--kind` is a comma-separated list of
   `function`, `method`, `class`, `interface`, `type`, `variable`; the query must
   not be blank.
@@ -248,6 +258,13 @@ npm run test:perf       # frozen wall-clock budgets in test/perf/, run serially
 npm run test:coverage   # npm test + src/core coverage thresholds (CI runs this)
 npm run build           # tsc + copy static assets
 ```
+
+A change to what the parser extracts (symbols, imports, references) must bump
+`EXTRACTOR_VERSION` in `src/core/parse/version.ts`; the parse golden test
+(`ATLAS_UPDATE_GOLDEN=1`) refuses to regenerate without it. A resolver change that
+alters edges for the same input bumps `RESOLVER_VERSION` in
+`src/core/graph/modules.ts`. Existing indexes then re-parse / re-resolve on the
+next `atlas index` without a migration.
 
 `npm test` includes a self-index integration test (Atlas indexes its own
 source tree) and an end-to-end CI workflow test (index → docs → drift →

@@ -65,6 +65,8 @@ export interface ResolveStats {
   references: number;
   // Unreadable or malformed tsconfig/package.json and ambiguous workspace packages.
   diagnostics: string[];
+  // Config paths the resolver read (feeds `resolverFingerprint`).
+  configInputs: string[];
 }
 
 export function resolveGraph(db: DB, opts: ResolveOptions): ResolveStats {
@@ -139,6 +141,7 @@ function resolveAll(db: DB, root: string): ResolveStats {
     heritage: 0,
     references: 0,
     diagnostics: modules.diagnostics,
+    configInputs: [],
   };
   const seen = new Set<string>();
   const edges: InsertEdgeInput[] = [];
@@ -369,6 +372,7 @@ function resolveAll(db: DB, root: string): ResolveStats {
   }
 
   insertEdges(db, edges);
+  stats.configInputs = [...modules.inputs].sort();
   return stats;
 }
 

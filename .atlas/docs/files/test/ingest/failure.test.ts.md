@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/ingest/failure.test.ts
-source_hash: d3036271a3cde64e12629612b139296a4476a5813d3cc1bbbcd924abef6afdeb
+source_hash: 9a2b40075d89d561f94fd9d71969dc492cbfd6e91c4537cb37e1e8fb000b0b1f
 ---
 # module test/ingest/failure.test.ts
 
@@ -23,7 +23,11 @@ source_hash: d3036271a3cde64e12629612b139296a4476a5813d3cc1bbbcd924abef6afdeb
 - `after` — variable (test/ingest/failure.test.ts:69)
 - `retried` — variable (test/ingest/failure.test.ts:74)
 - `names` — variable (test/ingest/failure.test.ts:77)
-- `r` — variable (test/ingest/failure.test.ts:88)
+- `db` — variable (test/ingest/failure.test.ts:87)
+- `up` — variable (test/ingest/failure.test.ts:95)
+- `kept` — variable (test/ingest/failure.test.ts:98)
+- `retried` — variable (test/ingest/failure.test.ts:103)
+- `r` — variable (test/ingest/failure.test.ts:115)
 
 References: `test/ingest/failure.test.ts:16`, `test/ingest/failure.test.ts:19`, `test/ingest/failure.test.ts:22`, `test/ingest/failure.test.ts:23`, `test/ingest/failure.test.ts:35`.
 

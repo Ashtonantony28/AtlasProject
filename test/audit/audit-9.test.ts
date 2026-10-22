@@ -115,7 +115,7 @@ async function graphOf(files: Record<string, string>): Promise<Graph> {
 // ---------------------------------------------------------------- incremental indexing
 
 describe('AUDIT-9 incremental indexing', () => {
-  it.fails(
+  it(
     'A9-01 an index written by an older extractor is re-parsed after an upgrade, without --force',
     async () => {
       const root = newRepo({
@@ -145,6 +145,8 @@ describe('AUDIT-9 incremental indexing', () => {
       );
       v5.close();
       db.prepare('DELETE FROM _migrations WHERE version > 5').run();
+      // A pre-SG25 Atlas recorded no index state (extractor version) in its runs.
+      db.prepare("UPDATE runs SET stats_json = json_remove(stats_json, '$.state')").run();
       const tables = db
         .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")
         .pluck()
@@ -166,7 +168,7 @@ describe('AUDIT-9 incremental indexing', () => {
     },
   );
 
-  it.fails(
+  it(
     'A9-03 a tsconfig `paths` change alone re-resolves edges on the next plain re-index',
     async () => {
       const root = newRepo({
@@ -196,7 +198,7 @@ describe('AUDIT-9 incremental indexing', () => {
     },
   );
 
-  it.fails(
+  it(
     'A9-03 adding `workspaces` to package.json alone resolves workspace imports on re-index',
     async () => {
       const root = newRepo({
@@ -491,7 +493,7 @@ describe('AUDIT-9 walker', () => {
     },
   );
 
-  it.fails('A9-10 a source file over the 1 MiB cap is reported, not silently dropped', async () => {
+  it('A9-10 a source file over the 1 MiB cap is reported, not silently dropped', async () => {
     let big = '';
     for (let i = 0; big.length <= 1024 * 1024; i++)
       big += `export function f${i}(): number { return ${i}; }\n`;
@@ -555,7 +557,7 @@ describe('AUDIT-9 walker', () => {
 // ---------------------------------------------------------------- resolver diagnostics
 
 describe('AUDIT-9 diagnostics', () => {
-  it.fails(
+  it(
     'A9-13 resolver diagnostics (ambiguous workspace package) reach the index result',
     async () => {
       const root = newRepo({
@@ -569,7 +571,10 @@ describe('AUDIT-9 diagnostics', () => {
       const db = openDatabase(join(root, '..', 'index.db'));
       try {
         const stats = await indexRepo(db, root, { skipEmbeddings: true });
-        expect(JSON.stringify(stats)).toContain('workspace package "example"');
+        // Compared JSON-escaped: the result is what MCP returns as text.
+        expect(JSON.stringify(stats)).toContain(
+          JSON.stringify('workspace package "example"').slice(1, -1),
+        );
       } finally {
         closeDatabase(db);
       }

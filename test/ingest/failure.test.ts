@@ -83,6 +83,33 @@ describe('indexRepo parse failure', () => {
     }
   });
 
+  it('a file that fails to re-parse during an extractor upgrade is retried on the next run', async () => {
+    const db = openDatabase(join(dir, 'index.db'));
+    try {
+      await indexRepo(db, root, { skipEmbeddings: true });
+      // Pretend an older extractor wrote the index (SG25 state in the last run).
+      db.prepare(
+        "UPDATE runs SET stats_json = json_set(stats_json, '$.state.extractorVersion', 0)",
+      ).run();
+      fault.on = 'Add two numbers';
+      const up = await indexRepo(db, root, { skipEmbeddings: true });
+      expect(up.extractorUpgrade?.from).toBe(0);
+      expect(up.filesFailed).toBe(1);
+      const kept = getFileByPath(db, MATH);
+      expect(kept?.content_hash).toBe('');
+      expect(getSymbolsForFile(db, kept!.id).map((s) => s.qualified_name)).toContain('add');
+
+      fault.on = null;
+      const retried = await indexRepo(db, root, { skipEmbeddings: true });
+      expect(retried.extractorUpgrade).toBeUndefined();
+      expect(retried.filesIndexed).toBe(1);
+      expect(getFileByPath(db, MATH)?.content_hash).not.toBe('');
+      expect((await indexRepo(db, root, { skipEmbeddings: true })).filesIndexed).toBe(0);
+    } finally {
+      closeDatabase(db);
+    }
+  });
+
   it('parseSource reports the failure as a diagnostic; parseSourceOrThrow throws', async () => {
     fault.on = 'x';
     const r = await parseSource('const x = 1;\n', 'typescript', 'x.ts');

@@ -287,6 +287,24 @@ export function finishRun(db: DB, runId: number, stats: Record<string, unknown>)
   );
 }
 
+/** `stats_json` of the most recent finished run, parsed; `{}` when none or unreadable. */
+export function getLastRunStats(db: DB): Record<string, unknown> {
+  const row = db
+    .prepare(
+      'SELECT stats_json FROM runs WHERE finished_at IS NOT NULL AND stats_json IS NOT NULL ORDER BY id DESC LIMIT 1',
+    )
+    .get() as { stats_json: string } | undefined;
+  if (!row) return {};
+  try {
+    const v = JSON.parse(row.stats_json) as unknown;
+    return typeof v === 'object' && v !== null && !Array.isArray(v)
+      ? (v as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
 export function getLastRun(db: DB): RunRow | undefined {
   return db.prepare('SELECT * FROM runs ORDER BY id DESC LIMIT 1').get() as RunRow | undefined;
 }
