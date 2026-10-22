@@ -554,3 +554,4 @@ name owns them. Destructured `require` gets variables like `const x = require()`
 resolver's import-first rule keeps those edges on the required module. `EXTRACTOR_VERSION` is 3
 (A13-01).
 
+
