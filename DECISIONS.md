@@ -596,3 +596,4 @@ and SG33 re-resolves it. For A17-02 the MCP session keeps a running total of in-
 reservations (prompt estimate + `max_tokens`) beside `ctx.budget`, so a config reload that
 replaces the budget (SG40) does not lose them; `TokenBudget` and the CLI's `budgeted` are
 unchanged.
+

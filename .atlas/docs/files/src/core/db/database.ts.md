@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/db/database.ts
-source_hash: 88f91efc0b15b10aa3fba68619271710c9edec1c09ead113de9204e06b80f795
+source_hash: 2a15b60f734bdae815156dbdadf0b8e96600512ae5814b8168b2d731c6c75fba
 ---
 # module src/core/db/database.ts
 
@@ -14,8 +14,9 @@ source_hash: 88f91efc0b15b10aa3fba68619271710c9edec1c09ead113de9204e06b80f795
 - `loadVecExtension` — function (src/core/db/database.ts:26)
 - `openDatabase` — function (src/core/db/database.ts:35)
 - `ensureMigrationsTable` — function (src/core/db/database.ts:59)
-- `runMigrations` — function (src/core/db/database.ts:69)
-- `closeDatabase` — function (src/core/db/database.ts:93)
+- `appliedVersion` — function (src/core/db/database.ts:69)
+- `runMigrations` — function (src/core/db/database.ts:80)
+- `closeDatabase` — function (src/core/db/database.ts:103)
 
 References: `src/core/db/database.ts:7`, `src/core/db/database.ts:9`, `src/core/db/database.ts:12`, `src/core/db/database.ts:20`, `src/core/db/database.ts:26`.
 

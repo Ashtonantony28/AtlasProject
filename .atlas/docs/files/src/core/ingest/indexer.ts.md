@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/ingest/indexer.ts
-source_hash: 9cdaa6a8f6b3fd2a0e3c87e05656200b7379234552e57622bba8cc9db3fb6ce8
+source_hash: e13a38ddd5f5678e0fa97c9fc58c7f3fc7878ce5ae40c23677dd7fca55b64aad
 ---
 # module src/core/ingest/indexer.ts
 
@@ -19,9 +19,10 @@ source_hash: 9cdaa6a8f6b3fd2a0e3c87e05656200b7379234552e57622bba8cc9db3fb6ce8
 - `dbFile` — function (src/core/ingest/indexer.ts:116)
 - `runKind` — function (src/core/ingest/indexer.ts:125)
 - `indexRepo` — function (src/core/ingest/indexer.ts:139)
-- `SymbolKey` — type (src/core/ingest/indexer.ts:169)
-- `carryEdges` — function (src/core/ingest/indexer.ts:177)
-- `runIndex` — function (src/core/ingest/indexer.ts:219)
+- `stampedExtractorVersion` — function (src/core/ingest/indexer.ts:169)
+- `SymbolKey` — type (src/core/ingest/indexer.ts:179)
+- `carryEdges` — function (src/core/ingest/indexer.ts:187)
+- `runIndex` — function (src/core/ingest/indexer.ts:229)
 
 References: `src/core/ingest/indexer.ts:32`, `src/core/ingest/indexer.ts:38`, `src/core/ingest/indexer.ts:45`, `src/core/ingest/indexer.ts:77`, `src/core/ingest/indexer.ts:80`.
 

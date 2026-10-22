@@ -66,28 +66,38 @@ function ensureMigrationsTable(db: DB): void {
   `);
 }
 
-export function runMigrations(db: DB): number {
-  ensureMigrationsTable(db);
-  const appliedRow = db.prepare('SELECT MAX(version) AS v FROM _migrations').get() as
+function appliedVersion(db: DB): number {
+  const row = db.prepare('SELECT MAX(version) AS v FROM _migrations').get() as
     | { v: number | null }
     | undefined;
-  const applied = appliedRow?.v ?? 0;
+  return row?.v ?? 0;
+}
 
-  let count = 0;
+/**
+ * Apply pending migrations. Another process may be migrating the same file, so the version is
+ * re-read and the migrations applied under one `BEGIN IMMEDIATE` (waiting on the busy timeout).
+ */
+export function runMigrations(db: DB): number {
+  ensureMigrationsTable(db);
+  const latest = MIGRATIONS[MIGRATIONS.length - 1]?.version ?? 0;
+  if (appliedVersion(db) >= latest) return 0;
+
   const insertMigration = db.prepare(
     'INSERT INTO _migrations (version, name, applied_at) VALUES (?, ?, ?)',
   );
-
-  for (const m of MIGRATIONS) {
-    if (m.version <= applied) continue;
-    const tx = db.transaction(() => {
-      db.exec(m.sql);
-      insertMigration.run(m.version, m.name, new Date().toISOString());
-    });
-    tx();
-    count++;
-  }
-  return count;
+  return db
+    .transaction(() => {
+      const applied = appliedVersion(db);
+      let count = 0;
+      for (const m of MIGRATIONS) {
+        if (m.version <= applied) continue;
+        db.exec(m.sql);
+        insertMigration.run(m.version, m.name, new Date().toISOString());
+        count++;
+      }
+      return count;
+    })
+    .immediate();
 }
 
 export function closeDatabase(db: DB): void {
