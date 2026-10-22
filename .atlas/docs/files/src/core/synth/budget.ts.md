@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/synth/budget.ts
-source_hash: aedce57b83e6178e92d3bc5cdb006215d8dc2f10c128f249fc262295bcd7dd87
+source_hash: 5767d397e921063531104e3279854d8fc6f3c943925a5f4a2b28e81677cf56c4
 ---
 # module src/core/synth/budget.ts
 
