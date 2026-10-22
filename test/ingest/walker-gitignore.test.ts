@@ -1,19 +1,11 @@
-// SG27 (A10-04): the walker carries each .gitignore set's directory verdict down the tree and
-// tests segment-local sets by entry name. These tests pin that the result is identical to the
-// previous walk, which re-tested every full path against every ancestor set.
+// SG27 (A10-04) carries .gitignore evaluation down the tree and tests segment-local sets by entry
+// name; SG30 (A12-01) lets a deeper set re-include a directory a shallower one ignores. Git itself
+// (`git ls-files -co --exclude-standard`) is the oracle.
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, relative, sep } from 'node:path';
-import ignore from 'ignore';
+import { dirname, join } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { segmentLocal, walkRepo } from '../../src/core/ingest/walker.js';
 import { detectLanguage } from '../../src/core/ingest/language.js';
 
@@ -22,38 +14,33 @@ afterEach(() => {
   for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
 });
 
-/** The pre-SG27 walk: every path tested against every ancestor set's `ig.test(fullRel)`. */
-function referenceWalk(root: string, exclude: string[]): string[] {
-  type R = { base: string; ig: ReturnType<typeof ignore> };
-  const ex: R[] = exclude.length ? [{ base: '', ig: ignore().add(exclude) }] : [];
-  const out: string[] = [];
-  const toRel = (abs: string): string => relative(root, abs).split(sep).join('/');
-  const isIgnored = (rules: R[], rel: string): boolean => {
-    let ignored = false;
-    for (const { base, ig } of rules) {
-      const r = ig.test(base ? rel.slice(base.length + 1) : rel);
-      if (r.ignored) ignored = true;
-      else if (r.unignored) ignored = false;
-    }
-    return ignored;
-  };
-  const visit = (dir: string, inherited: R[]): void => {
-    const gi = join(dir, '.gitignore');
-    const parents = existsSync(gi)
-      ? [...inherited, { base: toRel(dir), ig: ignore().add(readFileSync(gi, 'utf8')) }]
-      : inherited;
-    const rules = [...parents, ...ex];
-    for (const e of readdirSync(dir, { withFileTypes: true })) {
-      const abs = join(dir, e.name);
-      const rel = toRel(abs);
-      if (e.isDirectory()) {
-        if (['.git', '.atlas', 'node_modules', '__pycache__'].includes(e.name)) continue;
-        if (!isIgnored(rules, rel + '/')) visit(abs, parents);
-      } else if (!isIgnored(rules, rel) && detectLanguage(e.name)) out.push(rel);
-    }
-  };
-  visit(root, []);
-  return out.sort((a, b) => a.localeCompare(b));
+/** The supported files git lists in `root`, with `exclude` as command-line patterns. */
+function gitWalk(root: string, exclude: string[] = []): string[] {
+  const git = (args: string[]): string =>
+    execFileSync('git', ['-c', 'core.excludesFile=', ...args], { cwd: root }).toString();
+  git(['init', '-q']);
+  const x = exclude.flatMap((p) => ['-x', p]);
+  return git(['ls-files', '-z', '-co', '--exclude-standard', ...x])
+    .split('\0')
+    .filter((p) => p && detectLanguage(p))
+    .sort((a, b) => a.localeCompare(b));
+}
+
+function tree(files: Record<string, string>): string {
+  const root = mkdtempSync(join(tmpdir(), 'atlas-gi-'));
+  dirs.push(root);
+  for (const [rel, text] of Object.entries(files)) {
+    mkdirSync(dirname(join(root, rel)), { recursive: true });
+    writeFileSync(join(root, rel), text);
+  }
+  return root;
+}
+
+/** Asserts that walker and git agree, and returns the walked paths. */
+function walked(root: string, exclude: string[] = []): string[] {
+  const got = walkRepo(root, { exclude }).map((f) => f.relativePath);
+  expect(got).toEqual(gitWalk(root, exclude));
+  return got;
 }
 
 /** Deterministic PRNG so a failure is reproducible from its seed. */
@@ -114,7 +101,7 @@ function randomTree(seed: number): string {
   return root;
 }
 
-describe('walker .gitignore evaluation (SG27, A10-04)', () => {
+describe('walker .gitignore evaluation (SG27, SG30)', () => {
   it('classifies segment-local rule sets', () => {
     expect(segmentLocal('*.log\nbuild0/\n!keep0.ts\ntmp0*\n# c\n\n')).toBe(true);
     expect(segmentLocal('/a\n')).toBe(false);
@@ -123,31 +110,73 @@ describe('walker .gitignore evaluation (SG27, A10-04)', () => {
     expect(segmentLocal('x\\ y\n')).toBe(false);
   });
 
-  it('returns the same files as the previous walk on random nested .gitignore trees', () => {
+  it('returns the files git lists on random nested .gitignore trees', () => {
     for (let seed = 1; seed <= 60; seed++) {
       const root = randomTree(seed);
       for (const exclude of [[], ['**/*.py', 'c/']]) {
         const got = walkRepo(root, { exclude }).map((f) => f.relativePath);
-        expect(got, `seed ${seed} exclude ${exclude.join(',')}`).toEqual(
-          referenceWalk(root, exclude),
-        );
+        expect(got, `seed ${seed} exclude ${exclude.join(',')}`).toEqual(gitWalk(root, exclude));
       }
     }
   });
 
   it('keeps a deeper re-include of a directory a shallower set ignores', () => {
-    const root = mkdtempSync(join(tmpdir(), 'atlas-gi-'));
-    dirs.push(root);
-    const w = (rel: string, text: string): void => {
-      mkdirSync(dirname(join(root, rel)), { recursive: true });
-      writeFileSync(join(root, rel), text);
-    };
-    w('.gitignore', 'build/\n*.log\n');
-    w('x/.gitignore', '!build/\n');
-    w('x/build/f.ts', '');
-    w('y/build/g.ts', '');
-    w('x/build/deep/h.ts', '');
-    const got = walkRepo(root).map((f) => f.relativePath);
-    expect(got).toEqual(referenceWalk(root, []));
+    const root = tree({
+      '.gitignore': 'build/\n*.log\n',
+      'x/.gitignore': '!build/\n',
+      'x/build/f.ts': '',
+      'x/build/deep/h.ts': '',
+      'x/build/deep/n.log': '',
+      'y/build/g.ts': '',
+    });
+    expect(walked(root)).toEqual(['x/build/deep/h.ts', 'x/build/f.ts']);
+  });
+
+  it('does not re-include a file inside an ignored directory', () => {
+    const root = tree({
+      '.gitignore': 'build/\n!build/f.ts\n',
+      'x/.gitignore': '!build/g.ts\n',
+      'build/f.ts': '',
+      'x/build/g.ts': '',
+      'x/k.ts': '',
+    });
+    expect(walked(root)).toEqual(['x/k.ts']);
+  });
+
+  it('re-excludes a directory below a re-include', () => {
+    const root = tree({
+      '.gitignore': 'build/\n',
+      'x/.gitignore': '!build/\n',
+      'x/y/.gitignore': 'build/\n',
+      'x/build/.gitignore': 'deep/\n*.py\n!keep.py\n',
+      'x/build/f.ts': '',
+      'x/build/a.py': '',
+      'x/build/keep.py': '',
+      'x/build/deep/h.ts': '',
+      'x/y/build/g.ts': '',
+    });
+    expect(walked(root)).toEqual(['x/build/f.ts', 'x/build/keep.py']);
+  });
+
+  it('re-includes only where an anchored negation points', () => {
+    const root = tree({
+      '.gitignore': 'build/\n/lib/\n',
+      'x/.gitignore': '!/build/\n',
+      'x/build/f.ts': '',
+      'x/z/build/g.ts': '',
+      'lib/a.ts': '',
+      'x/lib/b.ts': '',
+    });
+    expect(walked(root)).toEqual(['x/build/f.ts', 'x/lib/b.ts']);
+  });
+
+  it('lets the config exclude override a re-include', () => {
+    const root = tree({
+      '.gitignore': 'build/\n',
+      'x/.gitignore': '!build/\n',
+      'x/build/f.ts': '',
+      'x/build/g.py': '',
+    });
+    expect(walked(root, ['*.py'])).toEqual(['x/build/f.ts']);
   });
 });

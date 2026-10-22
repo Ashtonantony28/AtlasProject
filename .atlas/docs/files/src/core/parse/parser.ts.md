@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/parse/parser.ts
-source_hash: f48c3c5f7c2a73af8e5caebaf2fc70682edbbf2853cdd5e2908d4d5add5fd2a7
+source_hash: 23cb743f733fff6a6064635a75725fd19ed95db44ef8b55de8c6bd85cae8bed6
 ---
 # module src/core/parse/parser.ts
 

@@ -216,22 +216,19 @@ describe('AUDIT-12 module resolution', () => {
 // ---------------------------------------------------------------- walker vs git (SG20/SG27)
 
 describe('AUDIT-12 walker', () => {
-  it.fails(
-    'A12-01: a directory ignored by a shallower .gitignore and re-included by a deeper one is walked, as git does',
-    () => {
-      const root = join(tmp(), 'repo');
-      write(root, {
-        '.gitignore': 'build/\n',
-        'x/.gitignore': '!build/\n',
-        'x/build/f.ts': 'export const f = 1;\n',
-        'x/build/deep/h.ts': 'export const h = 1;\n',
-        'y/build/g.ts': 'export const g = 1;\n',
-      });
-      const atlas = walkRepo(root).map((f) => f.relativePath);
-      expect(gitWalk(root)).toEqual(['x/build/deep/h.ts', 'x/build/f.ts']);
-      expect(atlas).toEqual(['x/build/deep/h.ts', 'x/build/f.ts']);
-    },
-  );
+  it('A12-01: a directory ignored by a shallower .gitignore and re-included by a deeper one is walked, as git does', () => {
+    const root = join(tmp(), 'repo');
+    write(root, {
+      '.gitignore': 'build/\n',
+      'x/.gitignore': '!build/\n',
+      'x/build/f.ts': 'export const f = 1;\n',
+      'x/build/deep/h.ts': 'export const h = 1;\n',
+      'y/build/g.ts': 'export const g = 1;\n',
+    });
+    const atlas = walkRepo(root).map((f) => f.relativePath);
+    expect(gitWalk(root)).toEqual(['x/build/deep/h.ts', 'x/build/f.ts']);
+    expect(atlas).toEqual(['x/build/deep/h.ts', 'x/build/f.ts']);
+  });
   it('W07: `maxBytes` is inclusive: a file of exactly the cap is walked, one byte more is too large', () => {
     const root = join(tmp(), 'repo');
     const body = (n: number): string => `//${'x'.repeat(n - 3)}\n`;
