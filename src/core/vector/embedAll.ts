@@ -22,6 +22,9 @@ export interface EmbedAllStats {
   durationMs: number;
 }
 
+// Yield to the event loop between batches at least this often (A18-02).
+const YIELD_MS = 50;
+
 /**
  * Embed every (non-module) symbol that does not yet have an embedding for the
  * current model. With force=true, re-embed everything.
@@ -58,7 +61,12 @@ export async function embedAllSymbols(
     durationMs: 0,
   };
 
+  let lastYield = Date.now();
   for (let i = 0; i < targets.length; i += batch) {
+    if (Date.now() - lastYield >= YIELD_MS) {
+      await new Promise(setImmediate);
+      lastYield = Date.now();
+    }
     const chunk = targets.slice(i, i + batch);
     const texts = chunk.map((sym) => {
       const file = files.get(sym.file_id);
