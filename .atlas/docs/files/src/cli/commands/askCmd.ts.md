@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/cli/commands/askCmd.ts
-source_hash: bdf54c06f2b74310436d8ad783be5e75500c1da6d08c61a35c179a990738a322
+source_hash: 2bc9c6a7d1a8f0ecebec7080386ee60e4fd65ecfd2b5dbb1e675d553095a73ce
 ---
 # module src/cli/commands/askCmd.ts
 

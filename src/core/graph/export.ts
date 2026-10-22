@@ -25,7 +25,8 @@ export interface GraphJson {
   edges: GraphEdge[];
   // Nodes and edges in scope before `offset`/`limit`/`edgeLimit`.
   totals: { nodes: number; edges: number };
-  // More nodes follow this page, or edges among these nodes were cut by `edgeLimit`.
+  // Something in scope is not in this response: nodes before or after the page,
+  // or edges cut by `edgeLimit` (as for drift, true whenever `offset > 0`).
   truncated: boolean;
 }
 
@@ -47,7 +48,12 @@ const NODE_SQL = `SELECT s.id, s.name, s.kind, COALESCE(f.path, '') AS file,
   FROM symbols s LEFT JOIN files f ON f.id = s.file_id`;
 const IN_IDS = '(SELECT value FROM json_each(?))';
 
-/** The graph, or a bounded slice of it: nodes ordered by id, edges among them. */
+/**
+ * The graph, or a bounded slice of it: nodes ordered by id, and the edges they
+ * own. An edge belongs to the page holding its `src` (its `dst` when `src` is
+ * null), so its far endpoint may sit on another page and paging through every
+ * node yields every edge in scope exactly once.
+ */
 export function buildGraphJson(db: DB, q: GraphQuery = {}): GraphJson {
   const offset = q.offset ?? 0;
   const limit = q.limit ?? Number.MAX_SAFE_INTEGER;
@@ -69,18 +75,17 @@ export function buildGraphJson(db: DB, q: GraphQuery = {}): GraphJson {
         ? (db
             .prepare('SELECT * FROM edges ORDER BY id LIMIT ?')
             .all(q.edgeLimit === undefined ? -1 : q.edgeLimit + 1) as EdgeRow[])
-        : edgesWithin(
-            db,
-            nodes.map((n) => n.id),
-          );
+        : edgesFromRange(db, nodes, q.edgeLimit);
   } else {
     const page = scope.slice(offset, offset + limit);
     totalNodes = scope.length;
     nodes = db
       .prepare(`${NODE_SQL} WHERE s.id IN ${IN_IDS} ORDER BY s.id`)
       .all(JSON.stringify(page)) as GraphNode[];
-    edgeRows = edgesWithin(db, page);
-    totalEdges = page.length === scope.length ? edgeRows.length : edgesWithin(db, scope).length;
+    const inScope = new Set(scope);
+    edgeRows = ownedEdges(db, page, inScope);
+    totalEdges =
+      page.length === scope.length ? edgeRows.length : ownedEdges(db, scope, inScope).length;
   }
 
   const edges = edgeRows.slice(0, edgeLimit).map((e) => ({
@@ -94,7 +99,7 @@ export function buildGraphJson(db: DB, q: GraphQuery = {}): GraphJson {
     nodes,
     edges,
     totals: { nodes: totalNodes, edges: totalEdges },
-    truncated: offset + nodes.length < totalNodes || edgeRows.length > edgeLimit,
+    truncated: offset > 0 || offset + nodes.length < totalNodes || edgeRows.length > edgeLimit,
   };
 }
 
@@ -142,21 +147,28 @@ function neighbourhood(db: DB, symbol: string, depth: number): number[] {
   return [...seen];
 }
 
-/** Edges whose non-null endpoints are all in `ids`, ordered by id. */
-function edgesWithin(db: DB, ids: number[]): EdgeRow[] {
-  if (ids.length === 0) return [];
-  const set = new Set(ids);
-  const json = JSON.stringify(ids);
-  const rows = db
-    .prepare(
-      `SELECT * FROM edges WHERE src_symbol IN ${IN_IDS}
-       UNION SELECT * FROM edges WHERE dst_symbol IN ${IN_IDS} ORDER BY id`,
-    )
-    .all(json, json) as EdgeRow[];
+const OWNED_BY = (match: string) =>
+  `SELECT * FROM edges WHERE src_symbol ${match}
+   UNION ALL SELECT * FROM edges WHERE src_symbol IS NULL AND dst_symbol ${match} ORDER BY id`;
+
+/** Edges owned by an unscoped page; its ids are every symbol id from the first to the last. */
+function edgesFromRange(db: DB, nodes: GraphNode[], edgeLimit?: number): EdgeRow[] {
+  const lo = nodes[0]?.id ?? 0;
+  const hi = nodes.at(-1)?.id ?? -1;
+  return db
+    .prepare(`${OWNED_BY('BETWEEN ? AND ?')} LIMIT ?`)
+    .all(lo, hi, lo, hi, edgeLimit === undefined ? -1 : edgeLimit + 1) as EdgeRow[];
+}
+
+/** Edges owned by `owners` whose non-null endpoints are all in `scope`, ordered by id. */
+function ownedEdges(db: DB, owners: number[], scope: Set<number>): EdgeRow[] {
+  if (owners.length === 0) return [];
+  const json = JSON.stringify(owners);
+  const rows = db.prepare(OWNED_BY(`IN ${IN_IDS}`)).all(json, json) as EdgeRow[];
   return rows.filter(
     (e) =>
-      (e.src_symbol === null || set.has(e.src_symbol)) &&
-      (e.dst_symbol === null || set.has(e.dst_symbol)),
+      (e.src_symbol === null || scope.has(e.src_symbol)) &&
+      (e.dst_symbol === null || scope.has(e.dst_symbol)),
   );
 }
 

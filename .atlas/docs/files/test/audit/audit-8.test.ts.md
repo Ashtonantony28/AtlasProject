@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/audit/audit-8.test.ts
-source_hash: 81841fd5ce8d521bb021aa394c6bc66a9aae4655ab9d93f3bcc4b6581c10a981
+source_hash: 328b6f12a4a319d28495aa880a7ef455665076cb112b64367376289991289c96
 ---
 # module test/audit/audit-8.test.ts
 
@@ -27,6 +27,26 @@ source_hash: 81841fd5ce8d521bb021aa394c6bc66a9aae4655ab9d93f3bcc4b6581c10a981
 - `zetaId` — variable (test/audit/audit-8.test.ts:164)
 - `pool` — variable (test/audit/audit-8.test.ts:167)
 - `hits` — variable (test/audit/audit-8.test.ts:173)
+- `emb` — variable (test/audit/audit-8.test.ts:181)
+- `hits` — variable (test/audit/audit-8.test.ts:183)
+- `knn` — variable (test/audit/audit-8.test.ts:185)
+- `real` — variable (test/audit/audit-8.test.ts:187)
+- `all` — variable (test/audit/audit-8.test.ts:196)
+- `g` — variable (test/audit/audit-8.test.ts:200)
+- `scoped` — variable (test/audit/audit-8.test.ts:210)
+- `page` — variable (test/audit/audit-8.test.ts:212)
+- `near` — variable (test/audit/audit-8.test.ts:216)
+- `both` — variable (test/audit/audit-8.test.ts:218)
+- `all` — variable (test/audit/audit-8.test.ts:227)
+- `seen` — variable (test/audit/audit-8.test.ts:228)
+- `offset` — variable (test/audit/audit-8.test.ts:229)
+- `page` — variable (test/audit/audit-8.test.ts:230)
+- `base` — variable (test/audit/audit-8.test.ts:240)
+- `root` — variable (test/audit/audit-8.test.ts:242)
+- `out` — variable (test/audit/audit-8.test.ts:244)
+- `report` — variable (test/audit/audit-8.test.ts:258)
+- `ctx` — variable (test/audit/audit-8.test.ts:264)
+- `docsDir` — variable (test/audit/audit-8.test.ts:279)
 
 References: `test/audit/audit-8.test.ts:38`, `test/audit/audit-8.test.ts:41`, `test/audit/audit-8.test.ts:42`, `test/audit/audit-8.test.ts:53`, `test/audit/audit-8.test.ts:54`.
 

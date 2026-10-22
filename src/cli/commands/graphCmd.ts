@@ -45,7 +45,7 @@ export function registerGraphCommand(program: Command): void {
         process.exitCode = 1;
         return;
       }
-      const { db } = openProjectIndex(opts.cwd ?? '.');
+      const { db } = openProjectIndex(opts.cwd ?? '.', { indexed: true });
       try {
         const q = {
           ...query,

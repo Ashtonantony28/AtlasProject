@@ -220,7 +220,7 @@ describe('AUDIT-8 findings', () => {
       for (const n of both.nodes) expect(n.file).toBe('src/math.ts');
     });
 
-    it.fails(
+    it(
       'A8-08: paging through the whole graph returns every edge counted in totals.edges',
       async () => {
         const { db } = await sampleIndex();
