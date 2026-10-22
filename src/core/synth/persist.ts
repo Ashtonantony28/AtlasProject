@@ -42,7 +42,7 @@ function render(doc: PersistedDoc): string {
 }
 
 function parse(raw: string): PersistedDoc | null {
-  const text = raw.replace(/\r\n/g, '\n');
+  const text = raw.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
   const m = text.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
   if (!m) return null;
   const meta = new Map<string, string>();
@@ -124,12 +124,27 @@ export function exportDocs(
   return { written, removed, total: docs.length };
 }
 
-/** Parse every persisted doc under `dir` (missing dir → none), sorted by target. */
+// A doc whose front matter does not parse, addressed by its path, with no hash (so always stale).
+function unparsed(dir: string, p: string, raw: string): PersistedDoc | null {
+  const rel = relative(dir, p).split(sep).join('/');
+  if (rel === ARCHITECTURE_FILE) {
+    return { kind: 'architecture', target: 'architecture', sourceHash: '', content: raw };
+  }
+  const target = rel.startsWith(`${FILES_DIR}/`) ? rel.slice(FILES_DIR.length + 1, -3) : '';
+  return target ? { kind: 'file', target, sourceHash: '', content: raw } : null;
+}
+
+/**
+ * Parse every persisted doc under `dir` (missing dir → none), sorted by target. A doc whose
+ * front matter is unreadable is kept with an empty `sourceHash`, so drift reports it stale.
+ */
 export function readPersistedDocs(dir: string): PersistedDoc[] {
   const out: PersistedDoc[] = [];
   for (const p of walkMarkdown(dir)) {
-    const doc = parse(readFileSync(p, 'utf8'));
-    if (doc && join(dir, relPathFor(doc)) === p) out.push(doc);
+    const raw = readFileSync(p, 'utf8');
+    const parsed = parse(raw);
+    const doc = parsed && join(dir, relPathFor(parsed)) === p ? parsed : unparsed(dir, p, raw);
+    if (doc) out.push(doc);
   }
   return out.sort((a, b) => (a.target < b.target ? -1 : a.target > b.target ? 1 : 0));
 }
@@ -140,7 +155,7 @@ export function importPersistedDocs(db: DB, dir: string): number {
   let imported = 0;
   for (const doc of readPersistedDocs(dir)) {
     const id = doc.kind === 'architecture' ? 0 : ids.get(doc.target);
-    if (id === undefined || getDoc(db, doc.kind, id)) continue;
+    if (id === undefined || !doc.sourceHash || getDoc(db, doc.kind, id)) continue;
     upsertDoc(db, {
       target_kind: doc.kind,
       target_id: id,

@@ -27,6 +27,15 @@ source_hash: 3f27f17629e59d1792555cf0d14d86c7b4f3e535651d8790a7634e87c98b684f
 - `items` — variable (test/web/rendering.test.ts:168)
 - `svgNodes` — variable (test/web/rendering.test.ts:180)
 - `svgEdges` — variable (test/web/rendering.test.ts:182)
+- `labels` — variable (test/web/rendering.test.ts:188)
+- `doc` — variable (test/web/rendering.test.ts:196)
+- `items` — variable (test/web/rendering.test.ts:197)
+- `shapesItem` — variable (test/web/rendering.test.ts:198)
+- `body` — variable (test/web/rendering.test.ts:206)
+- `doc` — variable (test/web/rendering.test.ts:213)
+- `form` — variable (test/web/rendering.test.ts:215)
+- `items` — variable (test/web/rendering.test.ts:218)
+- `searchTab` — variable (test/web/rendering.test.ts:226)
 
 References: `test/web/rendering.test.ts:12`, `test/web/rendering.test.ts:13`, `test/web/rendering.test.ts:15`, `test/web/rendering.test.ts:24`, `test/web/rendering.test.ts:29`.
 

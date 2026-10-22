@@ -124,7 +124,16 @@ if `.atlas/config.json` is absent, but is never written. Walk filters:
 - `languages` — subset of `typescript`, `javascript`, `python` (default: all).
 - `include` — gitignore-style globs; when non-empty only matching files are
   indexed (default `[]` = everything not excluded).
-- `exclude` — globs added to `.gitignore` rules.
+- `exclude` — globs applied after every `.gitignore` in the tree (root and
+  nested); a `!pattern` here re-includes a gitignored path. The default is
+  root-anchored: `node_modules/**`, `dist/**`, `build/**`, `.atlas/**`,
+  `coverage/**`, `.venv/**`, `venv/**`, `.next/**`, `.cache/**`. Remove an
+  entry to index that directory; `src/build/` or `lib/vendor/` is indexed
+  unless a `.gitignore` or `exclude` rule says otherwise.
+
+Whatever the config, `.git`, `.atlas`, `node_modules` and `__pycache__`
+directories are skipped at any depth, as is any virtualenv (a directory holding
+`pyvenv.cfg`).
 
 Other keys: `tokenBudget` (positive integer, default 200000), `synthModel`,
 `embeddingModel` (default `local-hash-v1`) and `indexPath` (default

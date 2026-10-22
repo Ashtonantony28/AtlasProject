@@ -22,7 +22,7 @@ describe('bounded dashboard API on an index larger than the limits', () => {
     dir = mkdtempSync(join(tmpdir(), 'atlas-web-bounded-'));
     await indexBigRepo(dir);
     db = openDatabase(join(dir, '.atlas', 'index.db'), { readonly: true, fileMustExist: true });
-    handle = await startServer(db, dir, { port: 43000 + Math.floor(Math.random() * 2000) });
+    handle = await startServer(db, dir, { port: 0 });
   }, 120_000);
   afterAll(async () => {
     await handle.close();
