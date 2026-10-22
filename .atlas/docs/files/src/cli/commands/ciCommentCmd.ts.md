@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/cli/commands/ciCommentCmd.ts
-source_hash: ef1aaca4fce0330a0f627fa5a1adcfb345384cd1699aa379145036e1cd94199b
+source_hash: 40d71bdbe175b572f9545f8b935bde4adfce6d1c35dc4817b39898622cba6383
 ---
 # module src/cli/commands/ciCommentCmd.ts
 
