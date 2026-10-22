@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/ingest/walker.ts
-source_hash: df68474d4f5c227ecd7798f6dba9698aeb09e0af548a512daa2ad7819bd2f0e7
+source_hash: 49ac087a9f93398ff4258fbb1e5bdb045005862376354a0731765b28fb3d0836
 ---
 # module src/core/ingest/walker.ts
 
