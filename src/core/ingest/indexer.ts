@@ -166,6 +166,16 @@ export function indexRepo(db: DB, root: string, opts: IndexOptions = {}): Promis
   return run;
 }
 
+function stampedExtractorVersion(statsJson: string | null): number | null {
+  try {
+    const v = (JSON.parse(statsJson ?? '{}') as { state?: { extractorVersion?: unknown } }).state
+      ?.extractorVersion;
+    return typeof v === 'number' ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 type SymbolKey = { id: number; kind: string; name: string; qualified_name: string | null };
 
 /**
@@ -225,13 +235,28 @@ async function runIndex(db: DB, root: string, opts: IndexOptions): Promise<Index
     lastYield = Date.now();
   };
   const prev = lastState(db);
-  const interrupted =
-    db
-      .prepare(
-        'SELECT 1 FROM runs WHERE finished_at IS NULL AND id > (SELECT COALESCE(MAX(id), 0) FROM runs WHERE finished_at IS NOT NULL)',
-      )
-      .get() !== undefined;
+  // Runs started after the last finished one never finished; each stamped its extractor version.
+  const unfinished = db
+    .prepare(
+      'SELECT stats_json FROM runs WHERE finished_at IS NULL AND id > (SELECT COALESCE(MAX(id), 0) FROM runs WHERE finished_at IS NOT NULL)',
+    )
+    .pluck()
+    .all() as (string | null)[];
+  const interrupted = unfinished.length > 0;
+  const anyFinished =
+    db.prepare('SELECT 1 FROM runs WHERE finished_at IS NOT NULL').get() !== undefined;
+  // Extractor versions that wrote the current rows. Runs from before the stamp count as unknown
+  // only when no run has finished.
+  const stamps = unfinished.map(stampedExtractorVersion);
+  const writers =
+    anyFinished || !interrupted
+      ? [prev.extractorVersion, ...stamps.filter((v) => v !== null)]
+      : stamps;
   const runId = startRun(db, null);
+  db.prepare('UPDATE runs SET stats_json = ? WHERE id = ?').run(
+    JSON.stringify({ state: { extractorVersion: EXTRACTOR_VERSION } }),
+    runId,
+  );
   const stats: IndexStats = {
     filesScanned: 0,
     filesIndexed: 0,
@@ -266,9 +291,9 @@ async function runIndex(db: DB, root: string, opts: IndexOptions): Promise<Index
   );
 
   // Rows written by another extractor version are re-parsed even when the content is unchanged.
-  const upgrade = existingByPath.size > 0 && prev.extractorVersion !== EXTRACTOR_VERSION;
-  if (upgrade && !opts.force)
-    stats.extractorUpgrade = { from: prev.extractorVersion, to: EXTRACTOR_VERSION };
+  const staleWriter = writers.find((v) => v !== EXTRACTOR_VERSION);
+  const upgrade = existingByPath.size > 0 && staleWriter !== undefined;
+  if (upgrade && !opts.force) stats.extractorUpgrade = { from: staleWriter, to: EXTRACTOR_VERSION };
   // During an upgrade, kept rows that are not re-parsed get a blank hash so the next run retries.
   const retry: number[] = [];
 
