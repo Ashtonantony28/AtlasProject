@@ -29,8 +29,12 @@ export function buildSymbolText(
   return parts.join('\n');
 }
 
+// The last source split, so a file's symbols (embedded in id order) split it once (A18-01).
+let split: { src: string; lines: string[] } | undefined;
+
 function sliceLines(src: string, start1: number, end1: number): string {
-  const lines = src.split('\n');
+  if (split?.src !== src) split = { src, lines: src.split('\n') };
+  const { lines } = split;
   const s = Math.max(0, start1 - 1);
   const e = Math.min(lines.length, end1);
   return lines.slice(s, e).join('\n');

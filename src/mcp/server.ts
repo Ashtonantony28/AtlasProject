@@ -22,6 +22,7 @@ import {
 } from '../core/drift/index.js';
 import {
   affordableMaxTokens,
+  BudgetExhaustedError,
   budgeted,
   createAnthropicClient,
   createOfflineClient,
@@ -86,7 +87,17 @@ export function createMcpContext(opts: McpContextOptions): McpContext {
       const input = estimateInputTokens(params);
       const left = new TokenBudget(ctx.budget.cap);
       left.record(ctx.budget.total().spent + reserved, 0);
-      const maxTokens = affordableMaxTokens(left, input, params.maxTokens);
+      let maxTokens: number;
+      try {
+        maxTokens = affordableMaxTokens(left, input, params.maxTokens);
+      } catch (err) {
+        if (!reserved || !(err instanceof BudgetExhaustedError)) throw err;
+        affordableMaxTokens(ctx.budget, input, params.maxTokens); // throws if no retry can pay it
+        throw new BudgetExhaustedError(
+          `${err.detail}, ${reserved} tokens reserved by calls in progress`,
+          'retry when they finish',
+        );
+      }
       const hold = input + maxTokens;
       reserved += hold;
       try {

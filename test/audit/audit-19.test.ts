@@ -311,23 +311,20 @@ describe('AUDIT-19 consistent surfaces (pinned)', () => {
 });
 
 describe('AUDIT-19 findings', () => {
-  it.fails(
-    'A19-01: a parallel atlas_ask refused for in-flight reservations does not claim the budget is spent',
-    async () => {
-      const root = await indexed();
-      editConfig(root, { tokenBudget: 20_000 });
-      const ctx = mcp(root);
-      const settled = await Promise.allSettled(
-        [1, 2, 3].map(() => handleAskTool(ctx, { question: 'circle area' })),
-      );
-      const refused = settled.flatMap((r) =>
-        r.status === 'rejected' ? [String((r.reason as Error).message)] : [],
-      );
-      // Three sequential asks spend ~1.9k of 20k; the third parallel one is refused with "0 of 20000 left; raise tokenBudget".
-      expect(ctx.budget.total().spent).toBeLessThan(2_000);
-      for (const m of refused) expect(m).not.toMatch(/ 0 of 20000 left; raise tokenBudget$/);
-    },
-  );
+  it('A19-01: a parallel atlas_ask refused for in-flight reservations does not claim the budget is spent', async () => {
+    const root = await indexed();
+    editConfig(root, { tokenBudget: 20_000 });
+    const ctx = mcp(root);
+    const settled = await Promise.allSettled(
+      [1, 2, 3].map(() => handleAskTool(ctx, { question: 'circle area' })),
+    );
+    const refused = settled.flatMap((r) =>
+      r.status === 'rejected' ? [String((r.reason as Error).message)] : [],
+    );
+    // Three sequential asks spend ~1.9k of 20k; the third parallel one is refused with "0 of 20000 left; raise tokenBudget".
+    expect(ctx.budget.total().spent).toBeLessThan(2_000);
+    for (const m of refused) expect(m).not.toMatch(/ 0 of 20000 left; raise tokenBudget$/);
+  });
 
   it.fails(
     'A19-02: MCP read tools follow config edits like atlas_ask, atlas_index and the CLI',
