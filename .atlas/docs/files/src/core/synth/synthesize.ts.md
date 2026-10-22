@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/synth/synthesize.ts
-source_hash: 48a88118edda64a127b170e9879c80dfd8b1415a6cce491b7ce5416f0fcf9dde
+source_hash: 2086b2d04518b3684b45f2c79796bee8551e541d7512d8dd1525d0bc8961145e
 ---
 # module src/core/synth/synthesize.ts
 
