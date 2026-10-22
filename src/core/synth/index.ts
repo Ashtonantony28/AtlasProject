@@ -10,6 +10,7 @@ export {
 export type { LLMClient, LLMResult, LLMCallParams, LLMMessage } from './llmClient.js';
 export {
   affordableMaxTokens,
+  BudgetExhaustedError,
   budgeted,
   estimateInputTokens,
   MIN_OUTPUT_TOKENS,

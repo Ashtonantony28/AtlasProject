@@ -568,3 +568,17 @@ yield interval, not the whole queue, and tree-sitter's GC finalizers get a turn 
 run's promise and stats, so at most one run per kind is running and one waiting (A14-02). Such a
 call read its config before joining, so the shared run still saw its arguments. Calls with an
 `onFile` callback never share. The resolver and embedder are still one synchronous block each.
+
+
+
+## 2026-10-22 — SG40: MCP calls follow the current config; a changed `indexPath` is an error
+
+`atlas_ask` re-reads `.atlas/config.json` per call, as `atlas_index` has since SG29. A changed
+`tokenBudget` replaces the session budget with one at the new cap that keeps the tokens spent so
+far (lowering it can leave nothing to spend); calls are charged to whichever budget is current when
+they return. The LLM client is cached per `synthModel`, so an edit picks a new one. A changed
+`indexPath` makes `atlas_ask` and `atlas_index` fail with "restart the server" instead of
+reopening the DB: reopening would have to drain queued index runs and in-flight reads on the old
+handle, and moving the index is rare. Read tools keep serving the open DB. The budget error's
+remedy names where the cap came from: `raise --budget` for `docs --budget`, otherwise
+`raise tokenBudget` (A15-01, A15-03).

@@ -51,6 +51,16 @@ export function estimateInputTokens(params: Pick<LLMCallParams, 'system' | 'mess
   return Math.ceil(chars / 3);
 }
 
+/** A call the budget cannot pay; `remedy` is the fix that works where the cap came from. */
+export class BudgetExhaustedError extends Error {
+  constructor(
+    readonly detail: string,
+    remedy = 'raise tokenBudget',
+  ) {
+    super(`token budget exhausted: ${detail}; ${remedy}`);
+  }
+}
+
 /**
  * `maxTokens` capped to what the budget can pay after `inputTokens`. Throws when that is below
  * MIN_OUTPUT_TOKENS (or `maxTokens`, if smaller).
@@ -63,8 +73,8 @@ export function affordableMaxTokens(
   const remaining = budget.remaining();
   const floor = Math.min(maxTokens, MIN_OUTPUT_TOKENS);
   if (remaining - inputTokens < floor) {
-    throw new Error(
-      `token budget exhausted: a call needs ~${inputTokens + floor} tokens (~${inputTokens} prompt + ${floor} output), ${remaining} of ${budget.cap} left; raise tokenBudget`,
+    throw new BudgetExhaustedError(
+      `a call needs ~${inputTokens + floor} tokens (~${inputTokens} prompt + ${floor} output), ${remaining} of ${budget.cap} left`,
     );
   }
   return Math.min(maxTokens, remaining - inputTokens);
