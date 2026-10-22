@@ -1,15 +1,17 @@
 // SG45 (migrations under one `BEGIN IMMEDIATE` with a busy wait; no lock on a migrated index),
-// SG65 (a fresh index is created in WAL mode; `SQLITE_BUSY` names the operation that hit it) and
-// SG80 (write transactions take the write lock up front and wait out another writer).
+// SG65 (a fresh index is created in WAL mode; `SQLITE_BUSY` names the operation that hit it),
+// SG80 (write transactions take the write lock up front and wait out another writer) and SG90 (a
+// `-wal` left beside a deleted index is never replayed into the new one).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import * as sqliteVec from 'sqlite-vec';
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
   closeDatabase,
+  counts,
   deleteFile,
   getDocTombstones,
   MIGRATIONS,
@@ -166,6 +168,9 @@ describe('SG65 opening a fresh index', () => {
   it('a file another program created in rollback mode fails at once, naming `journal mode`', async () => {
     // Switching to WAL upgrades a read lock to a write lock, which SQLite refuses without waiting.
     const path = join(tmp(), 'index.db');
+    const other = new Database(path);
+    other.exec('CREATE TABLE t (x)');
+    other.close();
     await holdWriteLock(path, 10_000, false);
     const t0 = Date.now();
     expect(() => openDatabase(path)).toThrow(
@@ -174,12 +179,28 @@ describe('SG65 opening a fresh index', () => {
     expect(Date.now() - t0).toBeLessThan(1000);
   });
 
+  it('an empty file another process is switching (SG90) is waited out, then opened in WAL mode', async () => {
+    const path = join(tmp(), 'index.db');
+    const done = await holdWriteLock(path, 1000, false);
+    const t0 = Date.now();
+    const db = open(path);
+    expect(Date.now() - t0).toBeGreaterThan(800);
+    expect(db.pragma('journal_mode', { simple: true })).toBe('wal');
+    expect(version(db)).toBe(LATEST);
+    await done();
+  });
+
   it('processes opening the same fresh index at the same instant all succeed', async () => {
-    // Each child opens ROUNDS fresh indexes, one per tick, at the same instants as the others.
-    const PROCS = 6;
-    const ROUNDS = 60;
-    const dir = tmp();
-    const child = `
+    expect(await openRace(tmp())).toEqual([]);
+  });
+});
+
+/**
+ * PROCS processes each open ROUNDS indexes `<dir>/<k>.db`, one per tick, at the same instants as
+ * the others. Returns the `ERR` lines of the opens that threw.
+ */
+async function openRace(dir: string, PROCS = 6, ROUNDS = 60): Promise<string[]> {
+  const child = `
       const { openDatabase } = await import(${JSON.stringify(join(ROOT, 'src/core/db/database.ts'))});
       process.stdout.write('ready\\n');
       process.stdin.once('data', (d) => {
@@ -194,32 +215,110 @@ describe('SG65 opening a fresh index', () => {
         }
         process.exit(0);
       });`;
-    const procs = Array.from({ length: PROCS }, () => {
-      const p = spawn(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', child], {
-        cwd: ROOT,
-        stdio: ['pipe', 'pipe', 'inherit'],
-      });
-      cleanup.push(() => p.kill());
-      let out = '';
-      const ready = new Promise<void>((ok) =>
-        p.stdout.on('data', (d: Buffer) => ((out += d.toString()), out.includes('ready') && ok())),
-      );
-      const code = new Promise<number | null>((ok) => p.on('close', ok));
-      return { p, ready, code, out: () => out };
+  const procs = Array.from({ length: PROCS }, () => {
+    const p = spawn(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', child], {
+      cwd: ROOT,
+      stdio: ['pipe', 'pipe', 'inherit'],
     });
-    await Promise.all(procs.map((c) => c.ready));
-    const t0 = String(Date.now() + 200);
-    for (const c of procs) c.p.stdin.write(t0);
-    expect(await Promise.all(procs.map((c) => c.code))).toEqual(Array(PROCS).fill(0));
-    expect(
-      procs.flatMap((c) =>
-        c
-          .out()
-          .split('\n')
-          .filter((l) => l.startsWith('ERR')),
-      ),
-    ).toEqual([]);
+    cleanup.push(() => p.kill());
+    let out = '';
+    const ready = new Promise<void>((ok) =>
+      p.stdout.on('data', (d: Buffer) => ((out += d.toString()), out.includes('ready') && ok())),
+    );
+    const code = new Promise<number | null>((ok) => p.on('close', ok));
+    return { p, ready, code, out: () => out };
   });
+  await Promise.all(procs.map((c) => c.ready));
+  const t0 = String(Date.now() + 200);
+  for (const c of procs) c.p.stdin.write(t0);
+  expect(await Promise.all(procs.map((c) => c.code))).toEqual(Array(PROCS).fill(0));
+  return procs.flatMap((c) =>
+    c
+      .out()
+      .split('\n')
+      .filter((l) => l.startsWith('ERR')),
+  );
+}
+
+describe('SG90 a WAL left beside a deleted index', () => {
+  /**
+   * Leaves at `path` what a killed run leaves after the user deletes `index.db`: its `-wal` (and
+   * `-shm`). `partial`: the WAL only holds pages written since a checkpoint (the usual case);
+   * otherwise it holds every page of the deleted index.
+   */
+  function leftoverWal(path: string, { partial, shm }: { partial: boolean; shm: boolean }): void {
+    const db = openDatabase(path);
+    db.pragma('wal_autocheckpoint = 0');
+    const add = (n: number, tag: string): void =>
+      db.transaction(() => {
+        for (let i = 0; i < n; i++) {
+          upsertFile(db, {
+            path: `${tag}${i}.ts`,
+            language: 'typescript',
+            content_hash: 'h',
+            loc: 1,
+          });
+        }
+      })();
+    add(500, 'old');
+    if (partial) {
+      db.pragma('wal_checkpoint(TRUNCATE)');
+      add(50, 'newer');
+    }
+    const files = shm ? ['-wal', '-shm'] : ['-wal'];
+    for (const f of files) copyFileSync(path + f, `${path}${f}.saved`);
+    closeDatabase(db);
+    rmSync(path);
+    for (const f of files) {
+      copyFileSync(`${path}${f}.saved`, path + f);
+      rmSync(`${path}${f}.saved`);
+    }
+    expect(existsSync(`${path}-wal`)).toBe(true);
+  }
+
+  /** The index at `path` is fresh, healthy, in WAL mode and keeps what is written to it. */
+  function expectFresh(path: string): void {
+    const db = open(path);
+    expect(db.pragma('integrity_check', { simple: true })).toBe('ok');
+    expect(db.pragma('journal_mode', { simple: true })).toBe('wal');
+    expect(version(db)).toBe(LATEST);
+    expect(counts(db).files).toBe(0);
+    upsertFile(db, { path: 'a.ts', language: 'typescript', content_hash: 'x', loc: 1 });
+    closeDatabase(db);
+    const again = open(path);
+    expect(again.pragma('integrity_check', { simple: true })).toBe('ok');
+    expect(counts(again).files).toBe(1);
+  }
+
+  for (const partial of [true, false]) {
+    for (const shm of [true, false]) {
+      it(`is discarded: the new index is fresh (${partial ? 'partial' : 'full-page'} WAL, ${shm ? 'with' : 'without'} -shm)`, () => {
+        const path = join(tmp(), 'index.db');
+        leftoverWal(path, { partial, shm });
+        expectFresh(path);
+      });
+    }
+  }
+
+  it('a `-shm` alone does not stop a fresh index being created in WAL mode', () => {
+    // A `-shm` alone holds no pages to replay: the pre-made WAL file is still linked in.
+    const path = join(tmp(), 'index.db');
+    leftoverWal(path, { partial: true, shm: true });
+    rmSync(`${path}-wal`);
+    opened.length = 0;
+    expectFresh(path);
+    expect(opened.filter((o) => o.path === path)[0]).toEqual({ path, version: 2 });
+  });
+
+  it('processes opening the same index at the same instant all succeed, and it comes up fresh', async () => {
+    const dir = tmp();
+    const ROUNDS = 60;
+    for (let k = 0; k < ROUNDS; k++) {
+      leftoverWal(join(dir, `${k}.db`), { partial: k % 2 === 0, shm: k % 4 < 2 });
+    }
+    expect(await openRace(dir, 6, ROUNDS)).toEqual([]);
+    for (let k = 0; k < ROUNDS; k++) expectFresh(join(dir, `${k}.db`));
+  }, 30_000);
 });
 
 describe('SG80 write transactions wait out another writer', () => {
