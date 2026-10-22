@@ -57,7 +57,7 @@ export interface RefRow {
   name: string;
   receiver: 'none' | 'this' | 'super' | 'member';
   object: string | null;
-  kind: 'calls' | 'extends' | 'implements';
+  kind: 'calls' | 'extends' | 'implements' | 'references';
   line: number;
 }
 

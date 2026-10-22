@@ -138,8 +138,9 @@ export function internalDiagnostic(err: unknown): ParseDiagnostic {
 }
 
 // `descendantsOfType` matches type names against every grammar symbol first (about 20 µs a
-// call); a JS cursor costs about 0.5 µs a node, so small subtrees are walked in JS.
-const NATIVE_MIN_DESCENDANTS = 100;
+// call); a JS cursor costs about 0.5 µs a node, so small subtrees are walked in JS. Matches found
+// natively are materialised, and with value nodes (SG18) there are many, so the cut-off is high.
+const NATIVE_MIN_DESCENDANTS = 500;
 
 /** Calls `onMatch` for every descendant of `node` (inclusive) whose type is in `types`, in pre-order. Comments and plain strings have no such descendants. */
 export function forEachOfType(
@@ -168,6 +169,18 @@ export function forEachOfType(
       depth--;
     }
   }
+}
+
+/**
+ * Drops `references` refs whose name (or receiver object) is not bound at the top level of the
+ * file: the resolver could not resolve them, and most are locals and parameters.
+ */
+export function boundValueRefs(refs: ParsedReference[], bound: Set<string>): ParsedReference[] {
+  return refs.filter((r) => {
+    if (r.kind !== 'references' || r.receiver === 'this' || r.receiver === 'super') return true;
+    const key = r.receiver === 'none' ? r.name : (r.object ?? '');
+    return bound.has(key) || bound.has(key.split('.')[0] as string);
+  });
 }
 
 /** Keeps the first occurrence of each (from, kind, receiver, object, name). */

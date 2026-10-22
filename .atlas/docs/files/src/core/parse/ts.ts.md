@@ -1,33 +1,43 @@
 ---
 kind: file
 target: src/core/parse/ts.ts
-source_hash: f19b144faa137a7a830f6c55e41e3c09ae6642eaed756bf2e90d41e079285217
+source_hash: 3d1d232ea94d9d0168d112833d0cf455d757017b03168ff3e2b62730af23fb53
 ---
 # module src/core/parse/ts.ts
 
 `module src/core/parse/ts.ts` exposes the following public surface:
 
-- `Node` — type (src/core/parse/ts.ts:24)
-- `Cursor` — type (src/core/parse/ts.ts:25)
-- `FN_NODES` — variable (src/core/parse/ts.ts:27)
-- `CLASS_NODES` — variable (src/core/parse/ts.ts:33)
-- `INTERFACE_NODES` — variable (src/core/parse/ts.ts:34)
-- `TYPE_NODES` — variable (src/core/parse/ts.ts:35)
-- `METHOD_NODES` — variable (src/core/parse/ts.ts:36)
-- `extractLeadingComment` — function (src/core/parse/ts.ts:43)
-- `lineOf` — function (src/core/parse/ts.ts:69)
-- `endLine` — function (src/core/parse/ts.ts:73)
-- `signatureFor` — function (src/core/parse/ts.ts:77)
-- `nameOf` — function (src/core/parse/ts.ts:83)
-- `Ctx` — interface (src/core/parse/ts.ts:89)
-- `FN_VALUES` — variable (src/core/parse/ts.ts:99)
-- `FIELD_NODES` — variable (src/core/parse/ts.ts:100)
-- `qualify` — function (src/core/parse/ts.ts:102)
-- `isPublicMember` — function (src/core/parse/ts.ts:106)
-- `isExported` — function (src/core/parse/ts.ts:114)
-- `push` — function (src/core/parse/ts.ts:120)
-- `visitScope` — function (src/core/parse/ts.ts:142)
+- `Node` — type (src/core/parse/ts.ts:25)
+- `Cursor` — type (src/core/parse/ts.ts:26)
+- `FN_NODES` — variable (src/core/parse/ts.ts:28)
+- `CLASS_NODES` — variable (src/core/parse/ts.ts:34)
+- `NAMESPACE_NODES` — variable (src/core/parse/ts.ts:36)
+- `INTERFACE_NODES` — variable (src/core/parse/ts.ts:37)
+- `TYPE_NODES` — variable (src/core/parse/ts.ts:38)
+- `METHOD_NODES` — variable (src/core/parse/ts.ts:39)
+- `extractLeadingComment` — function (src/core/parse/ts.ts:46)
+- `lineOf` — function (src/core/parse/ts.ts:72)
+- `endLine` — function (src/core/parse/ts.ts:76)
+- `signatureFor` — function (src/core/parse/ts.ts:80)
+- `nameOf` — function (src/core/parse/ts.ts:86)
+- `Ctx` — interface (src/core/parse/ts.ts:92)
+- `FN_VALUES` — variable (src/core/parse/ts.ts:104)
+- `FIELD_NODES` — variable (src/core/parse/ts.ts:110)
+- `qualify` — function (src/core/parse/ts.ts:112)
+- `isPublicMember` — function (src/core/parse/ts.ts:116)
+- `inMembers` — function (src/core/parse/ts.ts:125)
+- `isExported` — function (src/core/parse/ts.ts:129)
+- `push` — function (src/core/parse/ts.ts:139)
+- `visitScope` — function (src/core/parse/ts.ts:162)
+- `Target` — interface (src/core/parse/ts.ts:183)
+- `CALL_NODES` — variable (src/core/parse/ts.ts:189)
+- `NAME_NODES` — variable (src/core/parse/ts.ts:195)
+- `dotted` — function (src/core/parse/ts.ts:204)
+- `targetOf` — function (src/core/parse/ts.ts:218)
+- `addRef` — function (src/core/parse/ts.ts:245)
+- `addCall` — function (src/core/parse/ts.ts:250)
+- `parseTsLike` — function (src/core/parse/ts.ts:1011)
 
-References: `src/core/parse/ts.ts:24`, `src/core/parse/ts.ts:25`, `src/core/parse/ts.ts:27`, `src/core/parse/ts.ts:33`, `src/core/parse/ts.ts:34`.
+References: `src/core/parse/ts.ts:25`, `src/core/parse/ts.ts:26`, `src/core/parse/ts.ts:28`, `src/core/parse/ts.ts:34`, `src/core/parse/ts.ts:36`.
 
 _Generated offline (mock client)._

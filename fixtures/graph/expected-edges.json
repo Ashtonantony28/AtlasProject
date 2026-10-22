@@ -388,5 +388,125 @@
     "src": "web/ui/index.ts::<module>",
     "dst": "web/ui/extra.ts::<module>",
     "kind": "imports"
+  },
+  {
+    "src": "web/cjs/app.js::<module>",
+    "dst": "web/cjs/app.js::createApp",
+    "kind": "references"
+  },
+  {
+    "src": "web/cjs/app.js::<module>",
+    "dst": "web/cjs/app.js::version",
+    "kind": "references"
+  },
+  {
+    "src": "web/cjs/main.js::<module>",
+    "dst": "web/cjs/main.js::main",
+    "kind": "references"
+  },
+  {
+    "src": "web/cjs/main.js::<module>",
+    "dst": "web/cjs/main.js::Sub",
+    "kind": "references"
+  },
+  {
+    "src": "web/consumer.js::<module>",
+    "dst": "web/consumer.js::useLegacy",
+    "kind": "references"
+  },
+  {
+    "src": "web/ids.ts::<module>",
+    "dst": "web/ids.ts::makeId",
+    "kind": "references"
+  },
+  {
+    "src": "py/pkg/hooks.py::<module>",
+    "dst": "py/pkg/util.py::helper",
+    "kind": "imports"
+  },
+  {
+    "src": "py/pkg/hooks.py::HOOKS",
+    "dst": "py/pkg/hooks.py::on_start",
+    "kind": "references"
+  },
+  {
+    "src": "py/pkg/hooks.py::register",
+    "dst": "py/pkg/util.py::helper",
+    "kind": "references"
+  },
+  {
+    "src": "py/pkg/hooks.py::register",
+    "dst": "py/pkg/hooks.py::on_start",
+    "kind": "references"
+  },
+  {
+    "src": "web/handlers.js::Store.get",
+    "dst": "web/handlers.js::Store.has",
+    "kind": "calls"
+  },
+  {
+    "src": "web/handlers.js::<module>",
+    "dst": "web/handlers.js::Store",
+    "kind": "references"
+  },
+  {
+    "src": "web/routes.js::<module>",
+    "dst": "web/handlers.js::<module>",
+    "kind": "imports"
+  },
+  {
+    "src": "web/routes.js::register",
+    "dst": "web/handlers.js::list",
+    "kind": "references"
+  },
+  {
+    "src": "web/routes.js::register",
+    "dst": "web/handlers.js::Store",
+    "kind": "references"
+  },
+  {
+    "src": "web/routes.js::register",
+    "dst": "web/routes.js::notFound",
+    "kind": "references"
+  },
+  {
+    "src": "web/routes.js::<module>",
+    "dst": "web/routes.js::register",
+    "kind": "references"
+  },
+  {
+    "src": "web/shape.ts::<module>",
+    "dst": "web/ui/Base.ts::BaseView",
+    "kind": "imports"
+  },
+  {
+    "src": "web/shape.ts::default",
+    "dst": "web/ui/Base.ts::BaseView",
+    "kind": "extends"
+  },
+  {
+    "src": "web/measure.ts::<module>",
+    "dst": "web/shape.ts::default",
+    "kind": "imports"
+  },
+  {
+    "src": "web/measure.ts::<module>",
+    "dst": "web/geo.ts::Circle",
+    "kind": "imports"
+  },
+  {
+    "src": "web/measure.ts::measure",
+    "dst": "web/shape.ts::default",
+    "kind": "calls"
+  },
+  {
+    "src": "web/measure.ts::measure",
+    "dst": "web/geo.ts::Circle.area",
+    "kind": "calls"
+  },
+  {
+    "src": "web/measure.ts::areas",
+    "dst": "web/geo.ts::Circle.area",
+    "kind": "references"
   }
 ]

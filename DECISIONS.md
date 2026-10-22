@@ -416,3 +416,20 @@ gate invariance now live in `test/ingest`, `test/vector` and `test/drift`.
 ## 2026-10-22 — SG19: bare specifiers resolve through tsconfig `paths`/`baseUrl`, workspaces and Python roots
 
 Module-specifier resolution moved to `src/core/graph/modules.ts` (`ModuleResolver`), built once per `resolveGraph`. Config files are read from `root` (read-only, cached), and only directories that hold indexed files are listed, once each, so cost does not grow per import. JS/TS order: relative path, then the nearest `tsconfig.json`/`jsconfig.json` (JSONC; local `extends` chains, arrays, solution-style `references`; package `extends` such as `@tsconfig/*` are not followed) with TS's rules (exact pattern, else longest wildcard prefix; targets relative to `baseUrl`, else to the config that defines `paths`), then `baseUrl`, then workspace packages (`package.json` `workspaces` array or `{packages}`, `pnpm-workspace.yaml`, `!` exclusions). A package entry tries `exports` (`source` > `types` > `import` > `module` > `default` > `require` > `node`, subpath and `*` patterns), then `source`/`module`/`main`/`types`, then `src/index`; a `dist|lib|build|out/` target that is not indexed is retried under `src/`. A name declared by two workspace members resolves to nothing. Python absolute imports try the repo root, the importer's top-level package root, then `src/` beside the root or any pyproject.toml/setup.cfg/setup.py, the dirs those configs name (`where`, `package_dir`, poetry `from`), then a discovered package root only when exactly one holds that top-level package. Unreadable or malformed configs are skipped and listed in `ResolveStats.diagnostics` (new field). No schema or config change. Known gap: a change to only a tsconfig/package.json does not trigger re-resolution on a no-op re-index (use `--force`).
+
+## 2026-10-22 — SG18: assigned/anonymous functions, namespaces, `references` edges
+
+Module-level `obj.m = function`, `C.prototype.m = …`, `C.prototype = { … }` and `exports.x = …`
+define symbols (a method under its object; an exported function for `exports.x`). This applies only
+outside function bodies, IIFEs excepted, so assignments in callbacks still define nothing.
+Anonymous `export default` / `module.exports =` functions and classes are named `default`. A
+`default` symbol stops the members of `export default { … }` from being importable by name. TS
+namespaces and `declare module` become kind `variable` (what TS emits) with qualified members,
+because kind `module` means "the file" to the resolver, search, embeddings and drift.
+`references` refs come from identifiers or member expressions in call arguments, arrays, object
+values and shorthands, JSX expressions, returns, declarators and assignments. The parser drops
+those whose root name is not bound at the top level (locals, params). The resolver emits only
+resolved edges to a function, method or class, and drift's neighbourhood hash picks them up.
+`forEachOfType`'s native cut-off rose from 100 to 500 descendants, because native matches are
+materialised and value nodes made them about 7× as many. Parse+insert median on got went ~3.6 →
+~4.2 ms/file (budget 5), and express stayed ~1.7.

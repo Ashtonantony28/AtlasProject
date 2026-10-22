@@ -103,35 +103,28 @@ describe('AUDIT-5 graph', () => {
       "function handle() {\n  return res.send('x');\n}\nmodule.exports = handle;\n",
   };
 
-  it.fails(
-    'A5-01 `obj.m = function m() {}` defines a symbol and does not leak its locals',
-    async () => {
-      const g = await graphOf(EXPRESS_STYLE);
-      expect(g.symbols.some((s) => /^response\.js (function|method) (res\.)?send$/.test(s))).toBe(
-        true,
-      );
-      expect(g.symbols).not.toContain('response.js variable chunk');
-    },
-  );
+  it('A5-01 `obj.m = function m() {}` defines a symbol and does not leak its locals', async () => {
+    const g = await graphOf(EXPRESS_STYLE);
+    expect(g.symbols.some((s) => /^response\.js (function|method) (res\.)?send$/.test(s))).toBe(
+      true,
+    );
+    expect(g.symbols).not.toContain('response.js variable chunk');
+  });
 
-  it.fails('A5-01 a call to an assigned method resolves across files', async () => {
+  it('A5-01 a call to an assigned method resolves across files', async () => {
     const g = await graphOf(EXPRESS_STYLE);
     expect(
       [...g.strong].some((e) => /^app\.js::handle -calls-> response\.js::(res\.)?send$/.test(e)),
     ).toBe(true);
   });
 
-  it.fails(
-    'A5-01 anonymous `exports.x = function () {}` defines `x` and keeps its locals local',
-    async () => {
-      const g = await graphOf({
-        'user.js':
-          'exports.list = function (req, res) {\n  var page = 1;\n  res.render(page);\n};\n',
-      });
-      expect(g.symbols.some((s) => / list$/.test(s))).toBe(true);
-      expect(g.symbols).not.toContain('user.js variable page');
-    },
-  );
+  it('A5-01 anonymous `exports.x = function () {}` defines `x` and keeps its locals local', async () => {
+    const g = await graphOf({
+      'user.js': 'exports.list = function (req, res) {\n  var page = 1;\n  res.render(page);\n};\n',
+    });
+    expect(g.symbols.some((s) => / list$/.test(s))).toBe(true);
+    expect(g.symbols).not.toContain('user.js variable page');
+  });
 
   const ALIASED = {
     'tsconfig.json': JSON.stringify({
@@ -180,7 +173,7 @@ describe('AUDIT-5 graph', () => {
     },
   );
 
-  it.fails('A5-04 a function passed as a value through a module binding gets an edge', async () => {
+  it('A5-04 a function passed as a value through a module binding gets an edge', async () => {
     const g = await graphOf({
       'users.js':
         'function list(req, res) {}\nfunction view(req, res) {}\nmodule.exports = { list, view };\n',
@@ -191,7 +184,7 @@ describe('AUDIT-5 graph', () => {
     expect(strongTo(g, 'users.js::view')).not.toHaveLength(0);
   });
 
-  it.fails('A5-05 TS namespace members are qualified and `NS.f()` resolves', async () => {
+  it('A5-05 TS namespace members are qualified and `NS.f()` resolves', async () => {
     const g = await graphOf({
       'geo.ts':
         'export namespace Circle {\n  export function area(): number { return 1; }\n}\n' +
@@ -203,24 +196,21 @@ describe('AUDIT-5 graph', () => {
     expect(g.strong).toContain('use.ts::u -calls-> geo.ts::Circle.area');
   });
 
-  it.fails(
-    'A5-06 anonymous `export default class extends Base` keeps its heritage and members',
-    async () => {
-      const g = await graphOf({
-        'base.ts': 'export class Base {\n  helper(): void {}\n}\n',
-        'shape.ts':
-          "import { Base } from './base';\nexport default class extends Base {\n  area(): number { return 1; }\n}\n",
-        'use.ts': "import Shape from './shape';\nexport function u(): void {\n  new Shape();\n}\n",
-      });
-      expect(g.symbols).not.toContain('shape.ts method area'); // not a top-level member
-      expect(
-        [...g.strong].some(
-          (e) => e.startsWith('shape.ts::') && e.endsWith('-extends-> base.ts::Base'),
-        ),
-      ).toBe(true);
-      expect([...g.strong].some((e) => e.startsWith('use.ts::u -calls-> shape.ts::'))).toBe(true);
-    },
-  );
+  it('A5-06 anonymous `export default class extends Base` keeps its heritage and members', async () => {
+    const g = await graphOf({
+      'base.ts': 'export class Base {\n  helper(): void {}\n}\n',
+      'shape.ts':
+        "import { Base } from './base';\nexport default class extends Base {\n  area(): number { return 1; }\n}\n",
+      'use.ts': "import Shape from './shape';\nexport function u(): void {\n  new Shape();\n}\n",
+    });
+    expect(g.symbols).not.toContain('shape.ts method area'); // not a top-level member
+    expect(
+      [...g.strong].some(
+        (e) => e.startsWith('shape.ts::') && e.endsWith('-extends-> base.ts::Base'),
+      ),
+    ).toBe(true);
+    expect([...g.strong].some((e) => e.startsWith('use.ts::u -calls-> shape.ts::'))).toBe(true);
+  });
 
   it('A5-07 Python src layout: tests importing the package resolve', async () => {
     const g = await graphOf({

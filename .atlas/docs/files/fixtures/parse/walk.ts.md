@@ -1,7 +1,7 @@
 ---
 kind: file
 target: fixtures/parse/walk.ts
-source_hash: 5f5332ffbf003bcc7ec9062ee318ac802e126c79303ed65e746b1a315ddaaefe
+source_hash: e5a81d12167bce53366bb3913cc7b61fa682a382f60b98e422a1e67b25333c36
 ---
 # module fixtures/parse/walk.ts
 
@@ -19,7 +19,8 @@ source_hash: 5f5332ffbf003bcc7ec9062ee318ac802e126c79303ed65e746b1a315ddaaefe
 - `Listener.onEvent` — method (fixtures/parse/walk.ts:33)
 - `Options` — type (fixtures/parse/walk.ts:37)
 - `Options.retry` — method (fixtures/parse/walk.ts:37)
-- `go` — method (fixtures/parse/walk.ts:40)
+- `default` — class (fixtures/parse/walk.ts:39)
+- `default.go` — method (fixtures/parse/walk.ts:40)
 - `a` — variable (fixtures/parse/walk.ts:45)
 - `b` — variable (fixtures/parse/walk.ts:46)
 - `c` — variable (fixtures/parse/walk.ts:47)
@@ -27,6 +28,7 @@ source_hash: 5f5332ffbf003bcc7ec9062ee318ac802e126c79303ed65e746b1a315ddaaefe
 - `hoisted` — variable (fixtures/parse/walk.ts:50)
 - `Mode` — type (fixtures/parse/walk.ts:51)
 - `Calls` — class (fixtures/parse/walk.ts:55)
+- `Calls.all` — method (fixtures/parse/walk.ts:59)
 
 References: `fixtures/parse/walk.ts:7`, `fixtures/parse/walk.ts:8`, `fixtures/parse/walk.ts:11`, `fixtures/parse/walk.ts:12`, `fixtures/parse/walk.ts:14`.
 

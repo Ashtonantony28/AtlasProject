@@ -8,6 +8,7 @@ import type {
   RefKind,
 } from './types.js';
 import {
+  boundValueRefs,
   forEachOfType,
   internalDiagnostic,
   pushAll,
@@ -66,6 +67,18 @@ interface Ctx {
 }
 
 const CALL_NODES = new Set(['call']);
+// Nodes whose children (all named ones, or the one field) can be a function used as a value.
+const VALUE_FIELD = new Map<string, string | null>([
+  ['argument_list', null],
+  ['list', null],
+  ['tuple', null],
+  ['set', null],
+  ['return_statement', null],
+  ['keyword_argument', 'value'],
+  ['pair', 'value'],
+  ['assignment', 'right'],
+]);
+const REF_NODES = new Set([...CALL_NODES, ...VALUE_FIELD.keys()]);
 const IMPORT_NODES = new Set(['import_statement', 'import_from_statement']);
 
 /** `a`, `a.b.c` for identifier chains; null for anything computed. */
@@ -103,10 +116,25 @@ function addRef(ctx: Ctx, from: string | null, node: Node | null, kind: RefKind)
   }
 }
 
+/** A `references` ref for a name or attribute used as a value. */
+function addValue(ctx: Ctx, from: string | null, node: Node | null): void {
+  if (node && (node.type === 'identifier' || node.type === 'attribute'))
+    addRef(ctx, from, node, 'references');
+}
+
+function addValues(ctx: Ctx, from: string | null, node: Node): void {
+  const field = VALUE_FIELD.get(node.type);
+  if (field) addValue(ctx, from, node.childForFieldName(field));
+  else for (const c of node.namedChildren) addValue(ctx, from, c);
+}
+
+/** Calls and function values in `node`'s subtree. */
 function collectCalls(ctx: Ctx, node: Node | null, from: string | null): void {
   if (node)
-    forEachOfType(node, CALL_NODES, (c) =>
-      addRef(ctx, from, c.childForFieldName('function'), 'calls'),
+    forEachOfType(node, REF_NODES, (c) =>
+      c.type === 'call'
+        ? addRef(ctx, from, c.childForFieldName('function'), 'calls')
+        : addValues(ctx, from, c),
     );
 }
 
@@ -219,12 +247,16 @@ function visit(node: Node, ctx: Ctx, stack: Frame[]): void {
       });
       const right = node.childForFieldName('right');
       if (right?.type === 'assignment') stack.push(right);
-      else collectCalls(ctx, right, left.text);
+      else {
+        addValue(ctx, left.text, right);
+        collectCalls(ctx, right, left.text);
+      }
       return;
     }
   }
 
   if (node.type === 'call') addRef(ctx, ctx.owner, node.childForFieldName('function'), 'calls');
+  else if (VALUE_FIELD.has(node.type)) addValues(ctx, ctx.owner, node);
 
   pushAll(stack, node.namedChildren);
 }
@@ -296,11 +328,16 @@ export function parsePython(root: Node): ParseResult {
   } catch (err) {
     diagnostics.push(internalDiagnostic(err));
   }
+  // `from x import *` binds names the parser cannot see; the resolver looks them up.
+  const star = ctx.imports.some((i) => i.imported === '*');
+  const bound = new Set(ctx.symbols.filter((s) => s.qualifiedName === s.name).map((s) => s.name));
+  for (const i of ctx.imports) bound.add(i.alias ?? (i.imported === null ? i.module : i.imported));
+  const references = star ? ctx.references : boundValueRefs(ctx.references, bound);
   return {
     language: 'python',
     symbols: ctx.symbols,
     imports: ctx.imports,
-    references: uniqueRefs(ctx.references),
+    references: uniqueRefs(references),
     diagnostics,
   };
 }

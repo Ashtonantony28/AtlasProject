@@ -158,12 +158,13 @@ describe('SG10 default and CJS exports', () => {
     expect(g.strong).toContain('use.js::u -calls-> impl.js::aux');
   });
 
-  it('anonymous default exports still give a module import edge', async () => {
+  it('anonymous default exports are a `default` symbol that imports and calls resolve to (A5-06)', async () => {
     const g = await graphOf({
       'anon.ts': 'export default function () { return 1; }\n',
       'use.ts': "import anon from './anon';\nexport function u(): number { return anon(); }\n",
     });
-    expect(g.strong).toContain('use.ts::<module> -imports-> anon.ts::<module>');
+    expect(g.strong).toContain('use.ts::<module> -imports-> anon.ts::default');
+    expect(g.strong).toContain('use.ts::u -calls-> anon.ts::default');
   });
 });
 

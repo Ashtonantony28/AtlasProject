@@ -14,6 +14,7 @@ import {
   forEachOfType,
   internalDiagnostic,
   pushAll,
+  boundValueRefs,
   pushDescendants,
   uniqueRefs,
   walkFrames,
@@ -31,6 +32,8 @@ const FN_NODES = new Set([
 ]);
 
 const CLASS_NODES = new Set(['class_declaration', 'abstract_class_declaration']);
+// `namespace N {}`, `module N {}`, `declare module 'm' {}`: a 'variable' whose members are qualified.
+const NAMESPACE_NODES = new Set(['internal_module', 'module']);
 const INTERFACE_NODES = new Set(['interface_declaration']);
 const TYPE_NODES = new Set(['type_alias_declaration', 'enum_declaration']);
 const METHOD_NODES = new Set([
@@ -94,9 +97,16 @@ interface Ctx {
   scopeExported: boolean; // exported flag of the enclosing class/interface/object
   references: ParsedReference[];
   owner: string | null; // qualified name references are attributed to; null = module
+  ns: boolean; // the enclosing scope is a namespace body: statements, members exported by `export`
+  top: Map<string, boolean>; // top-level symbol names and their exported flag
 }
 
-const FN_VALUES = new Set(['arrow_function', 'function_expression', 'function']);
+const FN_VALUES = new Set([
+  'arrow_function',
+  'function_expression',
+  'function',
+  'generator_function',
+]);
 const FIELD_NODES = new Set(['public_field_definition', 'field_definition']);
 
 function qualify(ctx: Ctx, name: string): string {
@@ -111,8 +121,17 @@ function isPublicMember(node: Node): boolean {
   );
 }
 
+/** In a class, interface or object literal body, where nodes are members rather than statements. */
+function inMembers(ctx: Ctx): boolean {
+  return ctx.qualifier.length > 0 && !ctx.ns;
+}
+
 function isExported(ctx: Ctx, node: Node, name: string): boolean {
-  if (ctx.qualifier.length > 0) return ctx.scopeExported && isPublicMember(node);
+  if (ctx.qualifier.length > 0)
+    return (
+      ctx.scopeExported &&
+      (ctx.ns ? node.parent?.type === 'export_statement' : isPublicMember(node))
+    );
   return node.parent?.type === 'export_statement' || ctx.exportNames.has(name);
 }
 
@@ -135,6 +154,7 @@ function push(
     exported: isExported(ctx, outer, name),
   };
   ctx.symbols.push(sym);
+  if (ctx.qualifier.length === 0) ctx.top.set(name, sym.exported);
   return sym;
 }
 
@@ -145,12 +165,14 @@ function visitScope(
   name: string,
   exported: boolean,
   body: Node | null,
+  ns = false,
 ): void {
   if (!body) return;
-  const saved = { scopeExported: ctx.scopeExported, owner: ctx.owner };
+  const saved = { scopeExported: ctx.scopeExported, owner: ctx.owner, ns: ctx.ns };
   ctx.owner = qualify(ctx, name);
   ctx.qualifier.push(name);
   ctx.scopeExported = exported;
+  ctx.ns = ns;
   stack.push(() => {
     ctx.qualifier.pop();
     Object.assign(ctx, saved);
@@ -197,6 +219,7 @@ function targetOf(node: Node | null): Target | null {
   if (!node) return null;
   switch (node.type) {
     case 'identifier':
+    case 'shorthand_property_identifier':
     case 'type_identifier':
       return { name: node.text, receiver: 'none', object: null };
     case 'generic_type':
@@ -244,6 +267,8 @@ function addCall(ctx: Ctx, from: string | null, call: Node): void {
     return;
   }
   addRef(ctx, from, callee, 'calls', call);
+  const args = call.lastChild;
+  if (args?.type === 'arguments') addValues(ctx, from, args);
 }
 
 /**
@@ -257,15 +282,17 @@ function addCallAt(ctx: Ctx, from: string | null, cursor: Cursor, type: string):
   if (!cursor.gotoFirstChild()) return false;
   let t: Target | null | undefined;
   do {
-    if (cursor.currentFieldName === field) {
+    const name = cursor.currentFieldName;
+    if (name === field) {
       t = targetAt(cursor);
-      break;
+      if (t === undefined) break;
+      if (t) ctx.references.push({ fromQualifiedName: from, ...t, kind: 'calls', line });
+    } else if (name === 'arguments' && t !== undefined) {
+      addValuesAt(ctx, from, cursor, 'arguments');
     }
   } while (cursor.gotoNextSibling());
   cursor.gotoParent();
-  if (t === undefined) return false;
-  if (t) ctx.references.push({ fromQualifiedName: from, ...t, kind: 'calls', line });
-  return true;
+  return t !== undefined;
 }
 
 /** `targetOf` for a callee at `cursor` (left in place); undefined where `addCall` needs the node. */
@@ -332,13 +359,88 @@ function dottedAt(cursor: Cursor): string | null {
   return result;
 }
 
+// Nodes whose named children (or, for `VALUE_LAST`, last child) can be a function used as a value;
+// call arguments are read with their call.
+const VALUE_LAST = new Set(['pair', 'variable_declarator', 'assignment_expression']);
+// Value nodes the walk itself meets; declarators and assignments are handled by `visit`.
+const WALK_VALUES = new Set([
+  'array',
+  'jsx_expression',
+  'return_statement',
+  'pair',
+  'shorthand_property_identifier',
+]);
+const REF_NODES = new Set([
+  ...CALL_NODES,
+  ...WALK_VALUES,
+  'variable_declarator',
+  'assignment_expression',
+]);
+
+/** A `references` ref for an identifier or member expression used as a value. */
+function addValue(ctx: Ctx, from: string | null, node: Node | null): void {
+  if (node && (node.type === 'identifier' || node.type === 'member_expression'))
+    addRef(ctx, from, node, 'references', node);
+}
+
+/** Values among the children of the value node at `cursor`, read through the cursor, which is left where it was. */
+function addValuesAt(ctx: Ctx, from: string | null, cursor: Cursor, type: string): boolean {
+  if (type === 'shorthand_property_identifier') {
+    const line = cursor.startPosition.row + 1;
+    ctx.references.push({
+      fromQualifiedName: from,
+      name: cursor.nodeText,
+      receiver: 'none',
+      object: null,
+      kind: 'references',
+      line,
+    });
+    return true;
+  }
+  if (!cursor.gotoFirstChild()) return true;
+  if (VALUE_LAST.has(type)) {
+    // The value is the last child, after the key or name: `k: v`, `x = v`.
+    let n = 0;
+    while (cursor.gotoNextSibling()) n++;
+    if (n > 0) addValueAt(ctx, from, cursor);
+  } else {
+    do addValueAt(ctx, from, cursor);
+    while (cursor.gotoNextSibling());
+  }
+  cursor.gotoParent();
+  return true;
+}
+
+/** `addValuesAt` for a materialised node. */
+function addValues(ctx: Ctx, from: string | null, node: Node): void {
+  if (node.type === 'shorthand_property_identifier') addRef(ctx, from, node, 'references', node);
+  else if (!VALUE_LAST.has(node.type)) for (const c of node.namedChildren) addValue(ctx, from, c);
+  else if (node.childCount > 1) addValue(ctx, from, node.lastChild);
+}
+
+function addValueAt(ctx: Ctx, from: string | null, cursor: Cursor): void {
+  const t = cursor.nodeType;
+  const target = t === 'identifier' || t === 'member_expression' ? targetAt(cursor) : null;
+  if (target)
+    ctx.references.push({
+      fromQualifiedName: from,
+      ...target,
+      kind: 'references',
+      line: cursor.startPosition.row + 1,
+    });
+}
+
+/** Calls and function values in `node`'s subtree. */
 function collectCalls(ctx: Ctx, node: Node | null, from: string | null): void {
   if (node)
     forEachOfType(
       node,
-      CALL_NODES,
-      (c) => addCall(ctx, from, c),
-      (cursor, type) => addCallAt(ctx, from, cursor, type),
+      REF_NODES,
+      (c) => (CALL_NODES.has(c.type) ? addCall(ctx, from, c) : addValues(ctx, from, c)),
+      (cursor, type) =>
+        CALL_NODES.has(type)
+          ? addCallAt(ctx, from, cursor, type)
+          : addValuesAt(ctx, from, cursor, type),
     );
 }
 
@@ -379,7 +481,9 @@ const VISITED_ANYWHERE = [
   ...INTERFACE_NODES,
   ...TYPE_NODES,
   ...METHOD_NODES,
+  ...NAMESPACE_NODES,
   ...CALL_NODES,
+  ...WALK_VALUES,
   'import_statement',
 ];
 // The types `visit` acts on at module level and inside a scope; other nodes only have their named children walked.
@@ -390,7 +494,88 @@ const VISITED_TOP = new Set([
   'assignment_expression',
   'export_statement',
 ]);
-const VISITED_MEMBER = new Set([...VISITED_ANYWHERE, ...FIELD_NODES, 'property_signature', 'pair']);
+const VISITED_MEMBER = new Set([...VISITED_ANYWHERE, ...FIELD_NODES, 'property_signature']);
+
+/** Walk-time handler for calls and values, which reads them through the cursor. */
+function peekRef(ctx: Ctx, cursor: Cursor, type: string): boolean {
+  if (CALL_NODES.has(type)) return addCallAt(ctx, ctx.owner, cursor, type);
+  // In a member scope, `pair`s are object-literal members for `visit`.
+  return WALK_VALUES.has(type) && !(type === 'pair' && inMembers(ctx))
+    ? addValuesAt(ctx, ctx.owner, cursor, type)
+    : false;
+}
+
+/** Not inside a function body, other than an immediately invoked one (`(function () {…})()`, `.call(this)`). */
+function atModuleLevel(node: Node): boolean {
+  for (let p = node.parent; p; p = p.parent) {
+    if (!FN_VALUES.has(p.type)) continue;
+    let c = p.parent;
+    while (c?.type === 'parenthesized_expression') c = c.parent;
+    const prop = c?.type === 'member_expression' ? c.childForFieldName('property')?.text : null;
+    if (prop === 'call' || prop === 'apply') c = c?.parent ?? null;
+    if (c?.type !== 'call_expression') return false;
+  }
+  return true;
+}
+
+/**
+ * Defines `path` (e.g. `['res', 'send']`) as the function or class `value`, a function at the top
+ * level and a method below it; false for any other value. `node` gives span and signature.
+ */
+function defineValue(
+  ctx: Ctx,
+  stack: Frame[],
+  path: string[],
+  value: Node,
+  node: Node,
+  exported?: boolean,
+): boolean {
+  const isFn = FN_VALUES.has(value.type);
+  if (!isFn && value.type !== 'class') return false;
+  const name = path[path.length - 1] as string;
+  const saved = ctx.qualifier;
+  ctx.qualifier = path.slice(0, -1);
+  const outer = node.parent?.type === 'expression_statement' ? node.parent : node;
+  const sym = push(
+    ctx,
+    isFn ? (path.length > 1 ? 'method' : 'function') : 'class',
+    name,
+    node,
+    outer,
+  );
+  ctx.qualifier = saved;
+  if (exported !== undefined) sym.exported = exported;
+  const qname = sym.qualifiedName ?? name;
+  if (isFn) collectCalls(ctx, value, qname);
+  else {
+    collectHeritage(ctx, value, qname);
+    visitScope(ctx, stack, qname, sym.exported, value.childForFieldName('body'));
+  }
+  return true;
+}
+
+/**
+ * Module-level `module.exports = function () {}`, `exports.x = …`, `obj.m = …`,
+ * `C.prototype.m = …` and `C.prototype = { … }`; true when it defined something.
+ */
+function visitAssignment(ctx: Ctx, stack: Frame[], node: Node): boolean {
+  const left = node.childForFieldName('left');
+  const right = node.childForFieldName('right');
+  if (left?.type !== 'member_expression' || !right) return false;
+  if (isModuleExports(left))
+    return defineValue(ctx, stack, [nameOf(right) ?? 'default'], right, node);
+  const chain = dotted(left)?.split('.');
+  if (!chain || !atModuleLevel(node)) return false;
+  if (chain[0] === 'exports' || (chain[0] === 'module' && chain[1] === 'exports'))
+    return defineValue(ctx, stack, chain.slice(chain[0] === 'exports' ? 1 : 2), right, node);
+  const path = chain.filter((p) => p !== 'prototype');
+  const exported = ctx.top.get(path[0] as string) ?? ctx.exportNames.has(path[0] as string);
+  if (right.type === 'object' && path.length === 1 && chain.length === 2) {
+    visitScope(ctx, stack, path[0] as string, exported, right);
+    return true;
+  }
+  return path.length > 1 && defineValue(ctx, stack, path, right, node, exported);
+}
 
 /** Returns true when the node's named children are to be walked. */
 function visit(node: Node, type: string, ctx: Ctx, stack: Frame[]): boolean {
@@ -426,31 +611,33 @@ function visit(node: Node, type: string, ctx: Ctx, stack: Frame[]): boolean {
     }
   }
 
+  if (NAMESPACE_NODES.has(type)) {
+    const nameNode = node.childForFieldName('name');
+    if (nameNode) {
+      const name = trimQuotes(nameNode.text);
+      const outer = node.parent?.type === 'ambient_declaration' ? node.parent : node;
+      const sym = push(ctx, 'variable', name, node, outer);
+      visitScope(ctx, stack, name, sym.exported, node.childForFieldName('body'), true);
+      return false;
+    }
+  }
+
   if (CALL_NODES.has(type)) {
     addCall(ctx, ctx.owner, node);
   }
+  if (WALK_VALUES.has(type) && !(type === 'pair' && inMembers(ctx)))
+    addValuesAt(ctx, ctx.owner, node.walk(), type);
 
-  // `module.exports = function f() {}` / `= class C {}`: a named default export.
   if (ctx.qualifier.length === 0 && type === 'assignment_expression') {
-    const right = node.childForFieldName('right');
-    const name = right ? nameOf(right) : null;
-    if (right && name && isModuleExports(node.childForFieldName('left'))) {
-      if (FN_VALUES.has(right.type)) {
-        const sym = push(ctx, 'function', name, right, node.parent ?? node);
-        collectCalls(ctx, right, sym.qualifiedName);
-        return false;
-      }
-      if (right.type === 'class') {
-        const sym = push(ctx, 'class', name, right, node.parent ?? node);
-        collectHeritage(ctx, right, sym.qualifiedName ?? name);
-        visitScope(ctx, stack, name, sym.exported, right.childForFieldName('body'));
-        return false;
-      }
-    }
+    if (visitAssignment(ctx, stack, node)) return false;
+    addValue(ctx, ctx.owner, node.childForFieldName('right'));
   }
 
   if (ctx.qualifier.length === 0) {
     const value = type === 'export_statement' ? node.childForFieldName('value') : null;
+    // `export default function () {}`, `export default class extends B {}`, `export default fn`.
+    if (value && defineValue(ctx, stack, [nameOf(value) ?? 'default'], value, node)) return false;
+    addValue(ctx, ctx.owner, value);
     const scope =
       value?.type === 'object'
         ? 'default'
@@ -482,7 +669,7 @@ function visit(node: Node, type: string, ctx: Ctx, stack: Frame[]): boolean {
     return false;
   }
 
-  if (ctx.qualifier.length > 0) {
+  if (inMembers(ctx)) {
     // Function-typed interface properties: `onDraw: () => void`.
     if (type === 'property_signature') {
       const name = nameOf(node);
@@ -496,6 +683,7 @@ function visit(node: Node, type: string, ctx: Ctx, stack: Frame[]): boolean {
       const value = node.childForFieldName('value');
       const fn =
         name && value && FN_VALUES.has(value.type) ? push(ctx, 'method', name, node) : null;
+      if (!fn) addValue(ctx, ctx.owner, value);
       collectCalls(ctx, value, fn?.qualifiedName ?? ctx.owner);
       return false;
     }
@@ -507,7 +695,7 @@ function visit(node: Node, type: string, ctx: Ctx, stack: Frame[]): boolean {
         key && value && FN_VALUES.has(value.type)
           ? push(ctx, 'method', trimQuotes(key.text), node)
           : null;
-      collectCalls(ctx, value, fn?.qualifiedName ?? ctx.owner);
+      collectCalls(ctx, fn ? value : node, fn?.qualifiedName ?? ctx.owner);
       return false;
     }
   }
@@ -516,7 +704,7 @@ function visit(node: Node, type: string, ctx: Ctx, stack: Frame[]): boolean {
   // (ctx.qualifier empty) to avoid noise from local variables.
   if (
     (type === 'lexical_declaration' || type === 'variable_declaration') &&
-    ctx.qualifier.length === 0
+    (ctx.qualifier.length === 0 || ctx.ns)
   ) {
     // Declarators are deferred so each object scope is walked before the next declarator.
     const decls = node.namedChildren.filter((d) => d.type === 'variable_declarator');
@@ -542,7 +730,7 @@ function visitDeclarator(ctx: Ctx, stack: Frame[], node: Node, decl: Node): void
   const sym = push(ctx, isFn ? 'function' : 'variable', nameNode.text, decl, node);
   // Values are not walked for symbols: locals of `const f = () => {...}` are not top-level.
   if (valueNode?.type === 'object') visitScope(ctx, stack, sym.name, sym.exported, valueNode);
-  else collectCalls(ctx, valueNode, sym.qualifiedName);
+  else collectCalls(ctx, decl, sym.qualifiedName);
 }
 
 function isModuleExports(node: Node | null): boolean {
@@ -568,7 +756,7 @@ function collectCjsExport(assign: Node, names: Set<string>, rows: ParsedImport[]
   const line = lineOf(assign);
   const required = right.type === 'call_expression' ? requireSource(right) : null;
   if (isModuleExports(left)) {
-    const named = right.type === 'identifier' ? right.text : nameOf(right);
+    const named = right.type === 'identifier' ? right.text : (nameOf(right) ?? 'default');
     if (
       named &&
       (right.type === 'identifier' || FN_VALUES.has(right.type) || right.type === 'class')
@@ -636,9 +824,15 @@ function collectExports(root: Node, rows: ParsedImport[]): Set<string> {
     } else if (node.type === 'export_statement') {
       const line = lineOf(node);
       const value = node.childForFieldName('value');
-      if (value?.type === 'identifier') {
-        names.add(value.text);
-        rows.push(localExport(value.text, 'default', line));
+      const named =
+        value?.type === 'identifier'
+          ? value.text
+          : value && (FN_VALUES.has(value.type) || value.type === 'class')
+            ? (nameOf(value) ?? 'default')
+            : null;
+      if (named) {
+        names.add(named);
+        rows.push(localExport(named, 'default', line));
       }
       const isDefault = node.children.some((c) => c.type === 'default');
       const declared = node.childForFieldName('declaration');
@@ -823,29 +1017,36 @@ export function parseTsLike(root: Node, language: LanguageId): ParseResult {
     scopeExported: false,
     references: [],
     owner: null,
+    ns: false,
+    top: new Map(),
   };
   const diagnostics: ParseDiagnostic[] = [];
   try {
     ctx.exportNames = collectExports(root, ctx.imports);
     const visitChild = (node: Node, type: string, stack: Frame[]): boolean =>
       visit(node, type, ctx, stack);
-    // For call nodes `visit` only records the call and walks on.
-    const peekCall: Peek = (cursor, type) =>
-      CALL_NODES.has(type) && addCallAt(ctx, ctx.owner, cursor, type);
+    // For call and value nodes `visit` only records them and walks on.
+    const peek: Peek = (cursor, type) => peekRef(ctx, cursor, type);
     walkFrames(root.namedChildren, (node, stack) => {
       if (visit(node, node.type, ctx, stack)) {
-        const types = ctx.qualifier.length === 0 ? VISITED_TOP : VISITED_MEMBER;
-        pushDescendants(stack, node, types, visitChild, peekCall);
+        const types = inMembers(ctx) ? VISITED_MEMBER : VISITED_TOP;
+        pushDescendants(stack, node, types, visitChild, peek);
       }
     });
   } catch (err) {
     diagnostics.push(internalDiagnostic(err));
   }
+  const bound = new Set(ctx.top.keys());
+  for (const i of ctx.imports) {
+    const named = i.imported !== null && i.imported !== '*' && i.imported !== 'default';
+    const local = i.alias ?? (named ? i.imported : null);
+    if (local && !i.reexport) bound.add(local);
+  }
   return {
     language,
     symbols: ctx.symbols,
     imports: ctx.imports,
-    references: uniqueRefs(ctx.references),
+    references: uniqueRefs(boundValueRefs(ctx.references, bound)),
     diagnostics,
   };
 }

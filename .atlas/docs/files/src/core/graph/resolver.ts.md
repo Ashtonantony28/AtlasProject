@@ -1,24 +1,25 @@
 ---
 kind: file
 target: src/core/graph/resolver.ts
-source_hash: a3d4dfc86c2d5a3cb872ef55285665148727e14577525ac66b50be8b7f85ff72
+source_hash: 7e1609b37c6c5cb3a794ec77e555e8eee445024178971cc06b425ffa303d0663
 ---
 # module src/core/graph/resolver.ts
 
 `module src/core/graph/resolver.ts` exposes the following public surface:
 
-- `FileCtx` — interface (src/core/graph/resolver.ts:32)
-- `Binding` — type (src/core/graph/resolver.ts:45)
-- `ResolveOptions` — interface (src/core/graph/resolver.ts:52)
-- `ResolveStats` — interface (src/core/graph/resolver.ts:57)
-- `resolveGraph` — function (src/core/graph/resolver.ts:67)
-- `resolveAll` — function (src/core/graph/resolver.ts:71)
-- `EXTERNAL` — variable (src/core/graph/resolver.ts:363)
-- `localNameOf` — function (src/core/graph/resolver.ts:366)
-- `groupByFile` — function (src/core/graph/resolver.ts:375)
-- `refMeta` — function (src/core/graph/resolver.ts:385)
-- `ownerOf` — function (src/core/graph/resolver.ts:392)
+- `FileCtx` — interface (src/core/graph/resolver.ts:34)
+- `Binding` — type (src/core/graph/resolver.ts:47)
+- `ResolveOptions` — interface (src/core/graph/resolver.ts:54)
+- `ResolveStats` — interface (src/core/graph/resolver.ts:59)
+- `resolveGraph` — function (src/core/graph/resolver.ts:70)
+- `resolveAll` — function (src/core/graph/resolver.ts:74)
+- `EXTERNAL` — variable (src/core/graph/resolver.ts:375)
+- `VALUE_KINDS` — variable (src/core/graph/resolver.ts:376)
+- `localNameOf` — function (src/core/graph/resolver.ts:379)
+- `groupByFile` — function (src/core/graph/resolver.ts:388)
+- `refMeta` — function (src/core/graph/resolver.ts:398)
+- `ownerOf` — function (src/core/graph/resolver.ts:405)
 
-References: `src/core/graph/resolver.ts:32`, `src/core/graph/resolver.ts:45`, `src/core/graph/resolver.ts:52`, `src/core/graph/resolver.ts:57`, `src/core/graph/resolver.ts:67`.
+References: `src/core/graph/resolver.ts:34`, `src/core/graph/resolver.ts:47`, `src/core/graph/resolver.ts:54`, `src/core/graph/resolver.ts:59`, `src/core/graph/resolver.ts:70`.
 
 _Generated offline (mock client)._

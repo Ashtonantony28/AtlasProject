@@ -15,6 +15,8 @@
 //   module or class binding. Unresolved `this`/`super` calls and calls through
 //   an import binding are weak (dst null); calls on unbound names or receivers
 //   (builtins, locals, parameters) give no edge.
+// - references: a function, method or class used as a value (a callback, an
+//   assigned or exported function) resolves like a call; only resolved ones become edges.
 
 import {
   type DB,
@@ -60,6 +62,7 @@ export interface ResolveStats {
   imports: number;
   calls: number;
   heritage: number;
+  references: number;
   // Unreadable or malformed tsconfig/package.json and ambiguous workspace packages.
   diagnostics: string[];
 }
@@ -101,7 +104,9 @@ function resolveAll(db: DB, root: string): ResolveStats {
       if (!q.includes('.')) exportsByName.set(s.name, s);
       else if (q === `default.${s.name}`) members.push(s);
     }
-    for (const s of members) if (!exportsByName.has(s.name)) exportsByName.set(s.name, s);
+    // Members of `export default { … }`; not of an anonymous default class or function.
+    if (!byQName.has('default'))
+      for (const s of members) if (!exportsByName.has(s.name)) exportsByName.set(s.name, s);
     const rows = importsByFile.get(file.id) ?? [];
     const imports = rows.filter((r) => !r.reexport);
     const byLocal = new Map<string, ImportRow>();
@@ -132,6 +137,7 @@ function resolveAll(db: DB, root: string): ResolveStats {
     imports: 0,
     calls: 0,
     heritage: 0,
+    references: 0,
     diagnostics: modules.diagnostics,
   };
   const seen = new Set<string>();
@@ -151,6 +157,7 @@ function resolveAll(db: DB, root: string): ResolveStats {
     if (weak) stats.weakEdges++;
     if (kind === 'imports') stats.imports++;
     else if (kind === 'calls') stats.calls++;
+    else if (kind === 'references') stats.references++;
     else stats.heritage++;
   };
 
@@ -303,7 +310,7 @@ function resolveAll(db: DB, root: string): ResolveStats {
   const parents = new Map<number, SymbolRow[]>();
   for (const ctx of contexts.values()) {
     for (const ref of refsByFile.get(ctx.fileId) ?? []) {
-      if (ref.kind === 'calls') continue;
+      if (ref.kind !== 'extends' && ref.kind !== 'implements') continue;
       const src = srcOf(ctx, ref);
       if (src === null || typeof src === 'number') continue;
       const dst =
@@ -326,11 +333,11 @@ function resolveAll(db: DB, root: string): ResolveStats {
     return null;
   }
 
-  // 3) Calls.
+  // 3) Calls and references. A value in a `module.exports = { … }` object counts for the module.
   for (const ctx of contexts.values()) {
     for (const ref of refsByFile.get(ctx.fileId) ?? []) {
-      if (ref.kind !== 'calls') continue;
-      const src = srcOf(ctx, ref);
+      if (ref.kind !== 'calls' && ref.kind !== 'references') continue;
+      const src = srcOf(ctx, ref) ?? (ref.kind === 'references' ? ctx.moduleSymbolId : null);
       if (src === null) continue;
       const srcId = typeof src === 'number' ? src : src.id;
       let dst: SymbolRow | null | undefined;
@@ -352,6 +359,11 @@ function resolveAll(db: DB, root: string): ResolveStats {
         // Unbound names and receivers (builtins, locals, parameters) give no edge.
         if (dst === undefined) continue;
       }
+      if (ref.kind === 'references') {
+        if (dst && dst.id !== srcId && VALUE_KINDS.has(dst.kind))
+          emit(srcId, dst.id, 'references', refMeta(ref));
+        continue;
+      }
       emit(srcId, dst?.id ?? null, 'calls', refMeta(ref));
     }
   }
@@ -361,6 +373,7 @@ function resolveAll(db: DB, root: string): ResolveStats {
 }
 
 const EXTERNAL: Binding = { kind: 'external' };
+const VALUE_KINDS = new Set(['function', 'method', 'class']);
 
 /** The local name an import binds: alias, the named import, or a Python `import a.b`'s module. */
 function localNameOf(imp: ImportRow, language: string): string | null {
