@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/synth/llmClient.ts
-source_hash: d43a1684f45d5cab25230ff05de1f9663f585440f6d2c8ca1a7ca78ff63c9c78
+source_hash: 2d8ffabb16f44ce34a5b8d0a5bf7daa9ff9e8042140caf6f00de155cd4b993fd
 ---
 # module src/core/synth/llmClient.ts
 
@@ -9,12 +9,16 @@ source_hash: d43a1684f45d5cab25230ff05de1f9663f585440f6d2c8ca1a7ca78ff63c9c78
 
 - `LLMMessage` — interface (src/core/synth/llmClient.ts:4)
 - `LLMCallParams` — interface (src/core/synth/llmClient.ts:9)
-- `LLMResult` — interface (src/core/synth/llmClient.ts:16)
-- `LLMClient` — interface (src/core/synth/llmClient.ts:22)
-- `LLMClient.complete` — method (src/core/synth/llmClient.ts:24)
-- `createAnthropicClient` — function (src/core/synth/llmClient.ts:30)
-- `createOfflineClient` — function (src/core/synth/llmClient.ts:74)
+- `LLMResult` — interface (src/core/synth/llmClient.ts:15)
+- `DOC_MAX_TOKENS` — variable (src/core/synth/llmClient.ts:24)
+- `ASK_MAX_TOKENS` — variable (src/core/synth/llmClient.ts:25)
+- `COMPLETE_STOPS` — variable (src/core/synth/llmClient.ts:27)
+- `incompleteReason` — function (src/core/synth/llmClient.ts:30)
+- `LLMClient` — interface (src/core/synth/llmClient.ts:37)
+- `LLMClient.complete` — method (src/core/synth/llmClient.ts:39)
+- `createAnthropicClient` — function (src/core/synth/llmClient.ts:45)
+- `createOfflineClient` — function (src/core/synth/llmClient.ts:89)
 
-References: `src/core/synth/llmClient.ts:4`, `src/core/synth/llmClient.ts:9`, `src/core/synth/llmClient.ts:16`, `src/core/synth/llmClient.ts:22`, `src/core/synth/llmClient.ts:24`.
+References: `src/core/synth/llmClient.ts:4`, `src/core/synth/llmClient.ts:9`, `src/core/synth/llmClient.ts:15`, `src/core/synth/llmClient.ts:24`, `src/core/synth/llmClient.ts:25`.
 
 _Generated offline (mock client)._

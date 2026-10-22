@@ -142,7 +142,9 @@ error) instead of being ignored:
 - `ask`: `--k` 1–20 seed snippets (default 5), `--expand` 0–20 (default 5).
 - `docs`: `--budget` must be a positive integer. `--list` and `--show <path>`
   read the index, then the committed `.atlas/docs` (as the dashboard and
-  `atlas_docs` do); `--show` exits 1 when there is no doc.
+  `atlas_docs` do); `--show` exits 1 when there is no doc. A refused, cut-off
+  (`max_tokens`) or empty completion is never stored: `docs` names the target
+  and exits 1, and `ask` fails with an error.
 - `serve`: `--port` 0–65535.
 - Read commands (`search`, `graph`, `docs`, `ask`, `drift`, `serve`) fail with
   "no index … run `atlas index` first" on an unindexed directory and "directory not found"

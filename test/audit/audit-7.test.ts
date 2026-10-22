@@ -5,7 +5,7 @@
 // behaviour the audit found consistent.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cpSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
-import { createServer, type Server } from 'node:http';
+import type { Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -24,6 +24,7 @@ import {
   type McpContext,
 } from '../../src/mcp/server.js';
 import { runCli, SAMPLE } from '../cli/helpers.js';
+import { fakeAnthropic as startFake, message } from '../helpers/fakeAnthropic.js';
 
 const dirs: string[] = [];
 const contexts: McpContext[] = [];
@@ -77,41 +78,12 @@ function mcp(root: string): McpContext {
   return ctx;
 }
 
-/** A fake Messages endpoint: records each request body and answers with `reply(body)`. */
 async function fakeAnthropic(
   reply: (body: Record<string, unknown>) => { status: number; json: unknown },
-): Promise<{ url: string; bodies: Array<Record<string, unknown>> }> {
-  const bodies: Array<Record<string, unknown>> = [];
-  const server = createServer((req, res) => {
-    let raw = '';
-    req.on('data', (d) => (raw += String(d)));
-    req.on('end', () => {
-      const body = JSON.parse(raw || '{}') as Record<string, unknown>;
-      bodies.push(body);
-      const r = reply(body);
-      res.writeHead(r.status, { 'content-type': 'application/json' });
-      res.end(JSON.stringify(r.json));
-    });
-  });
-  servers.push(server);
-  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
-  const addr = server.address();
-  const port = typeof addr === 'object' && addr ? addr.port : 0;
-  return { url: `http://127.0.0.1:${port}`, bodies };
-}
-
-function message(body: Record<string, unknown>, extra: Record<string, unknown>) {
-  return {
-    status: 200,
-    json: {
-      id: 'msg_fake',
-      type: 'message',
-      role: 'assistant',
-      model: body['model'],
-      usage: { input_tokens: 10, output_tokens: 0 },
-      ...extra,
-    },
-  };
+) {
+  const fake = await startFake(reply);
+  servers.push(fake.server);
+  return fake;
 }
 
 describe('AUDIT-7 consistent surfaces (pinned)', () => {
@@ -140,7 +112,7 @@ describe('AUDIT-7 consistent surfaces (pinned)', () => {
 });
 
 describe('AUDIT-7 findings', () => {
-  it.fails(
+  it(
     'A7-01: the Anthropic client sends no sampling parameters (current models reject them)',
     async () => {
       const fake = await fakeAnthropic((body) =>
@@ -177,7 +149,7 @@ describe('AUDIT-7 findings', () => {
     },
   );
 
-  it.fails(
+  it(
     'A7-03: a refused (empty) completion is not stored as a fresh, cached doc',
     async () => {
       const root = await indexed();

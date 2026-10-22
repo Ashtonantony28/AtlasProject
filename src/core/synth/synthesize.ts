@@ -8,7 +8,7 @@ import {
   getDoc,
 } from '../db/index.js';
 import { sha256 } from '../ingest/index.js';
-import type { LLMClient } from './llmClient.js';
+import { DOC_MAX_TOKENS, incompleteReason, type LLMClient } from './llmClient.js';
 import { TokenBudget } from './budget.js';
 import { modulePrompt, architecturePrompt } from './context.js';
 
@@ -31,18 +31,25 @@ Stay grounded in what's listed. If something is unknown, say so briefly.`;
 export interface SynthesizeOptions {
   root: string;
   tokenBudget: number;
-  // Per-doc output token cap (passed to the LLM as max_tokens).
+  // Per-doc output token cap (passed to the LLM as max_tokens; default DOC_MAX_TOKENS).
   perDocMaxTokens?: number;
   // Regenerate even docs whose source_hash (sha256 of the prompt) is unchanged.
   force?: boolean;
-  onProgress?: (e: { kind: 'module' | 'architecture'; path?: string; status: 'generated' | 'cached' | 'skipped'; reason?: string }) => void;
+  onProgress?: (e: { kind: 'module' | 'architecture'; path?: string; status: DocStatus; reason?: string }) => void;
 }
+
+/** `failed`: the model refused, hit max_tokens or returned nothing; no doc was stored. */
+export type DocStatus = 'generated' | 'cached' | 'skipped' | 'failed';
 
 export interface SynthesizeStats {
   modulesGenerated: number;
   modulesCached: number;
   modulesSkipped: number;
+  modulesFailed: number;
   architectureGenerated: boolean;
+  architectureFailed: boolean;
+  /** Targets whose completion was unusable, with the reason (e.g. `stop_reason refusal`). */
+  failures: Array<{ target: string; reason: string }>;
   inputTokens: number;
   outputTokens: number;
   budgetRemaining: number;
@@ -56,12 +63,15 @@ export async function synthesizeDocs(
 ): Promise<SynthesizeStats> {
   const t0 = Date.now();
   const budget = new TokenBudget(opts.tokenBudget);
-  const perDocMax = opts.perDocMaxTokens ?? 800;
+  const perDocMax = opts.perDocMaxTokens ?? DOC_MAX_TOKENS;
   const stats: SynthesizeStats = {
     modulesGenerated: 0,
     modulesCached: 0,
     modulesSkipped: 0,
+    modulesFailed: 0,
     architectureGenerated: false,
+    architectureFailed: false,
+    failures: [],
     inputTokens: 0,
     outputTokens: 0,
     budgetRemaining: budget.cap,
@@ -75,7 +85,7 @@ export async function synthesizeDocs(
     system: string,
     prompt: string,
     target: { kind: 'file' | 'architecture'; id: number; path?: string },
-  ): Promise<'generated' | 'cached' | 'skipped'> => {
+  ): Promise<DocStatus> => {
     const hash = sha256(prompt);
     const cached = getDoc(db, target.kind, target.id);
     const path = target.path !== undefined ? { path: target.path } : {};
@@ -91,11 +101,17 @@ export async function synthesizeDocs(
       system,
       messages: [{ role: 'user', content: prompt }],
       maxTokens: perDocMax,
-      temperature: 0.2,
     });
     budget.record(res.inputTokens, res.outputTokens);
     stats.inputTokens += res.inputTokens;
     stats.outputTokens += res.outputTokens;
+    // Never store a refusal, cut-off or empty doc: it would be cached as fresh.
+    const reason = incompleteReason(res);
+    if (reason) {
+      stats.failures.push({ target: target.path ?? 'architecture', reason });
+      opts.onProgress?.({ kind, ...path, status: 'failed', reason });
+      return 'failed';
+    }
     upsertDoc(db, {
       target_kind: target.kind,
       target_id: target.id,
@@ -112,6 +128,7 @@ export async function synthesizeDocs(
     const r = await generate('module', MODULE_SYSTEM, prompt, { kind: 'file', id: file.id, path: file.path });
     if (r === 'generated') stats.modulesGenerated++;
     else if (r === 'cached') stats.modulesCached++;
+    else if (r === 'failed') stats.modulesFailed++;
     else stats.modulesSkipped++;
   }
 
@@ -121,6 +138,7 @@ export async function synthesizeDocs(
     id: 0,
   });
   stats.architectureGenerated = arch === 'generated';
+  stats.architectureFailed = arch === 'failed';
   // Pruned files' docs are now gone from the doc set too.
   clearDocTombstones(db);
 
