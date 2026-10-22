@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/ingest/walker.ts
-source_hash: 97f8d97c341b90fc050ec5bf2ce4f260fb3af36bd796f25e7ded329d96c5225e
+source_hash: 312f33b08ee8ad885702861f07c5381ff3f664863ab8887afd77449fefb81603
 ---
 # module src/core/ingest/walker.ts
 
@@ -15,16 +15,15 @@ source_hash: 97f8d97c341b90fc050ec5bf2ce4f260fb3af36bd796f25e7ded329d96c5225e
 - `DEFAULT_MAX_BYTES` — variable (src/core/ingest/walker.ts:42)
 - `ALWAYS_SKIP` — variable (src/core/ingest/walker.ts:46)
 - `Ignore` — type (src/core/ingest/walker.ts:48)
-- `Rules` — interface (src/core/ingest/walker.ts:53)
-- `readGitignore` — function (src/core/ingest/walker.ts:59)
-- `segmentLocal` — function (src/core/ingest/walker.ts:71)
-- `DirState` — type (src/core/ingest/walker.ts:86)
-- `verdict` — function (src/core/ingest/walker.ts:90)
-- `Groups` — interface (src/core/ingest/walker.ts:122)
-- `gitGroups` — function (src/core/ingest/walker.ts:128)
-- `fileIgnored` — function (src/core/ingest/walker.ts:144)
-- `walkRepo` — function (src/core/ingest/walker.ts:161)
-- `walkRepoReport` — function (src/core/ingest/walker.ts:166)
+- `Match` — type (src/core/ingest/walker.ts:49)
+- `Rules` — interface (src/core/ingest/walker.ts:54)
+- `readGitignore` — function (src/core/ingest/walker.ts:60)
+- `segmentLocal` — function (src/core/ingest/walker.ts:72)
+- `ownMatch` — function (src/core/ingest/walker.ts:86)
+- `extendGroups` — function (src/core/ingest/walker.ts:100)
+- `isIgnored` — function (src/core/ingest/walker.ts:108)
+- `walkRepo` — function (src/core/ingest/walker.ts:132)
+- `walkRepoReport` — function (src/core/ingest/walker.ts:137)
 
 References: `src/core/ingest/walker.ts:6`, `src/core/ingest/walker.ts:17`, `src/core/ingest/walker.ts:25`, `src/core/ingest/walker.ts:31`, `src/core/ingest/walker.ts:36`.
 

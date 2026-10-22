@@ -1,13 +1,13 @@
 ---
 kind: architecture
 target: architecture
-source_hash: af4a1e6921aae75267f0c2e0b79490772364c541c2e5339a922527577c4b6f39
+source_hash: 3684483d40bee969ca5f912347cad2e029d793d08fb429d1dd0542c194969b85
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 195 files, 1275 symbols, 5840 edges
+**Totals:** 195 files, 1276 symbols, 5835 edges
 
 ## Modules
 

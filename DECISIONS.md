@@ -502,3 +502,18 @@ Keying by file path also covers a second connection to the same DB in one proces
 processes still rely on SQLite's lock. `atlas_index` now does what `atlas index` does before
 indexing: writes the default config when missing, then loads it and stores it in `ctx.config`,
 so later `atlas_search` calls use the same embedder settings as the index (A11-02, A11-05, A7-08).
+
+## 2026-10-22 — SG30: the walker decides directories across all .gitignore sets, as git does
+
+Each .gitignore set is now matched against an entry's own path (`ignore`'s internal `_testOne`),
+not with `test()`, which also ignores a path when that same set ignores a parent directory. The
+"cannot re-include inside an excluded directory" rule is applied once, across all sets: the walk
+does not descend into a directory whose verdict (config `exclude`, then the deepest set with a
+matching rule) is ignored. So a deeper `!build/` re-includes a directory a shallower `build/`
+ignores, and its files are decided by their own patterns (A12-01). The per-set directory state
+from SG27 is gone; the merging of consecutive segment-local sets is kept, so the walk stays
+linear in depth. `_testOne` is not public API: `ignore` 6.x has no own-path test (7.x's
+`checkIgnore` still checks parents), and the git-oracle tests catch it if an upgrade changes it.
+The SG27 parity tests now compare with `git ls-files -co --exclude-standard` instead of the
+pre-SG27 walk, which had the same defect. `EXTRACTOR_VERSION` is unchanged: newly walked files
+are picked up by the next index run.

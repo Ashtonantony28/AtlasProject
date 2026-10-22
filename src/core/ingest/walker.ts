@@ -46,6 +46,7 @@ export const DEFAULT_MAX_BYTES = 1024 * 1024;
 const ALWAYS_SKIP = new Set(['.git', '.atlas', 'node_modules', '__pycache__']);
 
 type Ignore = ReturnType<typeof ignore>;
+type Match = ReturnType<Ignore['test']>;
 
 // A set of gitignore rules and the directory (relative POSIX, `''` = root) they apply to.
 // `local` sets hold only patterns with no `/` except a trailing one (and no `**`): git matches
@@ -78,79 +79,49 @@ export function segmentLocal(text: string): boolean {
   return true;
 }
 
-/**
- * Per rule set, whether the directory being visited is ignored by that set alone. `ignore`'s
- * own `test(path)` re-derives this from every parent segment on each call, which made the walk
- * cubic in the depth of nested `.gitignore` files (A10-04); here it is carried down instead.
- */
-type DirState = boolean[];
+// `ignore`'s `test()` also ignores a path when the same set ignores one of its parent directories.
+// Git applies that rule across all sets instead (a deeper set can re-include the directory), which
+// the walk does by not descending into ignored directories, so each set is asked about the path's
+// own match only.
+function ownMatch(ig: Ignore, path: string): Match {
+  return (ig as Ignore & { _testOne(path: string, checkUnignored: boolean): Match })._testOne(
+    path,
+    true,
+  );
+}
 
-// Gitignore precedence: deeper files override shallower ones; the config `exclude` comes last.
-// Same verdict as testing `rel` with each set's `ig.test()` in order (last non-neutral wins).
-function verdict(
-  rules: Rules[],
-  state: DirState,
+/**
+ * Append a directory's .gitignore set to its ancestors' (shallowest first), merging a run of
+ * consecutive segment-local sets into one matcher. Within one `ignore` instance the last
+ * matching rule decides, and across sets the deepest non-neutral set decides, so concatenating
+ * the rules of consecutive sets gives the same verdict. Entries are then tested against a handful
+ * of groups, whatever the number of ancestor `.gitignore` files (A10-04).
+ */
+function extendGroups(groups: Rules[], own: Rules): Rules[] {
+  const last = groups[groups.length - 1];
+  if (!own.local || !last?.local) return [...groups, own];
+  return [...groups.slice(0, -1), { base: '', ig: ignore().add(last.ig).add(own.ig), local: true }];
+}
+
+// Git's verdict on an entry of a walked directory: the config `exclude` first, then the deepest
+// .gitignore set with a matching rule.
+function isIgnored(
+  groups: Rules[],
+  exclude: Rules[],
   rel: string,
   name: string,
   isDir: boolean,
-): { ignored: boolean; perSet: DirState } {
-  let ignored = false;
-  const perSet: DirState = isDir ? new Array<boolean>(rules.length) : [];
-  for (let i = 0; i < rules.length; i++) {
-    const { base, ig, local } = rules[i]!;
-    let r: { ignored: boolean; unignored: boolean };
-    if (state[i]) r = { ignored: true, unignored: false };
-    else {
-      const path = local && !/^\.+$/.test(name) ? name : base ? rel.slice(base.length + 1) : rel;
-      r = ig.test(isDir ? `${path}/` : path);
-    }
-    if (r.ignored) ignored = true;
-    else if (r.unignored) ignored = false;
-    if (isDir) perSet[i] = r.ignored;
-  }
-  return { ignored, perSet };
-}
-
-/**
- * The .gitignore sets after the last one that already ignores the directory (`from`), with
- * each run of consecutive segment-local sets merged into one matcher. Within one `ignore`
- * instance the last matching rule decides, and across sets the last non-neutral set decides,
- * so concatenating the rules of consecutive sets gives the same verdict. Files are then tested
- * against a handful of groups, whatever the number of ancestor `.gitignore` files. A child
- * directory extends its parent's groups instead of rebuilding them.
- */
-interface Groups {
-  from: number;
-  count: number;
-  groups: Rules[];
-}
-
-function gitGroups(sets: Rules[], state: DirState, prev: Groups | null): Groups {
-  let from = sets.length;
-  while (from > 0 && !state[from - 1]) from--;
-  const extend = prev !== null && prev.from === from;
-  const groups = extend ? prev.groups.slice() : [];
-  for (let i = extend ? prev.count : from; i < sets.length; i++) {
-    const r = sets[i]!;
-    const last = groups[groups.length - 1];
-    if (r.local && last?.local) {
-      groups[groups.length - 1] = { base: '', ig: ignore().add(last.ig).add(r.ig), local: true };
-    } else groups.push(r);
-  }
-  return { from, count: sets.length, groups };
-}
-
-/** Same verdict as `verdict(rules, state, rel, name, false)` when no `exclude` set is forced. */
-function fileIgnored(g: Groups, exclude: Rules[], rel: string, name: string): boolean {
-  for (const groups of [exclude, g.groups]) {
-    for (let i = groups.length - 1; i >= 0; i--) {
-      const { base, ig, local } = groups[i]!;
-      const r = ig.test(local ? name : base ? rel.slice(base.length + 1) : rel);
+): boolean {
+  for (const sets of [exclude, groups]) {
+    for (let i = sets.length - 1; i >= 0; i--) {
+      const { base, ig, local } = sets[i]!;
+      const path = local ? name : base ? rel.slice(base.length + 1) : rel;
+      const r = ownMatch(ig, isDir ? `${path}/` : path);
       if (r.ignored) return true;
       if (r.unignored) return false;
     }
   }
-  return g.from > 0;
+  return false;
 }
 
 /**
@@ -176,14 +147,8 @@ export function walkRepoReport(root: string, opts: WalkOptions = {}): WalkResult
   const tooLarge: OversizedEntry[] = [];
   const toRel = (abs: string): string => relative(root, abs).split(sep).join('/');
 
-  // `inherited`: the ancestors' .gitignore sets. `state`: per set of `[...inherited, ...exclude]`,
-  // whether `dir` is ignored by that set.
-  const visit = (
-    dir: string,
-    inherited: Rules[],
-    state: DirState,
-    inheritedGroups: Groups | null,
-  ): void => {
+  // `inherited`: the ancestors' .gitignore groups (see `extendGroups`).
+  const visit = (dir: string, inherited: Rules[]): void => {
     let entries: import('node:fs').Dirent[];
     try {
       entries = readdirSync(dir, { withFileTypes: true });
@@ -193,29 +158,19 @@ export function walkRepoReport(root: string, opts: WalkOptions = {}): WalkResult
       return;
     }
     const own = readGitignore(dir);
-    const parents = own ? [...inherited, { base: toRel(dir), ...own }] : inherited;
-    const rules = [...parents, ...exclude];
-    const ruleState = own
-      ? [...state.slice(0, inherited.length), false, ...state.slice(inherited.length)]
-      : state;
-    // An `exclude` set never ignores a visited directory (it is the last set, so the directory
-    // would have been skipped); the per-set path covers that case anyway.
-    const fast = !ruleState.slice(parents.length).some(Boolean);
-    const groups = gitGroups(parents, ruleState, inheritedGroups);
+    const groups = own ? extendGroups(inherited, { base: toRel(dir), ...own }) : inherited;
     for (const e of entries) {
       const abs = join(dir, e.name);
       const rel = toRel(abs);
       if (!rel) continue;
       if (e.isDirectory()) {
         if (ALWAYS_SKIP.has(e.name)) continue;
-        const v = verdict(rules, ruleState, rel, e.name, true);
-        if (v.ignored) continue;
+        // An ignored directory is not walked, so nothing inside it can be re-included.
+        if (isIgnored(groups, exclude, rel, e.name, true)) continue;
         if (existsSync(join(abs, 'pyvenv.cfg'))) continue;
-        visit(abs, parents, v.perSet, groups);
+        visit(abs, groups);
       } else if (e.isFile()) {
-        if (fast && !/^\.+$/.test(e.name)) {
-          if (fileIgnored(groups, exclude, rel, e.name)) continue;
-        } else if (verdict(rules, ruleState, rel, e.name, false).ignored) continue;
+        if (isIgnored(groups, exclude, rel, e.name, false)) continue;
         if (inc && !inc.ignores(rel)) continue;
         const lang = detectLanguage(e.name);
         if (!lang || (langs && !langs.has(lang))) continue;
@@ -240,12 +195,7 @@ export function walkRepoReport(root: string, opts: WalkOptions = {}): WalkResult
     }
   };
 
-  visit(
-    root,
-    [],
-    exclude.map(() => false),
-    null,
-  );
+  visit(root, []);
   out.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
   tooLarge.sort((a, b) => a.path.localeCompare(b.path));
   return { files: out, unreadable, tooLarge };
