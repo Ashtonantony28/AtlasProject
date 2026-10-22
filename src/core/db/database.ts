@@ -6,8 +6,10 @@ import { MIGRATIONS } from './schema.js';
 
 export type DB = Database.Database;
 
-/** How long a statement waits for another connection's lock before `SQLITE_BUSY`. */
+/** How long a statement or `immediate` transaction waits for another connection's lock. */
 const BUSY_TIMEOUT_MS = 5000;
+/** How often `immediate` retries the write lock while another connection holds it. */
+const LOCK_POLL_MS = 10;
 
 const statements = new WeakMap<DB, Map<string, Database.Statement>>();
 
@@ -90,11 +92,51 @@ function createWalFile(dbPath: string): void {
   }
 }
 
-/** Names the operation in an `SQLITE_BUSY` error's message (`migrations: database is locked`). */
+/**
+ * Runs `fn` in a transaction that takes the write lock up front (`BEGIN IMMEDIATE`), waiting up to
+ * the busy timeout for another connection to release it. A deferred transaction that reads first
+ * gets `SQLITE_BUSY` at once in WAL mode instead. The lock is retried every few ms, because
+ * SQLite's busy handler sleeps up to 100 ms between tries and misses a writer's short gaps.
+ * Inside another transaction, `fn` runs in a savepoint.
+ */
+export function immediate<T>(db: DB, fn: () => T): T {
+  let began = false;
+  const tx = db.transaction(() => {
+    began = true;
+    return fn();
+  });
+  if (db.inTransaction) return tx();
+  const deadline = Date.now() + BUSY_TIMEOUT_MS;
+  db.pragma(`busy_timeout = ${LOCK_POLL_MS}`);
+  try {
+    for (;;) {
+      try {
+        return tx.immediate();
+      } catch (err) {
+        const code = (err as { code?: unknown } | null)?.code;
+        if (began || code !== 'SQLITE_BUSY' || Date.now() >= deadline) throw err;
+      }
+    }
+  } finally {
+    db.pragma(`busy_timeout = ${BUSY_TIMEOUT_MS}`);
+  }
+}
+
+const BUSY_REMEDY = ' (another process is writing the index; retry when it finishes)';
+
+/**
+ * Names the operation in an `SQLITE_BUSY` error's message, with its cause and remedy
+ * (`migrations: database is locked (another process is writing the index; …)`). Names it once.
+ */
 export function nameBusy(err: unknown, op: string): void {
   const code = (err as { code?: unknown } | null)?.code;
-  if (err instanceof Error && typeof code === 'string' && code.startsWith('SQLITE_BUSY')) {
-    err.message = `${op}: ${err.message}`;
+  if (
+    err instanceof Error &&
+    typeof code === 'string' &&
+    code.startsWith('SQLITE_BUSY') &&
+    !err.message.endsWith(BUSY_REMEDY)
+  ) {
+    err.message = `${op}: ${err.message}${BUSY_REMEDY}`;
   }
 }
 

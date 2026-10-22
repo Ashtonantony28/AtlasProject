@@ -61,7 +61,9 @@ describe('SG65 SQLITE_BUSY names the operation', () => {
       dirs.push(dir);
       busy.at = at;
       await expect(runCli(['index', dir]), at).rejects.toThrow(
-        new RegExp(`^${op}: database is locked$`),
+        new RegExp(
+          `^${op}: database is locked \\(another process is writing the index; retry when it finishes\\)$`,
+        ),
       );
       expect(busy.at, at).toBeNull();
     }
@@ -88,7 +90,9 @@ describe('SG65 SQLITE_BUSY names the operation', () => {
       await new Promise<void>((ok) => holder.stdout.once('data', () => ok()));
       const r = spawnSync(TSX, [CLI, 'index', dir], { encoding: 'utf8' });
       expect(r.status).toBe(1);
-      expect(r.stderr).toBe('atlas: journal mode: database is locked\n');
+      expect(r.stderr).toBe(
+        'atlas: journal mode: database is locked (another process is writing the index; retry when it finishes)\n',
+      );
     } finally {
       holder.kill();
     }

@@ -165,8 +165,10 @@ describe('AUDIT-23 consistent surfaces (pinned)', () => {
     nameBusy(busy, 'index write');
     nameBusy(other, 'index write');
     nameBusy('not an error', 'index write');
-    expect(busy.message).toBe('index write: database is locked');
-    expect(String(busy.stack).split('\n')[0]).toBe('Error: index write: database is locked');
+    const named =
+      'index write: database is locked (another process is writing the index; retry when it finishes)';
+    expect(busy.message).toBe(named);
+    expect(String(busy.stack).split('\n')[0]).toBe(`Error: ${named}`);
     expect(other.message).toBe('disk I/O error');
   });
 
@@ -196,36 +198,29 @@ describe('AUDIT-23 consistent surfaces (pinned)', () => {
 });
 
 describe('AUDIT-23 findings', () => {
-  it.fails(
-    'A23-01: an index run waits out a concurrent writer that holds the write lock for 1 s at a time (busy timeout 5 s)',
-    async () => {
-      const root = await indexed();
-      await writer(dbOf(root), 1_000, 12_000, 20);
-      const t0 = Date.now();
-      const res = await cli(['index', '--force', root]);
-      // Fails in ~1.5 s with "index write: database is locked": the per-file transaction is
-      // deferred, so its read-to-write upgrade gets SQLITE_BUSY at once, without the busy wait.
-      expect({ code: res.code, err: res.err }).toEqual({ code: 0, err: '' });
-      expect(Date.now() - t0).toBeLessThan(12_000);
-    },
-  );
+  it('A23-01: an index run waits out a concurrent writer that holds the write lock for 1 s at a time (busy timeout 5 s)', async () => {
+    const root = await indexed();
+    await writer(dbOf(root), 1_000, 12_000, 20);
+    const t0 = Date.now();
+    const res = await cli(['index', '--force', root]);
+    // Failed in ~1.5 s with "index write: database is locked" while the per-file transaction was
+    // deferred: its read-to-write upgrade got SQLITE_BUSY at once, without the busy wait (SG80).
+    expect({ code: res.code, err: res.err }).toEqual({ code: 0, err: '' });
+    expect(Date.now() - t0).toBeLessThan(12_000);
+  });
 
-  it.fails(
-    'A23-02: SQLITE_BUSY errors name the step on `atlas docs` too, and say what to do',
-    async () => {
-      const root = await indexed();
-      await writer(dbOf(root), 14_000, 14_000);
-      const docs = await cli(['docs', '--offline', '--cwd', root]);
-      const index = await cli(['index', root]);
-      expect([docs.code, index.code]).toEqual([1, 1]);
-      // index: "run stamp: database is locked"; docs: "database is locked" (no step).
-      expect(docs.err).toMatch(/^[a-z ]+: database is locked/);
-      for (const err of [docs.err, index.err]) {
-        expect(err).toMatch(/another (atlas )?process|retry|try again/);
-      }
-    },
-    40_000,
-  );
+  it('A23-02: SQLITE_BUSY errors name the step on `atlas docs` too, and say what to do', async () => {
+    const root = await indexed();
+    await writer(dbOf(root), 14_000, 14_000);
+    const docs = await cli(['docs', '--offline', '--cwd', root]);
+    const index = await cli(['index', root]);
+    expect([docs.code, index.code]).toEqual([1, 1]);
+    // Before SG80, index: "run stamp: database is locked"; docs: "database is locked" (no step).
+    expect(docs.err).toMatch(/^[a-z ]+: database is locked/);
+    for (const err of [docs.err, index.err]) {
+      expect(err).toMatch(/another (atlas )?process|retry|try again/);
+    }
+  }, 40_000);
 
   it.fails(
     'A23-03: a parallel atlas_ask capped by reservations is answered like the same call alone (or says why not)',
