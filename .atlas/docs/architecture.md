@@ -1,13 +1,13 @@
 ---
 kind: architecture
 target: architecture
-source_hash: 2689c01fdcb47548ed11792565c6eb2c0ade61bf09eb63dbe85858e52553263c
+source_hash: 9f79bb353dfe9c726d89b592fceb6fe6076de0f7d6a4e5700addb9ade9e6fa17
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 198 files, 1303 symbols, 5988 edges
+**Totals:** 199 files, 1348 symbols, 6040 edges
 
 ## Modules
 
@@ -20,7 +20,6 @@ This codebase's modules collaborate through the graph above.
 - `fixtures/graph/py/pkg/sub/service.py` — python, loc=20, 2 symbols
 - `fixtures/graph/py/pkg/sub/tools.py` — python, loc=2, 1 symbols
 - `fixtures/graph/py/pkg/util.py` — python, loc=6, 2 symbols
-- `fixtures/graph/web/Button.tsx` — typescript, loc=5, 1 symbols
 - `fixtures/graph/web/app.tsx` — typescript, loc=18, 4 symbols
 - `fixtures/graph/web/cjs/Model.js` — javascript, loc=5, 2 symbols
 - `fixtures/graph/web/cjs/app.js` — javascript, loc=10, 2 symbols
@@ -36,7 +35,7 @@ This codebase's modules collaborate through the graph above.
 - `fixtures/graph/web/strings.ts` — typescript, loc=7, 2 symbols
 - `fixtures/graph/web/ui/Base.ts` — typescript, loc=8, 3 symbols
 - `fixtures/graph/web/widget.ts` — typescript, loc=38, 9 symbols
-- `fixtures/parse/walk.js` — javascript, loc=40, 9 symbols
+- `fixtures/parse/walk.js` — javascript, loc=40, 11 symbols
 - `fixtures/parse/walk.ts` — typescript, loc=79, 18 symbols
 - `fixtures/sample/src/app.ts` — typescript, loc=14, 2 symbols
 - `fixtures/sample/src/math.ts` — typescript, loc=15, 3 symbols
@@ -44,14 +43,14 @@ This codebase's modules collaborate through the graph above.
 - `fixtures/sample/src/util.py` — python, loc=18, 4 symbols
 - `scripts/audit-explain.mjs` — javascript, loc=30, 9 symbols
 - `scripts/audit-load.mjs` — javascript, loc=136, 44 symbols
-- `scripts/audit-perf.mjs` — javascript, loc=213, 58 symbols
-- `scripts/audit-repo.mjs` — javascript, loc=176, 12 symbols
-- `scripts/audit-scaling.mjs` — javascript, loc=64, 13 symbols
+- `scripts/audit-perf.mjs` — javascript, loc=213, 66 symbols
+- `scripts/audit-repo.mjs` — javascript, loc=176, 14 symbols
+- `scripts/audit-scaling.mjs` — javascript, loc=64, 16 symbols
 - `scripts/audit2-load.mjs` — javascript, loc=161, 36 symbols
-- `scripts/audit2-mcp-index.mjs` — javascript, loc=51, 13 symbols
-- `scripts/audit2-memory.mjs` — javascript, loc=84, 21 symbols
-- `scripts/audit2-reindex.mjs` — javascript, loc=146, 31 symbols
-- `scripts/audit3-patho.mjs` — javascript, loc=164, 29 symbols
+- `scripts/audit2-mcp-index.mjs` — javascript, loc=51, 16 symbols
+- `scripts/audit2-memory.mjs` — javascript, loc=84, 26 symbols
+- `scripts/audit2-reindex.mjs` — javascript, loc=146, 37 symbols
+- `scripts/audit3-patho.mjs` — javascript, loc=164, 38 symbols
 - `scripts/bench.mjs` — javascript, loc=93, 25 symbols
 - `scripts/copy-static.mjs` — javascript, loc=16, 3 symbols
 - `src/cli/commands/askCmd.ts` — typescript, loc=87, 2 symbols
@@ -61,17 +60,18 @@ This codebase's modules collaborate through the graph above.
 - `src/cli/commands/graphCmd.ts` — typescript, loc=70, 2 symbols
 - `src/cli/commands/indexCmd.ts` — typescript, loc=103, 6 symbols
 - `src/cli/commands/init.ts` — typescript, loc=37, 2 symbols
+- `src/cli/commands/mcpCmd.ts` — typescript, loc=21, 2 symbols
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=386)
-- `src/core/db/repo.ts` (degree=357)
-- `src/core/parse/ts.ts` (degree=294)
+- `src/core/db/database.ts` (degree=390)
+- `src/core/db/repo.ts` (degree=363)
+- `src/core/parse/ts.ts` (degree=296)
 - `src/mcp/server.ts` (degree=250)
+- `src/core/ingest/indexer.ts` (degree=186)
 - `src/core/graph/modules.ts` (degree=184)
-- `src/core/ingest/indexer.ts` (degree=184)
 - `src/core/synth/persist.ts` (degree=159)
-- `src/core/db/index.ts` (degree=108)
+- `src/core/db/index.ts` (degree=109)
 - `scripts/audit2-reindex.mjs` (degree=107)
 - `test/synth/completion.test.ts` (degree=107)
 

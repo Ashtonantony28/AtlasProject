@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/parse/py.ts
-source_hash: 759f13cb1e5a7c9b3317d859ac0974ad9e71bda6cf6cf7d82971d9f28011b81e
+source_hash: b7b9265288beb1a86dafb7f67982aa9cdfa3c60b14b4317ffeac02f598862f0a
 ---
 # module src/core/parse/py.ts
 
@@ -27,8 +27,10 @@ source_hash: 759f13cb1e5a7c9b3317d859ac0974ad9e71bda6cf6cf7d82971d9f28011b81e
 - `literalAll` — function (src/core/parse/py.ts:150)
 - `qualify` — function (src/core/parse/py.ts:172)
 - `visit` — function (src/core/parse/py.ts:176)
-- `collectImports` — function (src/core/parse/py.ts:275)
-- `parsePython` — function (src/core/parse/py.ts:325)
+- `TARGET_LISTS` — variable (src/core/parse/py.ts:288)
+- `targetNames` — function (src/core/parse/py.ts:296)
+- `collectImports` — function (src/core/parse/py.ts:306)
+- `parsePython` — function (src/core/parse/py.ts:356)
 
 References: `src/core/parse/py.ts:20`, `src/core/parse/py.ts:22`, `src/core/parse/py.ts:26`, `src/core/parse/py.ts:30`, `src/core/parse/py.ts:36`.
 

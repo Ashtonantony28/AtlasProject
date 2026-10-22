@@ -1,13 +1,16 @@
 ---
 kind: file
 target: scripts/audit2-mcp-index.mjs
-source_hash: 77e29c08dcfd81ba98e2c2abdc112eda95d5240e09d83587aeefd7614b054281
+source_hash: b9b7d1acbfa51e9a9eaea895ccfc6d44e57a1fef5e4855782eecc40af89a8f21
 ---
 # module scripts/audit2-mcp-index.mjs
 
 `module scripts/audit2-mcp-index.mjs` exposes the following public surface:
 
 - `cli` — variable (scripts/audit2-mcp-index.mjs:15)
+- `work` — variable (scripts/audit2-mcp-index.mjs:16)
+- `filesArg` — variable (scripts/audit2-mcp-index.mjs:16)
+- `callsArg` — variable (scripts/audit2-mcp-index.mjs:16)
 - `files` — variable (scripts/audit2-mcp-index.mjs:21)
 - `calls` — variable (scripts/audit2-mcp-index.mjs:22)
 - `repo` — variable (scripts/audit2-mcp-index.mjs:23)

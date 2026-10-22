@@ -2448,6 +2448,26 @@
     "exported": false
    },
    {
+    "kind": "variable",
+    "name": "j",
+    "signature": "{ join: j, resolve } = require('./paths')",
+    "startLine": 3,
+    "endLine": 3,
+    "docstring": null,
+    "qualifiedName": "j",
+    "exported": false
+   },
+   {
+    "kind": "variable",
+    "name": "resolve",
+    "signature": "{ join: j, resolve } = require('./paths')",
+    "startLine": 3,
+    "endLine": 3,
+    "docstring": null,
+    "qualifiedName": "resolve",
+    "exported": false
+   },
+   {
     "kind": "function",
     "name": "createApp",
     "signature": "module.exports = function createApp(opts) {",

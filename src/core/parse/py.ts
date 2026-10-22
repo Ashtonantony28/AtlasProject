@@ -264,12 +264,43 @@ function visit(node: Node, ctx: Ctx, stack: Frame[]): void {
       }
       return;
     }
+    // `a, b = f()`, `(a, b) = x`, `[a, *rest] = y`: each target name; calls stay the module's (A13-01).
+    for (const name of targetNames(left)) {
+      ctx.symbols.push({
+        kind: 'variable',
+        name: name.text,
+        signature: signatureFor(node),
+        startLine: lineOf(node),
+        endLine: endLine(node),
+        docstring: null,
+        qualifiedName: qualify(ctx, name.text),
+        exported: isExported(ctx, name.text),
+      });
+    }
   }
 
   if (node.type === 'call') addRef(ctx, ctx.owner, node.childForFieldName('function'), 'calls');
   else if (VALUE_FIELD.has(node.type)) addValues(ctx, ctx.owner, node);
 
   pushAll(stack, node.namedChildren);
+}
+
+const TARGET_LISTS = new Set([
+  'pattern_list',
+  'tuple_pattern',
+  'list_pattern',
+  'list_splat_pattern',
+]);
+
+/** The names a tuple/list assignment target binds, in source order; none for a single name. */
+function targetNames(left: Node | null): Node[] {
+  const names: Node[] = [];
+  const todo = left && TARGET_LISTS.has(left.type) ? [left] : [];
+  for (let n = todo.pop(); n; n = todo.pop()) {
+    if (n.type === 'identifier') names.push(n);
+    else if (TARGET_LISTS.has(n.type)) todo.push(...[...n.namedChildren].reverse());
+  }
+  return names;
 }
 
 function collectImports(node: Node, ctx: Ctx): void {

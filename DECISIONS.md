@@ -541,3 +541,15 @@ files. That run then re-resolves when no file changed and reports the one new `r
 value, `'previous run interrupted'`; `atlas index` prints "after an interrupted run". Its own
 `finishRun` clears the condition, so the run after it keeps the graph again. No schema change:
 the signal is the existing run row, not a new "graph dirty" flag (A13-03).
+
+## 2026-10-22 — SG31: destructured top-level declarations and Python tuple targets are variables
+
+Each name a top-level (or namespace) `const`/`let`/`var` object or array pattern binds is a
+`variable` symbol spanning its declarator, exported like the declaration (`export const`, or a
+later `export { }`); renames bind the new name, defaults bind only their left side, and nested and
+rest patterns are walked. Python top-level `pattern_list`/`tuple_pattern`/`list_pattern` targets
+(with `*rest`) do the same under the usual `__all__`/underscore rules; attributes and subscripts
+bind nothing. Initializer calls stay the module's, as before: the value is shared, so no single
+name owns them. Destructured `require` gets variables like `const x = require()` already did; the
+resolver's import-first rule keeps those edges on the required module. `EXTRACTOR_VERSION` is 3
+(A13-01).

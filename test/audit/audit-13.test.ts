@@ -128,30 +128,27 @@ async function symbolsOf(
 // ---------------------------------------------------------------- high
 
 describe('AUDIT-13 high', () => {
-  it.fails(
-    'A13-01 destructured top-level declarations define symbols, so their importers resolve',
-    async () => {
-      const g = await graphOf({
-        'src/server/auth.ts':
-          "import NextAuth from 'next-auth';\nexport const { auth, handlers: h, signIn } = NextAuth({});\n",
-        'src/app/page.ts':
-          "import { auth, signIn } from '../server/auth';\nexport async function Page() { await auth(); signIn(); }\n",
-        'app/conf.py': 'release, version = get_version()\n',
-        'app/use.py': 'from app.conf import version\n\ndef show():\n    return version\n',
-      });
-      expect(g.exported).toEqual(
-        expect.arrayContaining([
-          'src/server/auth.ts auth',
-          'src/server/auth.ts h',
-          'src/server/auth.ts signIn',
-          'app/conf.py version',
-        ]),
-      );
-      expect(g.strong).toContain('src/app/page.ts::<module> -imports-> src/server/auth.ts::auth');
-      expect(g.strong).toContain('src/app/page.ts::Page -calls-> src/server/auth.ts::auth');
-      expect(g.strong).toContain('app/use.py::<module> -imports-> app/conf.py::version');
-    },
-  );
+  it('A13-01 destructured top-level declarations define symbols, so their importers resolve', async () => {
+    const g = await graphOf({
+      'src/server/auth.ts':
+        "import NextAuth from 'next-auth';\nexport const { auth, handlers: h, signIn } = NextAuth({});\n",
+      'src/app/page.ts':
+        "import { auth, signIn } from '../server/auth';\nexport async function Page() { await auth(); signIn(); }\n",
+      'app/conf.py': 'release, version = get_version()\n',
+      'app/use.py': 'from app.conf import version\n\ndef show():\n    return version\n',
+    });
+    expect(g.exported).toEqual(
+      expect.arrayContaining([
+        'src/server/auth.ts auth',
+        'src/server/auth.ts h',
+        'src/server/auth.ts signIn',
+        'app/conf.py version',
+      ]),
+    );
+    expect(g.strong).toContain('src/app/page.ts::<module> -imports-> src/server/auth.ts::auth');
+    expect(g.strong).toContain('src/app/page.ts::Page -calls-> src/server/auth.ts::auth');
+    expect(g.strong).toContain('app/use.py::<module> -imports-> app/conf.py::version');
+  });
 
   it(
     'A13-02 two index runs on one DB file that do not share the in-process queue (another process; here a symlinked path) do not duplicate symbols',
