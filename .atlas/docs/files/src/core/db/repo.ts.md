@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/db/repo.ts
-source_hash: e08f9855caae3d352f0c517964879e3781b1fb44ec257b3e0c7ade07af0ac970
+source_hash: fc7d9558082acd0d2e7612178673a6062858407cb0a516decc08b85a66af5229
 ---
 # module src/core/db/repo.ts
 
@@ -27,6 +27,24 @@ source_hash: e08f9855caae3d352f0c517964879e3781b1fb44ec257b3e0c7ade07af0ac970
 - `InsertImportInput` — interface (src/core/db/repo.ts:148)
 - `insertImport` — function (src/core/db/repo.ts:157)
 - `getImportsForFile` — function (src/core/db/repo.ts:173)
+- `getAllImports` — function (src/core/db/repo.ts:179)
+- `InsertRefInput` — type (src/core/db/repo.ts:183)
+- `insertRefs` — function (src/core/db/repo.ts:185)
+- `getAllRefs` — function (src/core/db/repo.ts:196)
+- `deleteRefsForFile` — function (src/core/db/repo.ts:200)
+- `UpsertDocInput` — interface (src/core/db/repo.ts:204)
+- `upsertDoc` — function (src/core/db/repo.ts:211)
+- `getDoc` — function (src/core/db/repo.ts:236)
+- `TOMBSTONE_KIND` — variable (src/core/db/repo.ts:245)
+- `getAllDocs` — function (src/core/db/repo.ts:247)
+- `DocTombstone` — interface (src/core/db/repo.ts:253)
+- `getDocTombstones` — function (src/core/db/repo.ts:259)
+- `clearDocTombstones` — function (src/core/db/repo.ts:271)
+- `startRun` — function (src/core/db/repo.ts:275)
+- `finishRun` — function (src/core/db/repo.ts:282)
+- `getLastRun` — function (src/core/db/repo.ts:290)
+- `counts` — function (src/core/db/repo.ts:294)
+- `deleteFile` — function (src/core/db/repo.ts:313)
 
 References: `src/core/db/repo.ts:17`, `src/core/db/repo.ts:24`, `src/core/db/repo.ts:48`, `src/core/db/repo.ts:52`, `src/core/db/repo.ts:56`.
 

@@ -10,13 +10,28 @@ export interface LLMCallParams {
   system?: string;
   messages: LLMMessage[];
   maxTokens: number;
-  temperature?: number;
 }
 
 export interface LLMResult {
   content: string;
   inputTokens: number;
   outputTokens: number;
+  /** The API's `stop_reason` (e.g. `end_turn`, `max_tokens`, `refusal`), when known. */
+  stopReason?: string;
+}
+
+/** Output-token caps per call. Thinking counts toward `max_tokens` on current models. */
+export const DOC_MAX_TOKENS = 16_000;
+export const ASK_MAX_TOKENS = 16_000;
+
+const COMPLETE_STOPS = new Set(['end_turn', 'stop_sequence']);
+
+/** Why `res` is not a usable, complete answer (refusal, cut-off or empty), or null if it is. */
+export function incompleteReason(res: LLMResult): string | null {
+  if (res.stopReason !== undefined && !COMPLETE_STOPS.has(res.stopReason)) {
+    return `stop_reason ${res.stopReason}`;
+  }
+  return res.content.trim() === '' ? 'empty response' : null;
 }
 
 export interface LLMClient {
@@ -45,7 +60,6 @@ export async function createAnthropicClient(model: string): Promise<LLMClient> {
       const response = await client.messages.create({
         model,
         max_tokens: params.maxTokens,
-        temperature: params.temperature ?? 0.2,
         ...(params.system ? { system: params.system } : {}),
         messages: params.messages.map((m) => ({ role: m.role, content: m.content })),
       });
@@ -57,6 +71,7 @@ export async function createAnthropicClient(model: string): Promise<LLMClient> {
         content: text,
         inputTokens: response.usage?.input_tokens ?? 0,
         outputTokens: response.usage?.output_tokens ?? 0,
+        ...(response.stop_reason ? { stopReason: String(response.stop_reason) } : {}),
       };
     },
   };
@@ -206,11 +221,14 @@ export function createOfflineClient(model = 'offline-mock-v1'): LLMClient {
         }
       }
 
-      const tokens = Math.ceil(body.length / 4);
+      // Bill the system prompt and every message, as the API does.
+      const chars =
+        (params.system?.length ?? 0) + params.messages.reduce((n, m) => n + m.content.length, 0);
       return {
         content,
-        inputTokens: tokens,
+        inputTokens: Math.ceil(chars / 4),
         outputTokens: Math.ceil(content.length / 4),
+        stopReason: 'end_turn',
       };
     },
   };

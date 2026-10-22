@@ -15,6 +15,7 @@ import {
   buildArchitectureContext,
   buildModuleContext,
   createOfflineClient,
+  DOC_MAX_TOKENS,
   moduleContextToPrompt,
   synthesizeDocs,
 } from '../../src/core/synth/index.js';
@@ -127,12 +128,13 @@ describe('atlas docs → atlas drift (CLI)', () => {
 
   it('drift exits 0 after docs even when the budget leaves modules undocumented', async () => {
     await runCli(['index', dir]);
-    await runCli(['docs', '--offline', '--budget', '1500', '--cwd', dir]);
+    // Room for one doc's max_tokens reserve plus a little: some docs, not all.
+    await runCli(['docs', '--offline', '--budget', String(DOC_MAX_TOKENS + 1500), '--cwd', dir]);
     const out = vi
       .mocked(process.stdout.write)
       .mock.calls.map((c) => String(c[0]))
       .join('');
-    expect(out).toMatch(/skipped [1-9]/);
+    expect(out).toMatch(/generated [1-9]\d*, cached 0, skipped [1-9]/);
     await runCli(['drift', '--cwd', dir]);
     expect(process.exitCode ?? 0).toBe(0);
     await runCli(['drift', '--strict', '--cwd', dir]);

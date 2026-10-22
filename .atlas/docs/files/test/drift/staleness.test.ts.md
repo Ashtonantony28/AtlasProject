@@ -1,28 +1,28 @@
 ---
 kind: file
 target: test/drift/staleness.test.ts
-source_hash: f5d2036da719d0c5c3c719180f4c76fc48c18971fc034795debbc88fa454049b
+source_hash: e63cefa39d30ed6f3aafc9f45533a9583c9e2f57863f3f017995b77ffa2d7034
 ---
 # module test/drift/staleness.test.ts
 
 `module test/drift/staleness.test.ts` exposes the following public surface:
 
-- `edit` — function (test/drift/staleness.test.ts:24)
-- `dir` — variable (test/drift/staleness.test.ts:32)
-- `root` — variable (test/drift/staleness.test.ts:33)
-- `db` — variable (test/drift/staleness.test.ts:34)
-- `prompt` — variable (test/drift/staleness.test.ts:50)
-- `arch` — variable (test/drift/staleness.test.ts:54)
-- `report` — variable (test/drift/staleness.test.ts:59)
-- `report` — variable (test/drift/staleness.test.ts:68)
-- `stale` — variable (test/drift/staleness.test.ts:87)
-- `paths` — variable (test/drift/staleness.test.ts:94)
-- `stats` — variable (test/drift/staleness.test.ts:95)
-- `dir` — variable (test/drift/staleness.test.ts:109)
-- `out` — variable (test/drift/staleness.test.ts:131)
-- `json` — variable (test/drift/staleness.test.ts:150)
-- `report` — variable (test/drift/staleness.test.ts:154)
+- `edit` — function (test/drift/staleness.test.ts:25)
+- `dir` — variable (test/drift/staleness.test.ts:33)
+- `root` — variable (test/drift/staleness.test.ts:34)
+- `db` — variable (test/drift/staleness.test.ts:35)
+- `prompt` — variable (test/drift/staleness.test.ts:51)
+- `arch` — variable (test/drift/staleness.test.ts:55)
+- `report` — variable (test/drift/staleness.test.ts:60)
+- `report` — variable (test/drift/staleness.test.ts:69)
+- `stale` — variable (test/drift/staleness.test.ts:88)
+- `paths` — variable (test/drift/staleness.test.ts:95)
+- `stats` — variable (test/drift/staleness.test.ts:96)
+- `dir` — variable (test/drift/staleness.test.ts:110)
+- `out` — variable (test/drift/staleness.test.ts:133)
+- `json` — variable (test/drift/staleness.test.ts:152)
+- `report` — variable (test/drift/staleness.test.ts:156)
 
-References: `test/drift/staleness.test.ts:24`, `test/drift/staleness.test.ts:32`, `test/drift/staleness.test.ts:33`, `test/drift/staleness.test.ts:34`, `test/drift/staleness.test.ts:50`.
+References: `test/drift/staleness.test.ts:25`, `test/drift/staleness.test.ts:33`, `test/drift/staleness.test.ts:34`, `test/drift/staleness.test.ts:35`, `test/drift/staleness.test.ts:51`.
 
 _Generated offline (mock client)._
