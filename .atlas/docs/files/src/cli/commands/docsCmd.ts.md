@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/cli/commands/docsCmd.ts
-source_hash: 8d6de5d25e160356a452cb4f4f864b51a7162d8465536a7202302674298b476a
+source_hash: 33a0582c4eaf4fd5b65ead636b0f6c061aad205de55ce727eade06a9a0602b77
 ---
 # module src/cli/commands/docsCmd.ts
 

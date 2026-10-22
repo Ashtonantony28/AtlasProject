@@ -1,13 +1,13 @@
 ---
 kind: architecture
 target: architecture
-source_hash: 1f3ce197694b421f24ac37005edbf3a000f3be14f3d27d629755c72f11674e79
+source_hash: af4a1e6921aae75267f0c2e0b79490772364c541c2e5339a922527577c4b6f39
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 192 files, 1243 symbols, 5562 edges
+**Totals:** 195 files, 1275 symbols, 5840 edges
 
 ## Modules
 
@@ -38,9 +38,6 @@ This codebase's modules collaborate through the graph above.
 - `fixtures/graph/web/store.ts` — typescript, loc=1, 1 symbols
 - `fixtures/graph/web/strings.ts` — typescript, loc=7, 2 symbols
 - `fixtures/graph/web/ui/Base.ts` — typescript, loc=8, 3 symbols
-- `fixtures/graph/web/ui/Panel.tsx` — typescript, loc=3, 1 symbols
-- `fixtures/graph/web/ui/cycle.ts` — typescript, loc=5, 1 symbols
-- `fixtures/graph/web/ui/extra.ts` — typescript, loc=3, 1 symbols
 - `fixtures/graph/web/widget.ts` — typescript, loc=38, 9 symbols
 - `fixtures/parse/walk.js` — javascript, loc=40, 9 symbols
 - `fixtures/parse/walk.ts` — typescript, loc=79, 18 symbols
@@ -61,18 +58,21 @@ This codebase's modules collaborate through the graph above.
 - `scripts/bench.mjs` — javascript, loc=93, 25 symbols
 - `scripts/copy-static.mjs` — javascript, loc=16, 3 symbols
 - `src/cli/commands/askCmd.ts` — typescript, loc=87, 2 symbols
+- `src/cli/commands/ciCommentCmd.ts` — typescript, loc=165, 7 symbols
+- `src/cli/commands/docsCmd.ts` — typescript, loc=100, 2 symbols
+- `src/cli/commands/driftCmd.ts` — typescript, loc=64, 2 symbols
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=358)
-- `src/core/db/repo.ts` (degree=326)
+- `src/core/db/database.ts` (degree=374)
+- `src/core/db/repo.ts` (degree=340)
 - `src/core/parse/ts.ts` (degree=294)
-- `src/mcp/server.ts` (degree=226)
-- `src/core/graph/modules.ts` (degree=171)
-- `src/core/ingest/indexer.ts` (degree=160)
+- `src/mcp/server.ts` (degree=250)
+- `src/core/graph/modules.ts` (degree=179)
+- `src/core/ingest/indexer.ts` (degree=171)
 - `src/core/synth/persist.ts` (degree=159)
 - `scripts/audit2-reindex.mjs` (degree=107)
 - `test/synth/completion.test.ts` (degree=107)
-- `test/audit/audit-8.test.ts` (degree=106)
+- `src/core/db/index.ts` (degree=106)
 
 _Generated offline (mock client)._

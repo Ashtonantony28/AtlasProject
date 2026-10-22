@@ -13,7 +13,8 @@ import { join, resolve } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { closeDatabase } from '../../src/core/db/index.js';
+import { closeDatabase, counts, openDatabase } from '../../src/core/db/index.js';
+import { indexRepo } from '../../src/core/ingest/index.js';
 import {
   createOfflineClient,
   exportDocs,
@@ -99,6 +100,74 @@ describe('MCP tool handlers', () => {
     expect(second.filesSkipped).toBe(first.filesIndexed);
     const forced = await handleIndexTool(ctx, { force: true });
     expect(forced.filesIndexed).toBe(first.filesIndexed);
+  });
+
+  it('parallel atlas_index calls run one at a time and leave the single-run symbol count', async () => {
+    await handleIndexTool(ctx, {});
+    const single = counts(ctx.db);
+    const fresh = join(dir, 'fresh');
+    cpSync(SAMPLE, fresh, { recursive: true });
+    const par = createMcpContext({ root: fresh, offline: true });
+    try {
+      const runs = await Promise.all([
+        handleIndexTool(par, { force: true }),
+        handleIndexTool(par, { force: true }),
+        handleIndexTool(par, {}),
+      ]);
+      expect(runs.map((r) => r.filesIndexed)).toEqual([single.files, single.files, 0]);
+      expect(counts(par.db)).toEqual(single);
+      const hits = await handleSearchTool(par, { query: 'area', limit: 100 });
+      const keys = hits.map((h) => `${h.file}:${h.startLine}:${h.name}`);
+      expect(new Set(keys).size).toBe(keys.length);
+    } finally {
+      closeDatabase(par.db);
+    }
+  });
+
+  it('atlas_index queues behind another in-process index of the same DB file', async () => {
+    const other = openDatabase(join(root, '.atlas', 'index.db'));
+    try {
+      await Promise.all([indexRepo(other, root), handleIndexTool(ctx, {}), indexRepo(other, root)]);
+      expect(counts(ctx.db).symbols).toBe(24);
+    } finally {
+      closeDatabase(other);
+    }
+  });
+
+  it('a failed queued run does not wedge the queue', async () => {
+    const failing = indexRepo(ctx.db, root, {
+      onFile: () => {
+        throw new Error('boom');
+      },
+    });
+    const next = handleIndexTool(ctx, {});
+    await expect(failing).rejects.toThrow('boom');
+    expect((await next).filesIndexed).toBeGreaterThan(0);
+    expect(counts(ctx.db).symbols).toBe(24);
+  });
+
+  it('atlas_index re-reads .atlas/config.json on every call', async () => {
+    const cfg = join(root, '.atlas', 'config.json');
+    const first = await handleIndexTool(ctx, {});
+    writeFileSync(
+      cfg,
+      JSON.stringify({ ...JSON.parse(readFileSync(cfg, 'utf8')), exclude: ['src/math.ts'] }),
+    );
+    const second = await handleIndexTool(ctx, {});
+    expect(second.filesScanned).toBe(first.filesScanned - 1);
+    expect(second.filesRemoved).toBe(1);
+    expect(ctx.config.exclude).toEqual(['src/math.ts']);
+  });
+
+  it('atlas_index writes a missing config and keeps an existing one', async () => {
+    const cfg = join(root, '.atlas', 'config.json');
+    expect(existsSync(cfg)).toBe(false);
+    await handleIndexTool(ctx, {});
+    expect(existsSync(cfg)).toBe(true);
+    const edited = { ...JSON.parse(readFileSync(cfg, 'utf8')), maxFileBytes: 4096 };
+    writeFileSync(cfg, JSON.stringify(edited));
+    await handleIndexTool(ctx, {});
+    expect(JSON.parse(readFileSync(cfg, 'utf8'))).toEqual(edited);
   });
 
   it('read tools fail with a clear error on an empty index', async () => {

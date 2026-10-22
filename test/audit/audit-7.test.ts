@@ -225,7 +225,7 @@ describe('AUDIT-7 findings', () => {
     },
   );
 
-  it.fails(
+  it(
     'A7-08: atlas_index writes .atlas/config.json like `atlas index`',
     async () => {
       const root = sampleCopy();

@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/synth/completion.test.ts
-source_hash: 8167158338101cd5931e907aebacdfbe231d07ffd32db2a0cf34675bd6f483c8
+source_hash: c47c39291639d212a282ff397144c70c1d4d732faac0afc6a395cf07461c9514
 ---
 # module test/synth/completion.test.ts
 

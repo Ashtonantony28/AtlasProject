@@ -114,6 +114,10 @@ node ./dist/cli/index.js ask  --cwd "$TARGET" "How does Counter.increment work?"
 The default synth model is `claude-sonnet-4-6`; override it with `synthModel` in
 `.atlas/config.json`. Spend is capped by `tokenBudget` (default 200k) per run of
 `atlas docs` (or `--budget <n>`) and of `atlas ask`, and per `atlas mcp` session.
+Each call's `max_tokens` (at most 16k) is capped to what the budget has left after
+its prompt; a call that could not get 1024 output tokens is refused. When the
+budget cannot pay for the first doc or answer, `docs`, `ask` and `atlas_ask` fail
+with `token budget exhausted: …`; once some docs are written, `docs` skips the rest.
 
 ### Configuration
 
@@ -291,8 +295,8 @@ missing or holds no docs. `hasDrift` in the JSON means "anything to report"
 - **Secrets:** `ANTHROPIC_API_KEY` is read from the environment; `.env` is
   gitignored. Atlas fails loudly if it's missing and `--offline` wasn't
   passed.
-- **Spend cap:** per-run token budget in `tokenBudget`; the synthesizer
-  skips work rather than overrunning.
+- **Spend cap:** per-run token budget in `tokenBudget`; calls are capped to
+  what is left, and the synthesizer skips work rather than overrunning.
 - **Offline mode:** `--offline` swaps in the deterministic mock LLM so
   synthesis and Q&A run in tests / CI / on planes.
 - **Read-only on inputs:** Atlas never modifies the target repository; it

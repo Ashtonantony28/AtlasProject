@@ -30,7 +30,7 @@ import {
   type LLMClient,
 } from '../core/synth/index.js';
 import { ask, DEFAULT_EXCERPT_LINES } from '../core/qa/index.js';
-import type { AtlasConfig } from '../core/config.js';
+import { loadConfig, writeDefaultConfig, type AtlasConfig } from '../core/config.js';
 import { loadProject, requireIndexed } from '../core/project.js';
 import {
   askParams,
@@ -93,13 +93,17 @@ function requireIndex(ctx: McpContext): void {
   requireIndexed(ctx.db, 'call atlas_index first');
 }
 
+// Like `atlas index`: writes a missing config and reads the current one on every call.
+// Concurrent calls queue in `indexRepo` (one run per DB at a time).
 export async function handleIndexTool(ctx: McpContext, args: { force?: boolean }) {
+  writeDefaultConfig(ctx.root);
+  const config = (ctx.config = loadConfig(ctx.root));
   return indexRepo(ctx.db, ctx.root, {
     force: args.force ?? false,
-    exclude: ctx.config.exclude,
-    include: ctx.config.include,
-    languages: ctx.config.languages,
-    ...(ctx.config.maxFileBytes !== undefined ? { maxBytes: ctx.config.maxFileBytes } : {}),
+    exclude: config.exclude,
+    include: config.include,
+    languages: config.languages,
+    ...(config.maxFileBytes !== undefined ? { maxBytes: config.maxFileBytes } : {}),
   });
 }
 
