@@ -32,6 +32,8 @@ export const ConfigSchema = z.object({
       '.next/**',
       '.cache/**',
     ]),
+  // Source files larger than this many bytes are not indexed (counted as too large). Default 1 MiB.
+  maxFileBytes: z.number().int().positive().optional(),
   // Per-run cost guardrail (Phase 5+). Inputs+outputs combined, approximate.
   tokenBudget: z.number().int().positive().default(200_000),
   // Embeddings model name (resolved by provider; Phase 4).

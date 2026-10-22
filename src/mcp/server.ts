@@ -99,6 +99,7 @@ export async function handleIndexTool(ctx: McpContext, args: { force?: boolean }
     exclude: ctx.config.exclude,
     include: ctx.config.include,
     languages: ctx.config.languages,
+    ...(ctx.config.maxFileBytes !== undefined ? { maxBytes: ctx.config.maxFileBytes } : {}),
   });
 }
 

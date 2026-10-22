@@ -27,12 +27,19 @@ export interface UnreadableEntry {
   reason: string;
 }
 
+// A supported source file left out because it exceeds `maxBytes`.
+export interface OversizedEntry {
+  path: string;
+  sizeBytes: number;
+}
+
 export interface WalkResult {
   files: WalkedFile[];
   unreadable: UnreadableEntry[];
+  tooLarge: OversizedEntry[];
 }
 
-const DEFAULT_MAX_BYTES = 1024 * 1024;
+export const DEFAULT_MAX_BYTES = 1024 * 1024;
 
 // Directory names that never hold project source, skipped at any depth. Everything else
 // (`dist`, `build`, `coverage`, …) is left to `.gitignore` and the config `exclude`.
@@ -85,6 +92,7 @@ export function walkRepoReport(root: string, opts: WalkOptions = {}): WalkResult
   const langs = opts.languages ? new Set(opts.languages) : null;
   const out: WalkedFile[] = [];
   const unreadable: UnreadableEntry[] = [];
+  const tooLarge: OversizedEntry[] = [];
   const toRel = (abs: string): string => relative(root, abs).split(sep).join('/');
 
   const visit = (dir: string, inherited: Rules[]): void => {
@@ -120,7 +128,10 @@ export function walkRepoReport(root: string, opts: WalkOptions = {}): WalkResult
           unreadable.push({ path: rel, reason: (err as Error).message });
           continue;
         }
-        if (st.size > max) continue;
+        if (st.size > max) {
+          tooLarge.push({ path: rel, sizeBytes: st.size });
+          continue;
+        }
         out.push({
           absolutePath: abs,
           relativePath: rel,
@@ -133,5 +144,6 @@ export function walkRepoReport(root: string, opts: WalkOptions = {}): WalkResult
 
   visit(root, []);
   out.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
-  return { files: out, unreadable };
+  tooLarge.sort((a, b) => a.path.localeCompare(b.path));
+  return { files: out, unreadable, tooLarge };
 }
