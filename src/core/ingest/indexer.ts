@@ -17,6 +17,7 @@ import {
   counts,
   getLastRunStats,
   getFileByPath,
+  nameBusy,
 } from '../db/index.js';
 import { acquireIndexLock } from './lock.js';
 import { DEFAULT_MAX_BYTES, walkRepoReport, type WalkOptions } from './walker.js';
@@ -149,8 +150,12 @@ export function indexRepo(db: DB, root: string, opts: IndexOptions = {}): Promis
     .then(async () => {
       if (kind !== undefined) pending.delete(kind);
       const release = db.memory ? undefined : await acquireIndexLock(key as string);
+      const step = { op: 'run stamp' };
       try {
-        return await runIndex(db, root, opts);
+        return await runIndex(db, root, opts, step);
+      } catch (err) {
+        nameBusy(err, step.op);
+        throw err;
       } finally {
         release?.();
       }
@@ -226,7 +231,13 @@ function carryEdges(db: DB, fileId: number): (() => void) | undefined {
   };
 }
 
-async function runIndex(db: DB, root: string, opts: IndexOptions): Promise<IndexStats> {
+/** `step.op` names what the run is writing, for an `SQLITE_BUSY` error. */
+async function runIndex(
+  db: DB,
+  root: string,
+  opts: IndexOptions,
+  step: { op: string },
+): Promise<IndexStats> {
   const t0 = Date.now();
   let lastYield = t0;
   const yieldIfDue = async (always = false): Promise<void> => {
@@ -257,6 +268,7 @@ async function runIndex(db: DB, root: string, opts: IndexOptions): Promise<Index
     JSON.stringify({ state: { extractorVersion: EXTRACTOR_VERSION } }),
     runId,
   );
+  step.op = 'index write';
   const stats: IndexStats = {
     filesScanned: 0,
     filesIndexed: 0,
@@ -466,6 +478,7 @@ async function runIndex(db: DB, root: string, opts: IndexOptions): Promise<Index
   let diagnostics = prev.resolverDiagnostics;
   let diagnosticCount = prev.resolverDiagnosticCount;
   if (stats.resolveReason !== null) {
+    step.op = 'graph resolve';
     const resolveStats = resolveGraph(db, { root });
     stats.edges = resolveStats.edges;
     stats.weakEdges = resolveStats.weakEdges;
@@ -483,6 +496,7 @@ async function runIndex(db: DB, root: string, opts: IndexOptions): Promise<Index
   // Generate embeddings for any new/changed symbols. Local-only, no API spend.
   if (!opts.skipEmbeddings) {
     await yieldIfDue(true);
+    step.op = 'embeddings write';
     const embedder = createEmbedder(loadConfig(root));
     const embStats = await embedAllSymbols(db, embedder, root);
     stats.embeddings = embStats.generated;
@@ -496,6 +510,7 @@ async function runIndex(db: DB, root: string, opts: IndexOptions): Promise<Index
     resolverDiagnostics: diagnostics,
     resolverDiagnosticCount: diagnosticCount,
   };
+  step.op = 'run stamp';
   finishRun(db, runId, { ...stats, totals: counts(db), state });
   return stats;
 }
