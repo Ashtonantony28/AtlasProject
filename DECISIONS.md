@@ -400,3 +400,15 @@ the same "index is empty: <next step>" message.
 ## 2026-10-22 — SG20: walk skips follow `.gitignore` and config, not names at any depth
 
 Only `.git`, `.atlas`, `node_modules` and `__pycache__` (never project source) and virtualenvs (a directory holding `pyvenv.cfg`) are skipped at any depth. `dist`, `build`, `coverage`, `venv`, `.next`, `.cache` are root-anchored entries in the default `exclude` (`.venv/**`, `venv/**`, `.next/**`, `.cache/**` added to the default value; no new keys), so `src/build/` is indexed and a user can drop an entry to index the root one. Nested `.gitignore` files are now read (deeper files override shallower ones, `exclude` is applied last), which keeps `packages/*/dist` out where a package ignores it. Persisted docs strip a leading BOM before parsing front matter; `ci-comment` validates its input and counts from `totals`, noting when the lists are a page.
+
+## 2026-10-22 — SG23/SG24: perf budgets run serially; coverage gate on src/core
+Wall-clock budgets (search p95 ≤ 50 ms, cached synthesis and drift ≤ 1 s, limits
+unchanged) moved to `test/perf/` and run only under `npm run test:perf`
+(`vitest.perf.config.ts`: one fork, no file parallelism, a warm-up pass before
+measuring); the default config excludes them, so parallel-suite load cannot fail
+them (A6-06, A8-12). Chosen over env-gating or wider margins because the budgets
+stay enforced in CI at their frozen values. CI runs `npm run test:coverage`
+instead of `npm test` (same suite, plus `src/core` thresholds lines 90 /
+branches 88 / functions 96, aggregated over the glob), then `test:perf`. SG17's
+unreadable-path guarantees, the search FTS filter fallback and drift paging's
+gate invariance now live in `test/ingest`, `test/vector` and `test/drift`.

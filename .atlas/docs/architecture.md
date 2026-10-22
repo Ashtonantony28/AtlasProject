@@ -1,13 +1,13 @@
 ---
 kind: architecture
 target: architecture
-source_hash: 6f78717e31bcd7e49d877ea0356a2f7861904bc1a8980c67af6db41ccf94472d
+source_hash: 726426f5e17a2e4cf698d43becdc87a60c7e4c6b920e3d620d84f6a72c06c162
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 168 files, 2178 symbols, 5343 edges
+**Totals:** 172 files, 2232 symbols, 5530 edges
 
 ## Modules
 
@@ -34,7 +34,6 @@ This codebase's modules collaborate through the graph above.
 - `fixtures/graph/web/ui/Base.ts` — typescript, loc=8, 3 symbols
 - `fixtures/graph/web/ui/Panel.tsx` — typescript, loc=3, 1 symbols
 - `fixtures/graph/web/ui/cycle.ts` — typescript, loc=5, 1 symbols
-- `fixtures/graph/web/ui/extra.ts` — typescript, loc=3, 1 symbols
 - `fixtures/graph/web/widget.ts` — typescript, loc=38, 9 symbols
 - `fixtures/parse/walk.js` — javascript, loc=40, 8 symbols
 - `fixtures/parse/walk.ts` — typescript, loc=79, 22 symbols
@@ -53,7 +52,6 @@ This codebase's modules collaborate through the graph above.
 - `scripts/audit2-reindex.mjs` — javascript, loc=146, 31 symbols
 - `scripts/bench.mjs` — javascript, loc=93, 25 symbols
 - `scripts/copy-static.mjs` — javascript, loc=16, 3 symbols
-- `scripts/synthetic-repo.mjs` — javascript, loc=29, 1 symbols
 - `src/cli/commands/askCmd.ts` — typescript, loc=87, 2 symbols
 - `src/cli/commands/ciCommentCmd.ts` — typescript, loc=165, 7 symbols
 - `src/cli/commands/docsCmd.ts` — typescript, loc=99, 2 symbols
@@ -61,16 +59,18 @@ This codebase's modules collaborate through the graph above.
 - `src/cli/commands/graphCmd.ts` — typescript, loc=70, 2 symbols
 - `src/cli/commands/indexCmd.ts` — typescript, loc=67, 2 symbols
 - `src/cli/commands/init.ts` — typescript, loc=37, 2 symbols
+- `src/cli/commands/mcpCmd.ts` — typescript, loc=21, 2 symbols
+- `src/cli/commands/searchCmd.ts` — typescript, loc=72, 2 symbols
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=319)
-- `src/core/db/repo.ts` (degree=282)
-- `src/mcp/server.ts` (degree=248)
+- `src/core/db/database.ts` (degree=331)
+- `src/core/db/repo.ts` (degree=298)
+- `src/mcp/server.ts` (degree=252)
 - `src/core/parse/ts.ts` (degree=164)
 - `src/core/synth/persist.ts` (degree=163)
 - `test/synth/completion.test.ts` (degree=153)
-- `src/core/ingest/indexer.ts` (degree=143)
+- `src/core/ingest/indexer.ts` (degree=149)
 - `test/graph/paging.test.ts` (degree=134)
 - `test/audit/audit-4.test.ts` (degree=133)
 - `test/audit/audit-8.test.ts` (degree=129)

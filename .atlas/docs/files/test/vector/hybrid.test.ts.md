@@ -1,33 +1,33 @@
 ---
 kind: file
 target: test/vector/hybrid.test.ts
-source_hash: a189729e09496f2df568749fe9b617da3c72044f63525c8a2c18c6e0e9389c87
+source_hash: 387c774335fc743159b7b44659e712809043468be428bf922b25800f55de950f
 ---
 # module test/vector/hybrid.test.ts
 
 `module test/vector/hybrid.test.ts` exposes the following public surface:
 
-- `__dirname` — variable (test/vector/hybrid.test.ts:13)
-- `FIXTURE` — variable (test/vector/hybrid.test.ts:14)
-- `ZxqvBlindEmbedder` — class (test/vector/hybrid.test.ts:18)
-- `ZxqvBlindEmbedder.embed` — method (test/vector/hybrid.test.ts:19)
-- `buildIndex` — function (test/vector/hybrid.test.ts:24)
-- `db` — variable (test/vector/hybrid.test.ts:33)
-- `dir` — variable (test/vector/hybrid.test.ts:34)
-- `embedder` — variable (test/vector/hybrid.test.ts:45)
-- `knnOnly` — variable (test/vector/hybrid.test.ts:46)
-- `hits` — variable (test/vector/hybrid.test.ts:49)
-- `db` — variable (test/vector/hybrid.test.ts:56)
-- `dir` — variable (test/vector/hybrid.test.ts:57)
-- `embedder` — variable (test/vector/hybrid.test.ts:58)
-- `unfiltered` — variable (test/vector/hybrid.test.ts:68)
-- `hits` — variable (test/vector/hybrid.test.ts:71)
-- `hits` — variable (test/vector/hybrid.test.ts:80)
-- `queries` — variable (test/vector/hybrid.test.ts:87)
-- `lat` — variable (test/vector/hybrid.test.ts:94)
-- `i` — variable (test/vector/hybrid.test.ts:95)
-- `t` — variable (test/vector/hybrid.test.ts:96)
+- `__dirname` — variable (test/vector/hybrid.test.ts:12)
+- `FIXTURE` — variable (test/vector/hybrid.test.ts:13)
+- `ZxqvBlindEmbedder` — class (test/vector/hybrid.test.ts:17)
+- `ZxqvBlindEmbedder.embed` — method (test/vector/hybrid.test.ts:18)
+- `buildIndex` — function (test/vector/hybrid.test.ts:23)
+- `db` — variable (test/vector/hybrid.test.ts:32)
+- `dir` — variable (test/vector/hybrid.test.ts:33)
+- `embedder` — variable (test/vector/hybrid.test.ts:44)
+- `knnOnly` — variable (test/vector/hybrid.test.ts:45)
+- `hits` — variable (test/vector/hybrid.test.ts:48)
+- `db` — variable (test/vector/hybrid.test.ts:55)
+- `dir` — variable (test/vector/hybrid.test.ts:56)
+- `embedder` — variable (test/vector/hybrid.test.ts:57)
+- `unfiltered` — variable (test/vector/hybrid.test.ts:67)
+- `hits` — variable (test/vector/hybrid.test.ts:70)
+- `hits` — variable (test/vector/hybrid.test.ts:79)
+- `dir` — variable (test/vector/hybrid.test.ts:88)
+- `db` — variable (test/vector/hybrid.test.ts:89)
+- `embedder` — variable (test/vector/hybrid.test.ts:92)
+- `hits` — variable (test/vector/hybrid.test.ts:105)
 
-References: `test/vector/hybrid.test.ts:13`, `test/vector/hybrid.test.ts:14`, `test/vector/hybrid.test.ts:18`, `test/vector/hybrid.test.ts:19`, `test/vector/hybrid.test.ts:24`.
+References: `test/vector/hybrid.test.ts:12`, `test/vector/hybrid.test.ts:13`, `test/vector/hybrid.test.ts:17`, `test/vector/hybrid.test.ts:18`, `test/vector/hybrid.test.ts:23`.
 
 _Generated offline (mock client)._

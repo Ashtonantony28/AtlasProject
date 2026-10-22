@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/audit/query-plan.test.ts
-source_hash: 6cc95b3a454fa302e1b9300548a7a82295929ed66771f549ecadaebc56db9168
+source_hash: 6185f6032d6d1543120251dd0a5da5d586cad27d241fd8ae4ddb0e36be56e28d
 ---
 # module test/audit/query-plan.test.ts
 
