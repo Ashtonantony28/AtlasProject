@@ -517,3 +517,40 @@ linear in depth. `_testOne` is not public API: `ignore` 6.x has no own-path test
 The SG27 parity tests now compare with `git ls-files -co --exclude-standard` instead of the
 pre-SG27 walk, which had the same defect. `EXTRACTOR_VERSION` is unchanged: newly walked files
 are picked up by the next index run.
+
+## 2026-10-22 — SG32: index runs hold a cross-process file lock and replace rows by path
+
+`indexRepo` now takes an exclusive SQLite lock (`BEGIN EXCLUSIVE` on a separate `<db>.lock`
+file, rollback-journal mode) for the whole run, after the in-process queue. A separate file is
+used so the lock does not block the run's own writes to the WAL index, and the OS drops it when a
+process dies, so there is no stale lock row to clean up. Waiting polls every 100 ms with
+`busy_timeout = 0` instead of SQLite's busy handler, which would block the event loop (and an
+MCP server); after 10 minutes the run throws `another atlas index run is writing <db>` before
+`startRun`, so it writes nothing. The queue key is now the DB file's real path, so a symlinked
+path shares it. The per-file transaction looks the path up again and deletes its symbols,
+imports, refs and embeddings by that row, not by the start-of-run snapshot (A13-02). One whole-run
+transaction was rejected: it would make an embedding or resolver failure discard all parsing and
+would block every other writer for the run.
+
+## 2026-10-22 — SG33: an unfinished run forces the next run to re-resolve
+
+`runIndex` checks, before `startRun`, for a `runs` row with no `finished_at` after the last
+finished one. With SG32's lock no other run can be live, so such a row means a run was killed or
+threw between its first write and `finishRun`, and the stored edges may not match the stored
+files. That run then re-resolves when no file changed and reports the one new `resolveReason`
+value, `'previous run interrupted'`; `atlas index` prints "after an interrupted run". Its own
+`finishRun` clears the condition, so the run after it keeps the graph again. No schema change:
+the signal is the existing run row, not a new "graph dirty" flag (A13-03).
+
+## 2026-10-22 — SG31: destructured top-level declarations and Python tuple targets are variables
+
+Each name a top-level (or namespace) `const`/`let`/`var` object or array pattern binds is a
+`variable` symbol spanning its declarator, exported like the declaration (`export const`, or a
+later `export { }`); renames bind the new name, defaults bind only their left side, and nested and
+rest patterns are walked. Python top-level `pattern_list`/`tuple_pattern`/`list_pattern` targets
+(with `*rest`) do the same under the usual `__all__`/underscore rules; attributes and subscripts
+bind nothing. Initializer calls stay the module's, as before: the value is shared, so no single
+name owns them. Destructured `require` gets variables like `const x = require()` already did; the
+resolver's import-first rule keeps those edges on the required module. `EXTRACTOR_VERSION` is 3
+(A13-01).
+

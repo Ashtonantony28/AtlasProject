@@ -1,12 +1,15 @@
 ---
 kind: file
 target: scripts/audit-scaling.mjs
-source_hash: ad7a1df4db53f69241fb456eca235af746647509841a767bedfe6850415888f1
+source_hash: c0b20be9b5203cad72ae5f3d8cdcecd73359b9741e605c57f8ed9fa507274001
 ---
 # module scripts/audit-scaling.mjs
 
 `module scripts/audit-scaling.mjs` exposes the following public surface:
 
+- `mode` — variable (scripts/audit-scaling.mjs:14)
+- `work` — variable (scripts/audit-scaling.mjs:14)
+- `sizes` — variable (scripts/audit-scaling.mjs:14)
 - `r2` — function (scripts/audit-scaling.mjs:19)
 - `median` — function (scripts/audit-scaling.mjs:20)
 - `time` — function (scripts/audit-scaling.mjs:21)

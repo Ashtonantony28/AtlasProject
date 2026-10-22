@@ -1,12 +1,17 @@
 ---
 kind: file
 target: scripts/audit2-memory.mjs
-source_hash: 15d6f1d457ee6572f851e1101cdbd8b1899c2a5d1a774557662596c404ea711c
+source_hash: 1225e44634c3517817ee3485875355a97dc3e2e8583d44507ed829d0dfb42873
 ---
 # module scripts/audit2-memory.mjs
 
 `module scripts/audit2-memory.mjs` exposes the following public surface:
 
+- `mode` — variable (scripts/audit2-memory.mjs:17)
+- `a1` — variable (scripts/audit2-memory.mjs:17)
+- `a2` — variable (scripts/audit2-memory.mjs:17)
+- `a3` — variable (scripts/audit2-memory.mjs:17)
+- `a4` — variable (scripts/audit2-memory.mjs:17)
 - `mb` — function (scripts/audit2-memory.mjs:22)
 - `sample` — function (scripts/audit2-memory.mjs:23)
 - `slope` — function (scripts/audit2-memory.mjs:30)
@@ -27,5 +32,6 @@ source_hash: 15d6f1d457ee6572f851e1101cdbd8b1899c2a5d1a774557662596c404ea711c
 - `walk` — variable (scripts/audit2-memory.mjs:66)
 - `victims` — variable (scripts/audit2-memory.mjs:69)
 - `c` — variable (scripts/audit2-memory.mjs:73)
+- `rss` — variable (scripts/audit2-memory.mjs:80)
 
 _Generated offline (mock client)._

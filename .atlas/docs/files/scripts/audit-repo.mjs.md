@@ -1,7 +1,7 @@
 ---
 kind: file
 target: scripts/audit-repo.mjs
-source_hash: 7429f48ac630924dec173b44a2406aa9f514177d0d84bdfcc788879dcc75e4b0
+source_hash: ac094fa6136f75d41d67d301508dc4d949d430c34ae6d9f02060b21a932f9612
 ---
 # module scripts/audit-repo.mjs
 
@@ -19,5 +19,7 @@ source_hash: 7429f48ac630924dec173b44a2406aa9f514177d0d84bdfcc788879dcc75e4b0
 - `tsFile` — function (scripts/audit-repo.mjs:65)
 - `pyFile` — function (scripts/audit-repo.mjs:114)
 - `writeAuditRepo` — function (scripts/audit-repo.mjs:147)
+- `dir` — variable (scripts/audit-repo.mjs:170)
+- `n` — variable (scripts/audit-repo.mjs:170)
 
 _Generated offline (mock client)._

@@ -1,7 +1,7 @@
 ---
 kind: file
 target: scripts/audit-perf.mjs
-source_hash: e7b0ad81e7442fa80e9ba8e1acf5440448fed489bb935701b2c4b176f276f01d
+source_hash: cd823d42e826eea529ff1ed20a04de16e5d55851d25285340e108fad5ff06af8
 ---
 # module scripts/audit-perf.mjs
 
@@ -20,12 +20,42 @@ source_hash: e7b0ad81e7442fa80e9ba8e1acf5440448fed489bb935701b2c4b176f276f01d
 - `rssMb` — function (scripts/audit-perf.mjs:47)
 - `out` — variable (scripts/audit-perf.mjs:48)
 - `target` — variable (scripts/audit-perf.mjs:50)
+- `ms` — variable (scripts/audit-perf.mjs:54)
 - `dbPath` — variable (scripts/audit-perf.mjs:59)
 - `db` — variable (scripts/audit-perf.mjs:61)
 - `walk` — variable (scripts/audit-perf.mjs:62)
 - `perFile` — variable (scripts/audit-perf.mjs:65)
 - `last` — variable (scripts/audit-perf.mjs:66)
+- `indexMs` — variable (scripts/audit-perf.mjs:67)
+- `stats` — variable (scripts/audit-perf.mjs:67)
 - `parseLoopMs` — variable (scripts/audit-perf.mjs:77)
 - `c` — variable (scripts/audit-perf.mjs:79)
+- `noop` — variable (scripts/audit-perf.mjs:94)
+- `i` — variable (scripts/audit-perf.mjs:95)
+- `res` — variable (scripts/audit-perf.mjs:100)
+- `i` — variable (scripts/audit-perf.mjs:101)
+- `files` — variable (scripts/audit-perf.mjs:106)
+- `victim` — variable (scripts/audit-perf.mjs:107)
+- `abs` — variable (scripts/audit-perf.mjs:109)
+- `orig` — variable (scripts/audit-perf.mjs:110)
+- `one` — variable (scripts/audit-perf.mjs:111)
+- `i` — variable (scripts/audit-perf.mjs:113)
+- `embedder` — variable (scripts/audit-perf.mjs:125)
+- `syms` — variable (scripts/audit-perf.mjs:126)
+- `names` — variable (scripts/audit-perf.mjs:127)
+- `phrases` — variable (scripts/audit-perf.mjs:128)
+- `lat` — variable (scripts/audit-perf.mjs:133)
+- `i` — variable (scripts/audit-perf.mjs:134)
+- `Q` — variable (scripts/audit-perf.mjs:135)
+- `i` — variable (scripts/audit-perf.mjs:136)
+- `n` — variable (scripts/audit-perf.mjs:137)
+- `p` — variable (scripts/audit-perf.mjs:138)
+- `all` — variable (scripts/audit-perf.mjs:146)
+- `llm` — variable (scripts/audit-perf.mjs:152)
+- `promptChars` — variable (scripts/audit-perf.mjs:153)
+- `maxPrompt` — variable (scripts/audit-perf.mjs:154)
+- `counting` — variable (scripts/audit-perf.mjs:155)
+- `counting.complete` — method (scripts/audit-perf.mjs:157)
+- `opts` — variable (scripts/audit-perf.mjs:164)
 
 _Generated offline (mock client)._

@@ -4,4 +4,4 @@
  * for the fixtures): the next `atlas index` on an index written by another version re-parses
  * every file, without `--force`.
  */
-export const EXTRACTOR_VERSION = 2;
+export const EXTRACTOR_VERSION = 3;

@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/ingest/language.ts
-source_hash: 2b301dbaded762e3ce54f0f390adc0dedce0b729dc0992cb782e623f9f2f00e4
+source_hash: 1c9e42d9d0365597ea87d7fad09536c346ef401ab73366c4af8d36bb1382e80d
 ---
 # module src/core/ingest/language.ts
 
