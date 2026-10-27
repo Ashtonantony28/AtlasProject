@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/cli/index.ts
-source_hash: b8ae39135098fc07a6a9f1e9414e2cb50ada6a248a5c5e689342c94ff48ce39e
+source_hash: 2ba4e8350cf0d969995f3bb415d9ccdd65c734cbd3da5b8ae88695df01e6316e
 ---
 # module src/cli/index.ts
 

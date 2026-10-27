@@ -13,24 +13,30 @@ import Database from 'better-sqlite3';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import {
   appendFileSync,
+  closeSync,
   copyFileSync,
   cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
+  openSync,
   readdirSync,
   renameSync,
   rmSync,
   statSync,
   writeFileSync,
+  writeSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { closeDatabase } from '../../src/core/db/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { closeDatabase, openDatabase } from '../../src/core/db/index.js';
+import { closeOnSignal } from '../../src/core/db/database.js';
 import { openProjectIndex } from '../../src/core/project.js';
 import {
+  createAtlasMcpServer,
   createMcpContext,
   handleIndexTool,
   handleSearchTool,
@@ -131,13 +137,17 @@ async function stopWith(child: ChildProcess, signal: NodeJS.Signals): Promise<vo
   await exited;
 }
 
-/** A writer that committed and was SIGKILLed before checkpointing: its WAL stays beside the DB. */
-function killedWriter(root: string): void {
+/**
+ * A writer that committed and was SIGKILLed before checkpointing (or, with `checkpoint`, after
+ * checkpointing but before the WAL was reset): its WAL stays beside the DB.
+ */
+function killedWriter(root: string, checkpoint = false): void {
   const r = spawnSync(process.execPath, [
     '-e',
     `const D = require(${JSON.stringify(require.resolve('better-sqlite3'))});
      const db = new D(${JSON.stringify(dbOf(root))});
      db.exec("UPDATE symbols SET docstring = 'STALE-WAL-' || id");
+     ${checkpoint ? "db.pragma('wal_checkpoint(PASSIVE)');" : ''}
      process.kill(process.pid, 'SIGKILL');`,
   ]);
   expect(r.signal).toBe('SIGKILL');
@@ -234,36 +244,28 @@ describe('AUDIT-31 consistent surfaces (pinned)', () => {
 });
 
 describe('AUDIT-31 findings', () => {
-  it.fails(
-    'A31-01: an index.db replaced beside a stale WAL is either used as is or refused with its cause; it is never silently mixed with the old WAL',
-    async () => {
-      const root = await indexed();
-      const other = await indexed(REPLACEMENT_FN);
-      killedWriter(root); // or Ctrl-C of `atlas index`, or SIGTERM of `atlas mcp` (A31-02)
-      copyFileSync(dbOf(other), dbOf(root)); // restore a backup, copy another checkout's index
-      const search = await cli(['search', 'replacementOnlyFn', '--cwd', root, '--limit', '1']);
-      const index = await cli(['index', root]);
-      // Either the replacement is what the surfaces read, or every surface refuses it naming the
-      // stale WAL and what to delete. Today search exits 0 with `add`, and index fails as below.
-      expect(index.err).not.toBe('database disk image is malformed');
-      expect(search.out).toMatch(/replacementOnlyFn/);
-    },
-    30_000,
-  );
+  it('A31-01: an index.db replaced beside a stale WAL is either used as is or refused with its cause; it is never silently mixed with the old WAL', async () => {
+    const root = await indexed();
+    const other = await indexed(REPLACEMENT_FN);
+    killedWriter(root); // or Ctrl-C of `atlas index`, or SIGTERM of `atlas mcp` (A31-02)
+    copyFileSync(dbOf(other), dbOf(root)); // restore a backup, copy another checkout's index
+    const search = await cli(['search', 'replacementOnlyFn', '--cwd', root, '--limit', '1']);
+    const index = await cli(['index', root]);
+    // Either the replacement is what the surfaces read, or every surface refuses it naming the
+    // stale WAL and what to delete.
+    expect(index.err).not.toBe('database disk image is malformed');
+    expect(search.out).toMatch(/replacementOnlyFn/);
+  }, 30_000);
 
-  it.fails(
-    'A31-02: `atlas mcp` stopped by SIGTERM (or SIGINT) closes the index like `atlas serve` does, leaving no WAL and a complete index.db',
-    async () => {
-      const root = sampleCopy();
-      const server = await stdioServer(root);
-      await server.client.callTool({ name: 'atlas_index', arguments: {} });
-      await stopWith(server.child(), 'SIGTERM');
-      // Today: index.db is 4096 bytes and the whole index (~2 MB) is left in index.db-wal.
-      expect(existsSync(`${dbOf(root)}-wal`)).toBe(false);
-      expect(statSync(dbOf(root)).size).toBeGreaterThan(4096);
-    },
-    30_000,
-  );
+  it('A31-02: `atlas mcp` stopped by SIGTERM (or SIGINT) closes the index like `atlas serve` does, leaving no WAL and a complete index.db', async () => {
+    const root = sampleCopy();
+    const server = await stdioServer(root);
+    await server.client.callTool({ name: 'atlas_index', arguments: {} });
+    await stopWith(server.child(), 'SIGTERM');
+    // Today: index.db is 4096 bytes and the whole index (~2 MB) is left in index.db-wal.
+    expect(existsSync(`${dbOf(root)}-wal`)).toBe(false);
+    expect(statSync(dbOf(root)).size).toBeGreaterThan(4096);
+  }, 30_000);
 
   it.fails(
     'A31-03: an index.db replaced (renamed into place) while atlas mcp runs is what the CLI then reads, and is not overwritten',
@@ -305,4 +307,134 @@ describe('AUDIT-31 findings', () => {
     },
     30_000,
   );
+});
+
+describe('SG120: a replaced or corrupt index, and stopping by a signal', () => {
+  const corrupt = (db: string): string =>
+    `index ${db} is unreadable (database disk image is malformed): it may have been replaced ` +
+    `beside a ${db}-wal it does not belong to; delete ${db} with its -wal and -shm and run ` +
+    '`atlas index`';
+
+  it('a stale WAL beside an index that was not replaced is still replayed (its commits are kept)', async () => {
+    const root = await indexed();
+    killedWriter(root);
+    const { db } = openProjectIndex(root, { readonly: true });
+    try {
+      const row = db.prepare('SELECT docstring FROM symbols LIMIT 1').get() as {
+        docstring: string;
+      };
+      expect(row.docstring).toMatch(/^STALE-WAL-/);
+    } finally {
+      closeDatabase(db);
+    }
+  }, 30_000);
+
+  it('an index replaced beside a WAL whose checkpoint had started is refused on every surface with one message, and not written', async () => {
+    const root = await indexed();
+    const other = await indexed(REPLACEMENT_FN);
+    killedWriter(root, true);
+    copyFileSync(dbOf(other), dbOf(root));
+    const msg = corrupt(dbOf(root));
+    for (const args of [
+      ['search', 'replacementOnlyFn', '--cwd', root],
+      ['graph', '--cwd', root],
+      ['index', root],
+    ]) {
+      expect(cliProcess(args), args[0]).toMatchObject({ out: '', err: `atlas: ${msg}`, code: 1 });
+    }
+    expect(() => openProjectIndex(root, { readonly: true })).toThrow(msg); // `atlas serve`
+    expect(() => createMcpContext({ root, offline: true })).toThrow(msg); // `atlas mcp` start
+    expect(existsSync(`${dbOf(root)}-wal`)).toBe(true); // left for the user, as the message says
+  }, 60_000);
+
+  it('an index SQLite reports corrupt gives one message: CLI exit 1, MCP isError, HTTP 500', async () => {
+    const root = await indexed();
+    const db = new Database(dbOf(root), { readonly: true });
+    const { rootpage } = db
+      .prepare("SELECT rootpage FROM sqlite_master WHERE name = 'symbols'")
+      .get() as { rootpage: number };
+    const pageSize = db.pragma('page_size', { simple: true }) as number;
+    db.close();
+    const ctx = createMcpContext({ root, offline: true });
+    contexts.push(ctx);
+    const fd = openSync(dbOf(root), 'r+');
+    writeSync(fd, Buffer.alloc(pageSize), 0, pageSize, (rootpage - 1) * pageSize);
+    closeSync(fd);
+    const msg = corrupt(dbOf(root));
+
+    expect(cliProcess(['search', 'area', '--cwd', root])).toMatchObject({
+      err: `atlas: ${msg}`,
+      code: 1,
+    });
+
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await createAtlasMcpServer(ctx).connect(a);
+    const client = new Client({ name: 'sg120', version: '0.0.0' });
+    cleanup.push(() => client.close());
+    await client.connect(b);
+    const res = (await client.callTool({
+      name: 'atlas_symbol',
+      arguments: { name: 'add' },
+    })) as { content: { text: string }[]; isError?: boolean };
+    expect(res.isError).toBe(true);
+    expect(res.content[0]?.text).toContain(msg);
+
+    const { db: ro } = openProjectIndex(root, { readonly: true });
+    const handle = await startServer(ro, root, { port: 0, host: '127.0.0.1' });
+    cleanup.push(async () => {
+      await handle.close();
+      closeDatabase(ro);
+    });
+    const graph = await fetch(new URL('/api/graph', handle.url));
+    expect(graph.status).toBe(500);
+    expect(await graph.json()).toEqual({ error: msg });
+  }, 60_000);
+
+  it('`atlas mcp` stopped by SIGINT closes the index too', async () => {
+    const root = sampleCopy();
+    const server = await stdioServer(root);
+    await server.client.callTool({ name: 'atlas_index', arguments: {} });
+    await stopWith(server.child(), 'SIGINT');
+    expect(existsSync(`${dbOf(root)}-wal`)).toBe(false);
+    expect(integrity(dbOf(root))).toBe('ok');
+  }, 30_000);
+
+  it('`atlas index` stopped by SIGINT mid-run closes the index and still dies by the signal', async () => {
+    const root = sampleCopy();
+    for (let i = 0; i < 400; i++) {
+      writeFileSync(
+        join(root, 'src', `gen${i}.ts`),
+        `export function gen${i}(): number { return ${i}; }\n`,
+      );
+    }
+    const child = spawn(process.execPath, [...NODE_ARGS, 'index', root, '--verbose'], {
+      cwd: ROOT,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    cleanup.push(() => void child.kill('SIGKILL'));
+    const exited = new Promise<NodeJS.Signals | null>((ok) =>
+      child.once('exit', (_c, sig) => ok(sig)),
+    );
+    await new Promise<void>((ok) => child.stdout.once('data', () => ok()));
+    child.kill('SIGINT');
+    expect(await exited).toBe('SIGINT');
+    expect(existsSync(`${dbOf(root)}-wal`)).toBe(false);
+    expect(integrity(dbOf(root))).toBe('ok');
+  }, 60_000);
+
+  it('closeOnSignal closes the index, re-raises the signal and removes its handlers', () => {
+    const db = openDatabase(':memory:');
+    const before = process.listenerCount('SIGTERM');
+    closeOnSignal(db);
+    expect(process.listenerCount('SIGTERM')).toBe(before + 1);
+    const kill = vi.spyOn(process, 'kill').mockImplementation(() => true);
+    process.emit('SIGTERM', 'SIGTERM');
+    expect(db.open).toBe(false);
+    expect(kill).toHaveBeenCalledWith(process.pid, 'SIGTERM');
+    expect(process.listenerCount('SIGTERM')).toBe(before);
+    const other = openDatabase(':memory:');
+    closeOnSignal(other)();
+    expect(process.listenerCount('SIGTERM')).toBe(before);
+    closeDatabase(other);
+  });
 });

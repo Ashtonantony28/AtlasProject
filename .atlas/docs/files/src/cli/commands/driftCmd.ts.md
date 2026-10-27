@@ -1,15 +1,15 @@
 ---
 kind: file
 target: src/cli/commands/driftCmd.ts
-source_hash: 11664613a3944f24df0802873b2bb44ed5e0ebfb787222fe9973e341a218c61b
+source_hash: 36f15a05082fb7a82f217d5e2b97d90442f56fa10e18c5a6061320901089384a
 ---
 # module src/cli/commands/driftCmd.ts
 
 `module src/cli/commands/driftCmd.ts` exposes the following public surface:
 
-- `DriftArgs` — interface (src/cli/commands/driftCmd.ts:7)
-- `registerDriftCommand` — function (src/cli/commands/driftCmd.ts:17)
+- `DriftArgs` — interface (src/cli/commands/driftCmd.ts:8)
+- `registerDriftCommand` — function (src/cli/commands/driftCmd.ts:18)
 
-References: `src/cli/commands/driftCmd.ts:7`, `src/cli/commands/driftCmd.ts:17`, `src/cli/commands/driftCmd.ts:7`, `src/cli/commands/driftCmd.ts:17`.
+References: `src/cli/commands/driftCmd.ts:8`, `src/cli/commands/driftCmd.ts:18`, `src/cli/commands/driftCmd.ts:8`, `src/cli/commands/driftCmd.ts:18`.
 
 _Generated offline (mock client)._

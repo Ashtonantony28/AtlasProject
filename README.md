@@ -209,6 +209,28 @@ the server writes only under `.atlas/`.
 }
 ```
 
+### The index files: reset and backup
+
+The index is `.atlas/index.db` plus, while a process has it open (or after one
+was killed), `index.db-wal` and `index.db-shm`. The three move together: recent
+writes may live only in the `-wal`, so copying or moving `index.db` alone
+loses them, and an `index.db` copied beside another index's `-wal` would be
+mixed with it. `atlas index`, `atlas docs`, `atlas mcp` and `atlas serve`
+close the index when stopped with Ctrl-C or SIGTERM, which leaves a complete
+`index.db` and no `-wal`.
+
+- **Reset:** stop every Atlas process on the project, then
+  `rm .atlas/index.db*` and `atlas index`. The index is rebuilt from source;
+  committed `.atlas/docs` are imported again by `atlas docs`.
+- **Back up or restore:** with no Atlas process running (so there is no
+  `-wal`), copy `index.db`; when restoring, delete the old `index.db-wal` and
+  `index.db-shm` first.
+
+Atlas drops a leftover `-wal` it can tell does not belong to the `index.db`
+beside it. When it cannot tell, or SQLite finds the index corrupt, every
+surface fails with one message naming the file, the `-wal` and the remedy
+above (CLI exit 1, MCP `isError`, HTTP 500).
+
 ## Verified on real third-party repos
 
 The `scripts/verify-external.sh` script clones a public repo into a temp dir,
