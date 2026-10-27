@@ -1,13 +1,13 @@
 ---
 kind: architecture
 target: architecture
-source_hash: ed55d4dfe8a230c314c834f9eb7901a4e1a37a0e5733d1d052a54b6412f9355f
+source_hash: bc727722218995b599c771b0c09537c6f8371e84ff8f0bfb5a24dbacae251a8d
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 220 files, 1577 symbols, 7509 edges
+**Totals:** 221 files, 1595 symbols, 7603 edges
 
 ## Modules
 
@@ -59,19 +59,19 @@ This codebase's modules collaborate through the graph above.
 - `src/cli/commands/indexCmd.ts` — typescript, loc=103, 6 symbols
 - `src/cli/commands/init.ts` — typescript, loc=37, 2 symbols
 - `src/cli/commands/mcpCmd.ts` — typescript, loc=21, 2 symbols
-- `src/cli/commands/searchCmd.ts` — typescript, loc=72, 2 symbols
 - `src/core/config.ts` — typescript, loc=134, 14 symbols
+- `src/core/db/database.ts` — typescript, loc=212, 17 symbols
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=524)
-- `src/core/db/repo.ts` (degree=440)
+- `src/core/db/database.ts` (degree=539)
+- `src/core/db/repo.ts` (degree=445)
 - `src/mcp/server.ts` (degree=346)
 - `src/core/parse/ts.ts` (degree=296)
 - `src/core/ingest/indexer.ts` (degree=232)
 - `src/core/graph/modules.ts` (degree=184)
 - `src/core/synth/persist.ts` (degree=161)
-- `src/core/db/index.ts` (degree=127)
+- `src/core/db/index.ts` (degree=128)
 - `test/cli/helpers.ts` (degree=125)
 - `test/audit/audit-21.test.ts` (degree=124)
 
