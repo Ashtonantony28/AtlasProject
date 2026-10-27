@@ -237,9 +237,11 @@ refused with the cause and the `-wal` is left in place: fix the cause and
 retry. If the check finds the index corrupt and no checkpoint of the `-wal`
 ever started, it is renamed to `index.db-wal.foreign-<ms>-<state>` (never
 deleted) and Atlas says so on stderr, on every open until the file is moved or
-deleted. While nothing has written the index since, the message says to move it
-back beside the index it came from to recover its writes; once the index has
-been written, it says to delete it instead. In any
+deleted. While nothing has written the index since, the message says to stop
+every Atlas process on the project, then move it back beside the index it came
+from to recover its writes; while a running Atlas process (`atlas serve`,
+`atlas mcp`) has the index open, it says to stop them first instead; once the
+index has been written, it says to delete it. In any
 other case, or when SQLite finds the index corrupt, every surface fails with
 one message naming the file, the `-wal` (a symlinked index's target) and the
 remedy above (CLI exit 1, MCP `isError`, HTTP 500).

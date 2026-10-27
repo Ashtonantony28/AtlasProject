@@ -401,7 +401,7 @@ describe('a WAL the check cannot decide is kept and the open refused', () => {
     hook.read = (p) => (p.endsWith('.check') ? 0 : undefined);
     expectKeptAndRefused(
       root,
-      /cannot check .*\(short read of .*index\.db(\.\d+\.\d+\.check)? at byte 0 of \d+\); it is kept/,
+      /cannot check .*\(short read of .*index\.db at byte 0 of \d+\); it is kept/,
     );
   });
 
