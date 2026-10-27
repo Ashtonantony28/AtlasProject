@@ -1,15 +1,15 @@
 ---
 kind: file
 target: src/cli/commands/docsCmd.ts
-source_hash: b04ebe2d8a1767ebac844b7c430368962b068a2af6fb38991c9fee0abb8d9d05
+source_hash: c1eb0ba8d21c51e79d79466263c5e7b31ec6644e942f99d6ce53c8f886efa53c
 ---
 # module src/cli/commands/docsCmd.ts
 
 `module src/cli/commands/docsCmd.ts` exposes the following public surface:
 
-- `DocsArgs` — interface (src/cli/commands/docsCmd.ts:17)
-- `registerDocsCommand` — function (src/cli/commands/docsCmd.ts:28)
+- `DocsArgs` — interface (src/cli/commands/docsCmd.ts:18)
+- `registerDocsCommand` — function (src/cli/commands/docsCmd.ts:29)
 
-References: `src/cli/commands/docsCmd.ts:17`, `src/cli/commands/docsCmd.ts:28`, `src/cli/commands/docsCmd.ts:17`, `src/cli/commands/docsCmd.ts:28`.
+References: `src/cli/commands/docsCmd.ts:18`, `src/cli/commands/docsCmd.ts:29`, `src/cli/commands/docsCmd.ts:18`, `src/cli/commands/docsCmd.ts:29`.
 
 _Generated offline (mock client)._

@@ -1,13 +1,13 @@
 ---
 kind: architecture
 target: architecture
-source_hash: 04e6babc2bfe06d3d65c10e3ad8c7143fb2513cb46c497e71e4079cab94bafa6
+source_hash: 8f3739a106a3eea23cead06f092bcf8792caf4756639d94c1c493a7f012f9707
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 224 files, 1627 symbols, 7833 edges
+**Totals:** 224 files, 1636 symbols, 7888 edges
 
 ## Modules
 
@@ -53,26 +53,26 @@ This codebase's modules collaborate through the graph above.
 - `scripts/copy-static.mjs` — javascript, loc=16, 3 symbols
 - `src/cli/commands/askCmd.ts` — typescript, loc=87, 2 symbols
 - `src/cli/commands/ciCommentCmd.ts` — typescript, loc=165, 7 symbols
-- `src/cli/commands/docsCmd.ts` — typescript, loc=109, 2 symbols
-- `src/cli/commands/driftCmd.ts` — typescript, loc=64, 2 symbols
-- `src/cli/commands/indexCmd.ts` — typescript, loc=103, 6 symbols
+- `src/cli/commands/docsCmd.ts` — typescript, loc=112, 2 symbols
+- `src/cli/commands/driftCmd.ts` — typescript, loc=66, 2 symbols
+- `src/cli/commands/indexCmd.ts` — typescript, loc=106, 6 symbols
 - `src/core/config.ts` — typescript, loc=134, 14 symbols
-- `src/core/db/database.ts` — typescript, loc=214, 17 symbols
+- `src/core/db/database.ts` — typescript, loc=374, 25 symbols
 - `src/core/db/repo.ts` — typescript, loc=413, 44 symbols
 - `src/core/db/schema.ts` — typescript, loc=187, 3 symbols
 - `src/core/db/types.ts` — typescript, loc=79, 9 symbols
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=561)
+- `src/core/db/database.ts` (degree=609)
 - `src/core/db/repo.ts` (degree=455)
-- `src/mcp/server.ts` (degree=353)
+- `src/mcp/server.ts` (degree=361)
 - `src/core/parse/ts.ts` (degree=296)
 - `src/core/ingest/indexer.ts` (degree=234)
 - `src/core/graph/modules.ts` (degree=184)
 - `src/core/synth/persist.ts` (degree=161)
 - `src/core/db/index.ts` (degree=131)
+- `test/audit/audit-31.test.ts` (degree=131)
 - `test/cli/helpers.ts` (degree=130)
-- `test/audit/audit-21.test.ts` (degree=124)
 
 _Generated offline (mock client)._
