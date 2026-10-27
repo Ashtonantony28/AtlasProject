@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/helpers/lockHolder.ts
-source_hash: bb1d1ce4bcfd411e2528a60834335bcf7a9ecc9e3868cd583a4ecc5b861ce072
+source_hash: 4bb7512ec1589d6bbbd35cb95ec8a8cb61e6d60696a16f3c96381961cdc2208e
 ---
 # module test/helpers/lockHolder.ts
 
