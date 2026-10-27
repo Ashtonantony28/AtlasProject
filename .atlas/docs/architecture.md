@@ -1,19 +1,20 @@
 ---
 kind: architecture
 target: architecture
-source_hash: e2f44e4890ce01dfdc61cf48ceeaf8ad7f7696b8faf14ce4ba829479f6d52f67
+source_hash: 3ae02b618860bd88c6a5a370f25ec73bcd9e0df47c78d13e93fb6679ca49b62f
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 238 files, 1906 symbols, 9113 edges
+**Totals:** 237 files, 1886 symbols, 9028 edges
 
 ## Modules
 
 - `fixtures/graph/py/pkg/hooks.py` — python, loc=13, 3 symbols
 - `fixtures/graph/py/pkg/models.py` — python, loc=14, 5 symbols
 - `fixtures/graph/py/pkg/repo.py` — python, loc=23, 6 symbols
+- `fixtures/graph/py/pkg/sub/service.py` — python, loc=20, 2 symbols
 - `fixtures/graph/web/app.tsx` — typescript, loc=18, 4 symbols
 - `fixtures/graph/web/cjs/main.js` — javascript, loc=16, 5 symbols
 - `fixtures/graph/web/geo.ts` — typescript, loc=15, 6 symbols
@@ -60,19 +61,18 @@ This codebase's modules collaborate through the graph above.
 - `src/core/parse/py.ts` — typescript, loc=385, 24 symbols
 - `src/core/parse/refs.ts` — typescript, loc=195, 14 symbols
 - `src/core/parse/ts.ts` — typescript, loc=1281, 80 symbols
-- `src/core/parse/types.ts` — typescript, loc=49, 7 symbols
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=755)
+- `src/core/db/database.ts` (degree=749)
 - `src/core/db/repo.ts` (degree=455)
 - `src/mcp/server.ts` (degree=375)
 - `src/core/parse/ts.ts` (degree=296)
 - `src/core/ingest/indexer.ts` (degree=234)
 - `src/core/graph/modules.ts` (degree=184)
-- `test/db/leftoverWal.test.ts` (degree=165)
+- `test/db/leftoverWal.test.ts` (degree=175)
 - `src/core/synth/persist.ts` (degree=161)
-- `src/core/db/index.ts` (degree=145)
-- `test/cli/helpers.ts` (degree=140)
+- `src/core/db/index.ts` (degree=144)
+- `test/cli/helpers.ts` (degree=139)
 
 _Generated offline (mock client)._
