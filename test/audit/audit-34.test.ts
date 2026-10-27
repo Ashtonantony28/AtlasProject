@@ -212,68 +212,60 @@ async function liveWriter(dbPath: string): Promise<ChildProcess> {
 }
 
 describe('A34-01 (high) a WAL that belongs to the index is renamed aside when the check cannot run', () => {
-  it.fails(
-    'A34-01 on a full disk (growing a file fails) a killed writer’s own WAL is kept: its rows and docs are not lost',
-    () => {
-      const root = indexed();
-      killedWriter(dbOf(root), `UPDATE symbols SET docstring = 'STALE-WAL-' || id; ${DOCS_WRITER}`);
-      // The first command after the crash runs while the disk is full (the usual reason a writer
-      // dies). The check's read-only connection cannot grow its `.check-shm` to 32 KiB
-      // (SQLITE_IOERR_SHMSIZE), `integrityOk` reads any non-busy error as "fails integrity", the
-      // -shm says never checkpointed, and the WAL is renamed to `index.db-wal.foreign-<ms>` with
-      // "does not belong to" on stderr. Real repro: AUDIT-34.md (40 MB tmpfs, 60 docs -> 0).
-      cliOnFullDisk(['search', 'add', '--cwd', root, '--limit', '1']);
-      // Space is back. Today: { stale: 0, docs: 0 }, exit 0 on every surface.
-      expect(seen(root)).toMatchObject({ stale: 24, docs: 4 });
-      expect(aside(root)).toEqual([]);
-    },
-    60_000,
-  );
+  it('A34-01 on a full disk (growing a file fails) a killed writer’s own WAL is kept: its rows and docs are not lost', () => {
+    const root = indexed();
+    killedWriter(dbOf(root), `UPDATE symbols SET docstring = 'STALE-WAL-' || id; ${DOCS_WRITER}`);
+    // The first command after the crash runs while the disk is full (the usual reason a writer
+    // dies). The check's read-only connection cannot grow its `.check-shm` to 32 KiB
+    // (SQLITE_IOERR_SHMSIZE). Before SG140 `integrityOk` read that as "fails integrity", the
+    // -shm said never checkpointed, and the WAL was renamed to `index.db-wal.foreign-<ms>` with
+    // "does not belong to" on stderr. Real repro: AUDIT-34.md (40 MB tmpfs, 60 docs -> 0).
+    const full = cliOnFullDisk(['search', 'add', '--cwd', root, '--limit', '1']);
+    // SG140: refused, naming the cause, with the WAL left in place.
+    expect(full.code).toBe(1);
+    expect(full.err).toMatch(/cannot check .*index\.db-wal.*\(SQLITE_IOERR\w*: disk I\/O error\)/);
+    expect(aside(root)).toEqual([]);
+    // Space is back. Before SG140: { stale: 0, docs: 0 }, exit 0 on every surface.
+    expect(seen(root)).toMatchObject({ stale: 24, docs: 4 });
+    expect(aside(root)).toEqual([]);
+  }, 60_000);
 });
 
 describe('A34-02 (medium) `/proc/locks` is matched by inode number on any device', () => {
-  it.fails(
-    'A34-02 locks on the same inode numbers on another filesystem do not skip the check: a replaced index is not mixed with a foreign WAL',
-    () => {
-      const root = indexed();
-      const other = indexed(REPLACEMENT_FN);
-      killedWriter(dbOf(root));
-      copyFileSync(dbOf(other), dbOf(root)); // in place: same inode, beside the stale WAL
-      // A process on another filesystem (a btrfs/ZFS snapshot or clone of the project, a copied
-      // disk image) holds files with the same inode numbers as index.db and its -shm. Real repro:
-      // two loop-mounted copies of one ext4 image (AUDIT-34.md).
-      const fake = locksOnAnotherDevice([dbOf(root), `${dbOf(root)}-shm`]);
-      const search = cli(
-        ['search', 'replacementOnlyFn', '--cwd', root, '--limit', '1'],
-        ['--require', procLocksPreload()],
-        { ATLAS_AUDIT34_LOCKS: fake },
-      );
-      // Today: `liveWal` is true, the check is skipped and SQLite replays the foreign WAL: exit 0
-      // with `add`, and the close checkpoints the mix (`wrong # of entries in index ...`).
-      expectReplacementOrRefusal(search, root);
-    },
-    60_000,
-  );
+  it('A34-02 locks on the same inode numbers on another filesystem do not skip the check: a replaced index is not mixed with a foreign WAL', () => {
+    const root = indexed();
+    const other = indexed(REPLACEMENT_FN);
+    killedWriter(dbOf(root));
+    copyFileSync(dbOf(other), dbOf(root)); // in place: same inode, beside the stale WAL
+    // A process on another filesystem (a btrfs/ZFS snapshot or clone of the project, a copied
+    // disk image) holds files with the same inode numbers as index.db and its -shm. Real repro:
+    // two loop-mounted copies of one ext4 image (AUDIT-34.md).
+    const fake = locksOnAnotherDevice([dbOf(root), `${dbOf(root)}-shm`]);
+    const search = cli(
+      ['search', 'replacementOnlyFn', '--cwd', root, '--limit', '1'],
+      ['--require', procLocksPreload()],
+      { ATLAS_AUDIT34_LOCKS: fake },
+    );
+    // Today: `liveWal` is true, the check is skipped and SQLite replays the foreign WAL: exit 0
+    // with `add`, and the close checkpoints the mix (`wrong # of entries in index ...`).
+    expectReplacementOrRefusal(search, root);
+  }, 60_000);
 
-  it.fails(
-    'A34-02 a lock on the -shm’s inode number on another filesystem does not refuse an index beside its own WAL',
-    () => {
-      const root = indexed();
-      killedWriter(dbOf(root));
-      const fake = locksOnAnotherDevice([`${dbOf(root)}-shm`]);
-      const search = cli(
-        ['search', 'add', '--cwd', root, '--limit', '1'],
-        ['--require', procLocksPreload()],
-        { ATLAS_AUDIT34_LOCKS: fake },
-      );
-      // Today: exit 1, "unreadable (another process still has the replaced index open) ... delete
-      // index.db with its -wal and -shm", which deletes the WAL's commits if followed.
-      expect(search.err).toBe('');
-      expect(search.code).toBe(0);
-      expect(seen(root).stale).toBe(24);
-    },
-    60_000,
-  );
+  it('A34-02 a lock on the -shm’s inode number on another filesystem does not refuse an index beside its own WAL', () => {
+    const root = indexed();
+    killedWriter(dbOf(root));
+    const fake = locksOnAnotherDevice([`${dbOf(root)}-shm`]);
+    const search = cli(
+      ['search', 'add', '--cwd', root, '--limit', '1'],
+      ['--require', procLocksPreload()],
+      { ATLAS_AUDIT34_LOCKS: fake },
+    );
+    // Today: exit 1, "unreadable (another process still has the replaced index open) ... delete
+    // index.db with its -wal and -shm", which deletes the WAL's commits if followed.
+    expect(search.err).toBe('');
+    expect(search.code).toBe(0);
+    expect(seen(root).stale).toBe(24);
+  }, 60_000);
 });
 
 describe('A34-03 (medium) a foreign WAL that only adds rows passes the integrity check and is replayed', () => {
@@ -322,6 +314,27 @@ describe('A34-04 (low) without a usable `/proc/locks` a live holder’s WAL is r
 });
 
 describe('SG130/SG135 held (pinned)', () => {
+  it('SG140: a WAL set aside is reported on every later open until it is moved', () => {
+    const root = indexed();
+    const other = indexed(REPLACEMENT_FN);
+    killedWriter(dbOf(root));
+    copyFileSync(dbOf(other), dbOf(root));
+    const first = cli(['search', 'replacementOnlyFn', '--cwd', root, '--limit', '1']);
+    expect(first.code, first.err).toBe(0);
+    expect(first.err).toMatch(/does not belong to .*; moved it to .*-wal\.foreign-/);
+    const [name] = aside(root);
+    for (const args of [
+      ['search', 'add', '--cwd', root],
+      ['index', root],
+    ]) {
+      const r = cli(args);
+      expect(r.code, r.err).toBe(0);
+      expect(r.err).toContain(`${name} was set aside from ${dbOf(root)}`);
+    }
+    rmSync(join(root, '.atlas', name!));
+    expect(cli(['search', 'add', '--cwd', root]).err).toBe('');
+  }, 60_000);
+
   it('a killed `atlas docs` copied with `cp -a` keeps its docs; in place, after `mv` and after a copy without -shm', () => {
     const src = indexed();
     killedWriter(dbOf(src), DOCS_WRITER);

@@ -656,14 +656,20 @@ page 1 is not in every WAL generation, and a sidecar beside the index goes stale
 non-Atlas writer starts a WAL generation (and the index directory is pinned to `index.db` and its WAL
 files). So a leftover WAL is judged by whether it fits the file: `openDatabase` resolves a symlinked
 index to the file SQLite uses, and when a non-empty `-wal` is there that no live connection holds
-(read passively from `/proc/locks`: a WAL connection locks the file and its `-shm` for its life; a
-probe under the lock elsewhere), it takes `<db>.open.lock` (an exclusive SQLite lock, created only
+(read passively from `/proc/locks`, matched by device and inode: a WAL connection locks the file and
+its `-shm` for its life; a probe under the lock elsewhere, or when a lock is on the same inode number
+on another device (A34-02)), it takes `<db>.open.lock` (an exclusive SQLite lock, created only
 then) and keeps it until it has opened the file, so racing openers decide one at a time and the next
 sees the first as a holder. Under it: a `-shm` locked without the file (a live process on an inode
 renamed over) is refused; a read-only `PRAGMA integrity_check` with the WAL replayed, through hard
 links so it does not look like a holder, keeps the WAL when it passes; when it fails and the `-shm`
 says no checkpoint of the WAL ever started, the WAL is renamed to `-wal.foreign-<ms>` and reported
-on stderr; anything else is refused with `nameCorrupt`'s message, which names the symlink target's
+on stderr, then again on every open while that file is there (so it can be moved back before the
+next write). SG140: only a check that ran and reported corruption (`SQLITE_CORRUPT*`/`SQLITE_NOTADB`
+or a result other than `ok`) counts as "does not fit"; an error that stops the check from running
+(the check's `-shm` cannot grow on a full disk, `EDQUOT`, `EFBIG`, `SQLITE_CANTOPEN`/`IOERR*`/`FULL`/
+`NOMEM`, `sqlite-vec` not loading) refuses the open with that cause and leaves the WAL in place
+(A34-01: a killed writer's own WAL was set aside on a full disk); anything else is refused with `nameCorrupt`'s message, which names the symlink target's
 `-wal`. The cost is a full integrity check on the first open after a crash, a copy or a move with a
 WAL. Residual: a foreign WAL whose replay is structurally valid (`integrity_check` does not compare
 FTS or `vec0` contents) is kept, as is a WAL replayed onto a byte-identical backup.
