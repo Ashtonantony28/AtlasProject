@@ -1,38 +1,31 @@
 ---
 kind: file
 target: src/core/db/database.ts
-source_hash: 86507dd7220d716dcaed8ab2fdb74c2ba5ad457c00f09aca3680ea072361b132
+source_hash: 4f3f62921312e0418550843394c9e4f62378b997b57b87b4e945aca53a986b51
 ---
 # module src/core/db/database.ts
 
 `module src/core/db/database.ts` exposes the following public surface:
 
-- `DB` — type (src/core/db/database.ts:17)
-- `BUSY_TIMEOUT_MS` — variable (src/core/db/database.ts:20)
-- `LOCK_POLL_MS` — variable (src/core/db/database.ts:22)
-- `statements` — variable (src/core/db/database.ts:24)
-- `prepareCached` — function (src/core/db/database.ts:27)
-- `OpenDbOptions` — interface (src/core/db/database.ts:35)
-- `loadVecExtension` — function (src/core/db/database.ts:41)
-- `openDatabase` — function (src/core/db/database.ts:50)
-- `dropForeignWal` — function (src/core/db/database.ts:99)
-- `checkIntegrity` — function (src/core/db/database.ts:119)
-- `neverCheckpointed` — function (src/core/db/database.ts:145)
-- `readHead` — function (src/core/db/database.ts:159)
-- `fileInUse` — function (src/core/db/database.ts:174)
-- `createWalFile` — function (src/core/db/database.ts:198)
-- `switchToWal` — function (src/core/db/database.ts:222)
-- `immediate` — function (src/core/db/database.ts:245)
-- `BUSY_REMEDY` — variable (src/core/db/database.ts:268)
-- `nameBusy` — function (src/core/db/database.ts:274)
-- `lastOpened` — variable (src/core/db/database.ts:287)
-- `nameCorrupt` — function (src/core/db/database.ts:293)
-- `closeOnSignal` — function (src/core/db/database.ts:313)
-- `ensureMigrationsTable` — function (src/core/db/database.ts:328)
-- `appliedVersion` — function (src/core/db/database.ts:338)
-- `runMigrations` — function (src/core/db/database.ts:349)
-- `closeDatabase` — function (src/core/db/database.ts:372)
+- `DB` — type (src/core/db/database.ts:21)
+- `BUSY_TIMEOUT_MS` — variable (src/core/db/database.ts:24)
+- `LOCK_POLL_MS` — variable (src/core/db/database.ts:26)
+- `OPEN_LOCK_MS` — variable (src/core/db/database.ts:28)
+- `statements` — variable (src/core/db/database.ts:30)
+- `prepareCached` — function (src/core/db/database.ts:33)
+- `OpenDbOptions` — interface (src/core/db/database.ts:41)
+- `loadVecExtension` — function (src/core/db/database.ts:47)
+- `openDatabase` — function (src/core/db/database.ts:56)
+- `checkLeftoverWal` — function (src/core/db/database.ts:112)
+- `decideWal` — function (src/core/db/database.ts:125)
+- `walOwner` — function (src/core/db/database.ts:137)
+- `immediate` — function (src/core/db/database.ts:385)
+- `nameBusy` — function (src/core/db/database.ts:414)
+- `nameCorrupt` — function (src/core/db/database.ts:433)
+- `closeOnSignal` — function (src/core/db/database.ts:454)
+- `runMigrations` — function (src/core/db/database.ts:490)
+- `closeDatabase` — function (src/core/db/database.ts:513)
 
-References: `src/core/db/database.ts:17`, `src/core/db/database.ts:20`, `src/core/db/database.ts:22`, `src/core/db/database.ts:24`, `src/core/db/database.ts:27`.
+References: `src/core/db/database.ts:21`, `src/core/db/database.ts:24`, `src/core/db/database.ts:26`, `src/core/db/database.ts:28`, `src/core/db/database.ts:30`.
 
 _Generated offline (mock client)._

@@ -4,9 +4,13 @@ import {
   closeSync,
   existsSync,
   linkSync,
+  lstatSync,
   mkdirSync,
   openSync,
+  readFileSync,
   readSync,
+  realpathSync,
+  renameSync,
   rmSync,
   statSync,
 } from 'node:fs';
@@ -20,6 +24,8 @@ export type DB = Database.Database;
 const BUSY_TIMEOUT_MS = 5000;
 /** How often `immediate` retries the write lock while another connection holds it. */
 const LOCK_POLL_MS = 10;
+/** How long an opener waits for another to finish checking a leftover WAL. */
+const OPEN_LOCK_MS = 60_000;
 
 const statements = new WeakMap<DB, Map<string, Database.Statement>>();
 
@@ -48,93 +54,221 @@ function loadVecExtension(db: DB): void {
  * downstream code can query the embeddings_vec virtual table either way.
  */
 export function openDatabase(dbPath: string, opts: OpenDbOptions = {}): DB {
+  let release = (): void => undefined;
   if (dbPath !== ':memory:') {
     lastOpened = dbPath;
-    if (dropForeignWal(dbPath)) checkIntegrity(dbPath);
+    release = checkLeftoverWal(dbPath);
   }
-  if (!opts.readonly && !opts.fileMustExist && !existsSync(dbPath)) {
-    mkdirSync(dirname(dbPath), { recursive: true });
-    // A `-wal` left by a killed run would be replayed into a pre-made file; SQLite drops it beside
-    // a 0-byte one (and `switchToWal` waits out the processes racing to switch that file).
-    if (dbPath !== ':memory:' && !existsSync(`${dbPath}-wal`)) createWalFile(dbPath);
-  }
-
-  const db = new Database(dbPath, {
-    readonly: opts.readonly ?? false,
-    fileMustExist: opts.fileMustExist ?? false,
-    timeout: BUSY_TIMEOUT_MS,
-  });
-
-  // sqlite-vec is needed even in read-only mode because the embeddings_vec
-  // virtual table created by migration v2 is queried on search.
-  loadVecExtension(db);
-
-  if (!opts.readonly) {
-    let op = 'journal mode';
-    try {
-      switchToWal(db, dbPath);
-      db.pragma('foreign_keys = ON');
-      db.pragma('synchronous = NORMAL');
-      op = 'migrations';
-      runMigrations(db);
-    } catch (err) {
-      nameBusy(err, op);
-      throw err;
+  try {
+    if (!opts.readonly && !opts.fileMustExist && !existsSync(dbPath)) {
+      mkdirSync(dirname(dbPath), { recursive: true });
+      // A `-wal` left by a killed run would be replayed into a pre-made file; SQLite drops it beside
+      // a 0-byte one (and `switchToWal` waits out the processes racing to switch that file).
+      if (dbPath !== ':memory:' && !existsSync(`${dbPath}-wal`)) createWalFile(dbPath);
     }
-  }
 
-  return db;
-}
+    const db = new Database(dbPath, {
+      readonly: opts.readonly ?? false,
+      fileMustExist: opts.fileMustExist ?? false,
+      timeout: BUSY_TIMEOUT_MS,
+    });
 
-/**
- * A `-wal` left beside `dbPath` by a stopped process may not belong to it when `dbPath` changed
- * (ctime) after the WAL was last written: a WAL-mode file changes only by a checkpoint, or by being
- * replaced (`cp`/`mv` of a backup or another checkout's index). SQLite would replay it into a file
- * it does not belong to (A31-01). When no connection (in any process) holds the file:
- * - if the `-shm` left with it says no checkpoint of it was ever attempted, it is deleted;
- * - otherwise it may be the rest of an interrupted checkpoint, so it is kept and the caller checks
- *   the index's integrity after SQLite replays it (returns true).
- * Best effort: on any error it is left to SQLite.
- */
-function dropForeignWal(dbPath: string): boolean {
-  const wal = `${dbPath}-wal`;
-  try {
-    const db = statSync(dbPath, { bigint: true, throwIfNoEntry: false });
-    const log = statSync(wal, { bigint: true, throwIfNoEntry: false });
-    if (!db || !log || db.size === 0n || log.size <= 32n || db.ctimeNs <= log.mtimeNs) return false;
-    if (fileInUse(dbPath)) return false;
-    if (!neverCheckpointed(dbPath)) return true;
-    const now = statSync(wal, { bigint: true, throwIfNoEntry: false });
-    if (now?.ino === log.ino && now.mtimeNs === log.mtimeNs) rmSync(wal);
-  } catch {
-    // Unreadable or not removable: SQLite decides, and a mix is reported as corrupt.
-  }
-  return false;
-}
-
-/**
- * Throws a named `SQLITE_CORRUPT` error unless `PRAGMA integrity_check` passes on `dbPath` with its
- * WAL replayed. Read-only, so closing it never checkpoints a mixed WAL into the file.
- */
-function checkIntegrity(dbPath: string): void {
-  const db = new Database(dbPath, {
-    readonly: true,
-    fileMustExist: true,
-    timeout: BUSY_TIMEOUT_MS,
-  });
-  try {
+    // sqlite-vec is needed even in read-only mode because the embeddings_vec
+    // virtual table created by migration v2 is queried on search.
     loadVecExtension(db);
-    if (db.pragma('integrity_check(1)', { simple: true }) !== 'ok') {
-      throw Object.assign(new Error('database disk image is malformed'), {
-        code: 'SQLITE_CORRUPT',
-      });
+
+    if (!opts.readonly) {
+      let op = 'journal mode';
+      try {
+        switchToWal(db, dbPath);
+        db.pragma('foreign_keys = ON');
+        db.pragma('synchronous = NORMAL');
+        op = 'migrations';
+        runMigrations(db);
+      } catch (err) {
+        nameBusy(err, op);
+        throw err;
+      }
+    }
+
+    return db;
+  } finally {
+    release();
+  }
+}
+
+/**
+ * SQLite replays any `-wal` beside the file it opens, and a WAL does not name its database: one left
+ * by a killed writer beside a replaced `index.db` would be mixed into it (A31-01). A leftover WAL
+ * that no connection holds is checked first, under a lock every Atlas opener takes, held until the
+ * caller has opened the file (so racing openers cannot replay it meanwhile):
+ * - with the WAL replayed, the file passes `PRAGMA integrity_check`: kept (its own WAL, copied or
+ *   moved with it);
+ * - it fails, and the `-shm` says no checkpoint of the WAL ever started (so the file was never
+ *   written from it): the WAL is renamed aside, never deleted, and reported on stderr;
+ * - anything else (no `-shm`, a checkpoint started, not movable) fails with `nameCorrupt`'s message.
+ * Timestamps play no part. Returns the lock's release.
+ */
+function checkLeftoverWal(dbPath: string): () => void {
+  const path = walOwner(dbPath);
+  if (!leftoverWal(path) || liveWal(holders(path))) return () => undefined;
+  const release = lockOpens(path);
+  try {
+    if (leftoverWal(path)) decideWal(dbPath, path);
+    return release;
+  } catch (err) {
+    release();
+    throw err;
+  }
+}
+
+function decideWal(dbPath: string, path: string): void {
+  const before = holders(path) ?? probe(path);
+  if (liveWal(before)) return;
+  // A live connection to a file renamed over by this one: its WAL is still in use (A33-05).
+  if (before.shm) throw corrupt(dbPath, 'another process still has the replaced index open');
+  if (integrityOk(path)) return;
+  const after = holders(path) ?? probe(path);
+  if (!after.db && !after.shm && neverCheckpointed(path) && setAside(path)) return;
+  throw corrupt(dbPath, 'database disk image is malformed');
+}
+
+/** The file whose `-wal` SQLite uses for `dbPath`: a symlinked index's target. */
+function walOwner(dbPath: string): string {
+  try {
+    return lstatSync(dbPath).isSymbolicLink() ? realpathSync(dbPath) : dbPath;
+  } catch {
+    return dbPath;
+  }
+}
+
+function leftoverWal(path: string): boolean {
+  try {
+    const db = statSync(path, { throwIfNoEntry: false });
+    const wal = statSync(`${path}-wal`, { throwIfNoEntry: false });
+    return !!db && db.size > 0 && !!wal && wal.size > 32;
+  } catch {
+    return false;
+  }
+}
+
+interface Holders {
+  db: boolean;
+  shm: boolean;
+}
+
+/** A live WAL connection holds a lock on the file and on its `-shm` for its whole life. */
+function liveWal(h: Holders | undefined): boolean {
+  return !!h && h.db && h.shm;
+}
+
+/**
+ * Who holds locks on `path` and its `-shm`, read from the kernel's lock table: passive, so unlike a
+ * probe it takes no lock another opener could mistake for a holder. Undefined where there is none.
+ */
+function holders(path: string): Holders | undefined {
+  let table: string;
+  try {
+    table = readFileSync('/proc/locks', 'utf8');
+  } catch {
+    return undefined;
+  }
+  const locked = new Set(Array.from(table.matchAll(/ [0-9a-f]+:[0-9a-f]+:(\d+) /g), (m) => m[1]));
+  const held = (f: string): boolean => {
+    const ino = statSync(f, { bigint: true, throwIfNoEntry: false })?.ino;
+    return ino !== undefined && locked.has(String(ino));
+  };
+  return { db: held(path), shm: held(`${path}-shm`) };
+}
+
+/** `holders` by a probe (under the open lock). When it cannot tell, the WAL is never set aside. */
+function probe(path: string): Holders {
+  try {
+    const used = fileInUse(path);
+    return { db: used, shm: used };
+  } catch {
+    return { db: true, shm: false };
+  }
+}
+
+/**
+ * Takes `<db>.open.lock` with an exclusive SQLite (OS file) lock, released by the returned function;
+ * the OS drops it if the process dies. Where it cannot be created (a read-only directory), nothing
+ * can write the WAL or set it aside, so the check runs without it.
+ */
+function lockOpens(path: string): () => void {
+  let lock: DB;
+  try {
+    lock = new Database(`${path}.open.lock`, { timeout: OPEN_LOCK_MS });
+  } catch {
+    return () => undefined;
+  }
+  try {
+    lock.exec('BEGIN EXCLUSIVE');
+  } catch (err) {
+    lock.close();
+    if ((err as { code?: unknown } | null)?.code !== 'SQLITE_BUSY') return () => undefined;
+    nameBusy(err, 'open');
+    throw err;
+  }
+  return () => lock.close();
+}
+
+/**
+ * `PRAGMA integrity_check` of `path` with its WAL replayed, on a read-only connection (so a mix is
+ * never checkpointed into the file) through hard links, so the check is not taken for a live
+ * connection to `path` and its `-shm`. Without hard links it runs on `path` itself.
+ */
+function integrityOk(path: string): boolean {
+  const link = `${path}.${process.pid}.${Date.now()}.check`;
+  const made: string[] = [];
+  try {
+    linkSync(path, link);
+    made.push(link, `${link}-shm`);
+    linkSync(`${path}-wal`, `${link}-wal`);
+    made.push(`${link}-wal`);
+  } catch {
+    // No hard links here.
+  }
+  try {
+    const db = new Database(made.length === 3 ? link : path, {
+      readonly: true,
+      fileMustExist: true,
+      timeout: BUSY_TIMEOUT_MS,
+    });
+    try {
+      loadVecExtension(db);
+      return db.pragma('integrity_check(1)', { simple: true }) === 'ok';
+    } finally {
+      db.close();
     }
   } catch (err) {
-    nameCorrupt(err, dbPath);
+    const code = (err as { code?: unknown } | null)?.code;
+    if (typeof code !== 'string' || !code.startsWith('SQLITE_BUSY')) return false;
+    nameBusy(err, 'integrity check');
     throw err;
   } finally {
-    db.close();
+    for (const f of made) rmSync(f, { force: true });
   }
+}
+
+/** Renames the WAL to `<db>-wal.foreign-<ms>` and says so on stderr. False if it cannot. */
+function setAside(path: string): boolean {
+  const wal = `${path}-wal`;
+  const aside = `${wal}.foreign-${Date.now()}`;
+  try {
+    renameSync(wal, aside);
+  } catch {
+    return false;
+  }
+  process.stderr.write(`atlas: ${wal} does not belong to ${path}; moved it to ${aside}\n`);
+  return true;
+}
+
+function corrupt(dbPath: string, cause: string): Error {
+  const err = Object.assign(new Error(cause), { code: 'SQLITE_CORRUPT' });
+  nameCorrupt(err, dbPath);
+  return err;
 }
 
 /**
@@ -143,8 +277,14 @@ function checkIntegrity(dbPath: string): void {
  * of this WAL starts. Recovery after a crash sets the latter to the frame count.
  */
 function neverCheckpointed(dbPath: string): boolean {
-  const head = readHead(`${dbPath}-wal`, 32);
-  const shm = readHead(`${dbPath}-shm`, 136);
+  let head: Buffer | undefined;
+  let shm: Buffer | undefined;
+  try {
+    head = readHead(`${dbPath}-wal`, 32);
+    shm = readHead(`${dbPath}-shm`, 136);
+  } catch {
+    return false;
+  }
   if (!head || !shm) return false;
   const u32 = (at: number): number =>
     endianness() === 'LE' ? shm.readUInt32LE(at) : shm.readUInt32BE(at);
@@ -297,11 +437,12 @@ export function nameCorrupt(err: unknown, dbPath: string | undefined = lastOpene
     dbPath !== undefined &&
     typeof code === 'string' &&
     /^SQLITE_(CORRUPT|NOTADB)/.test(code) &&
-    !err.message.includes(`${dbPath}-wal`)
+    !err.message.includes(`${walOwner(dbPath)}-wal`)
   ) {
+    const file = walOwner(dbPath);
     err.message =
       `index ${dbPath} is unreadable (${err.message}): it may have been replaced beside a ` +
-      `${dbPath}-wal it does not belong to; delete ${dbPath} with its -wal and -shm and run ` +
+      `${file}-wal it does not belong to; delete ${file} with its -wal and -shm and run ` +
       '`atlas index`';
   }
 }

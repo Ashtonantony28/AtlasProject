@@ -226,10 +226,17 @@ close the index when stopped with Ctrl-C or SIGTERM, which leaves a complete
   `-wal`), copy `index.db`; when restoring, delete the old `index.db-wal` and
   `index.db-shm` first.
 
-Atlas drops a leftover `-wal` it can tell does not belong to the `index.db`
-beside it. When it cannot tell, or SQLite finds the index corrupt, every
-surface fails with one message naming the file, the `-wal` and the remedy
-above (CLI exit 1, MCP `isError`, HTTP 500).
+Copying or moving the project or its `.atlas/` (`cp -r`, `cp -a`, `rsync -a`,
+`tar`, `mv`), a killed writer's last `-wal` included, keeps every committed
+write. Before opening an index beside a `-wal` that no running process holds,
+Atlas checks it under `.atlas/index.db.open.lock`, which every Atlas process
+opening the index takes: the `-wal` is kept when the index with it replayed
+passes SQLite's integrity check. Otherwise, if no checkpoint of it ever started,
+it is renamed to `index.db-wal.foreign-<ms>` (never deleted) and Atlas says so on
+stderr; move it back beside the index it came from to recover its writes. In
+any other case, or when SQLite finds the index corrupt, every surface fails with
+one message naming the file, the `-wal` (a symlinked index's target) and the
+remedy above (CLI exit 1, MCP `isError`, HTTP 500).
 
 ## Verified on real third-party repos
 
