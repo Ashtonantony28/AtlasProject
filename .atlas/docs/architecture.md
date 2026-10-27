@@ -1,7 +1,7 @@
 ---
 kind: architecture
 target: architecture
-source_hash: 75858aa2a4683cbc66aebb78a6437bd496524bcb3c1bea1161027f440bb55925
+source_hash: 2086fc6dc153c5b349239c18df9574d425a930d803d5c117ac77f40b833e317a
 ---
 # Architecture
 
@@ -59,7 +59,7 @@ This codebase's modules collaborate through the graph above.
 - `src/cli/commands/indexCmd.ts` — typescript, loc=103, 6 symbols
 - `src/cli/commands/init.ts` — typescript, loc=37, 2 symbols
 - `src/core/config.ts` — typescript, loc=134, 14 symbols
-- `src/core/db/database.ts` — typescript, loc=212, 17 symbols
+- `src/core/db/database.ts` — typescript, loc=214, 17 symbols
 - `src/core/db/repo.ts` — typescript, loc=413, 44 symbols
 
 ## Key collaborations
