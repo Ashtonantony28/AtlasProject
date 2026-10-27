@@ -673,5 +673,5 @@ or a result other than `ok`) counts as "does not fit"; an error that stops the c
 `-wal`. The cost is a full integrity check on the first open after a crash, a copy or a move with a
 WAL. Residual: a foreign WAL whose replay is structurally valid (`integrity_check` does not compare
 FTS or `vec0` contents) is kept, as is a WAL replayed onto a byte-identical backup.
-SG150 (A36-02): the reminder stops offering the move-back once the index has changed (its size and mtime are in the set-aside name), rather than refusing writers, which would block `atlas index`/`atlas mcp` beside any set-aside WAL and need a guard on every write path.
+SG150 (A36-02): the reminder stops offering the move-back once the index has changed (its size and mtime are in the set-aside name), rather than refusing writers, which would block `atlas index`/`atlas mcp` beside any set-aside WAL and need a guard on every write path. SG190 (A41-01): the move-back is offered only when no live connection holds the index (`holders`/probe, and a read-only open reads once so it is seen), not done by Atlas under the open lock, which would need a new command.
 

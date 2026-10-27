@@ -27,7 +27,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { closeDatabase } from '../../src/core/db/index.js';
+import { closeDatabase, openDatabase } from '../../src/core/db/index.js';
 import { openProjectIndex } from '../../src/core/project.js';
 import { startServer } from '../../src/web/server.js';
 import { SAMPLE } from '../cli/helpers.js';
@@ -190,7 +190,7 @@ describe('AUDIT-41 consistent surfaces (pinned)', () => {
       const db = dbOf(root);
       const msg =
         `atlas: index ${db}: cannot check ${db}-wal, left by a process that stopped ` +
-        '(EIO: i/o error, read); it is kept: free disk space (or fix the cause) and retry';
+        '(EIO: i/o error, read); it is kept: fix the cause and retry';
       for (const args of [
         ['search', 'add', '--cwd', root],
         ['index', root],
@@ -225,38 +225,50 @@ describe('AUDIT-41 consistent surfaces (pinned)', () => {
     },
     120_000,
   );
+
+  it('SG190: while a connection holds the index the reminder says to stop every Atlas process, not to move the WAL back; once none does, the move-back says to stop them first', () => {
+    const root = setAsideByRead();
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const db = openDatabase(dbOf(root), { readonly: true, fileMustExist: true }); // no query yet
+    const held = cli(['search', 'add', '--cwd', root, '--limit', '1']);
+    closeDatabase(db);
+    expect(held.code, held.err).toBe(0);
+    expect(held.err).toMatch(/which a running Atlas process has open: stop every Atlas process/);
+    expect(held.err).not.toMatch(/move it back/);
+    const free = cli(['search', 'add', '--cwd', root, '--limit', '1']);
+    expect(free.err).toMatch(
+      /stop every Atlas process on the project, then move it back to .*-wal before anything writes/,
+    );
+    expect(aside(root)).toHaveLength(1);
+  }, 60_000);
 });
 
 describe('AUDIT-41 findings', () => {
-  it.fails(
-    'A41-01: while `atlas serve` has the index open, the reminder does not offer the move-back, and following it does not leave the dashboard answering (200) from an index the CLI refuses as malformed',
-    async () => {
-      const root = setAsideByRead();
-      vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
-      const { db } = openProjectIndex(root, { readonly: true }); // a running `atlas serve`
-      const handle = await startServer(db, root, { port: 0, host: '127.0.0.1' });
-      cleanup.push(async () => {
-        await handle.close();
-        closeDatabase(db);
-      });
-      const held = cli(['search', 'add', '--cwd', root, '--limit', '1']);
-      expect(held.code, held.err).toBe(0);
-      // Follow it, as the reminder says.
-      const [name] = aside(root);
-      renameSync(join(root, '.atlas', name!), `${dbOf(root)}-wal`);
-      const after = cli(['search', 'add', '--cwd', root, '--limit', '1']);
-      const stats = await fetch(new URL('/api/stats', handle.url));
-      const body = (await stats.json()) as { docs?: number };
-      // Today: `… if its writes belong there, move it back to <db>-wal before anything writes …`
-      // is printed while the dashboard holds the index; after the move the CLI exits 1 (`unreadable
-      // (database disk image is malformed) … delete <db> …`) while /api/stats answers 200 with the
-      // set-aside WAL's 4 docs mixed into the replacement.
-      expect(held.err).not.toMatch(/move it back/);
-      expect(stats.status === 200, `${stats.status} vs exit ${after.code}`).toBe(after.code === 0);
-      expect(body.docs ?? 0).toBe(0);
-    },
-    90_000,
-  );
+  it('A41-01: while `atlas serve` has the index open, the reminder does not offer the move-back, and following it does not leave the dashboard answering (200) from an index the CLI refuses as malformed', async () => {
+    const root = setAsideByRead();
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const { db } = openProjectIndex(root, { readonly: true }); // a running `atlas serve`
+    const handle = await startServer(db, root, { port: 0, host: '127.0.0.1' });
+    cleanup.push(async () => {
+      await handle.close();
+      closeDatabase(db);
+    });
+    const held = cli(['search', 'add', '--cwd', root, '--limit', '1']);
+    expect(held.code, held.err).toBe(0);
+    // Follow it, as the reminder says.
+    const [name] = aside(root);
+    renameSync(join(root, '.atlas', name!), `${dbOf(root)}-wal`);
+    const after = cli(['search', 'add', '--cwd', root, '--limit', '1']);
+    const stats = await fetch(new URL('/api/stats', handle.url));
+    const body = (await stats.json()) as { docs?: number };
+    // Today: `… if its writes belong there, move it back to <db>-wal before anything writes …`
+    // is printed while the dashboard holds the index; after the move the CLI exits 1 (`unreadable
+    // (database disk image is malformed) … delete <db> …`) while /api/stats answers 200 with the
+    // set-aside WAL's 4 docs mixed into the replacement.
+    expect(held.err).not.toMatch(/move it back/);
+    expect(stats.status === 200, `${stats.status} vs exit ${after.code}`).toBe(after.code === 0);
+    expect(body.docs ?? 0).toBe(0);
+  }, 90_000);
 
   (CC ? it.fails : it.skip)(
     'A41-02: the library throws every `cannot check` refusal as a SqliteError with a code, whatever stopped the check',
@@ -275,7 +287,7 @@ describe('AUDIT-41 findings', () => {
     60_000,
   );
 
-  (CC ? it.fails : it.skip)(
+  (CC ? it : it.skip)(
     'A41-03: a read error during the check is refused with a stable cause and the remedy the README gives, not "free disk space" and not a temporary file name',
     () => {
       const root = indexed();

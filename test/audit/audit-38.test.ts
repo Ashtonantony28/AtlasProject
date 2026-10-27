@@ -332,7 +332,7 @@ describe('SG150 the two checks and the result rows (pinned)', () => {
     const row = '*** in database main ***\nPage 12: never used';
     hook.integrity = checkSays(row, row);
     hook.read = (p) => (p.endsWith('.check') ? 0 : undefined);
-    expectKeptAndRefused(root, /cannot check .*\(short read of .*\.check at byte 0 of \d+\); it is kept/);
+    expectKeptAndRefused(root, /cannot check .*\(short read of .*index\.db at byte 0 of \d+\); it is kept/);
   }, 30_000);
 });
 
