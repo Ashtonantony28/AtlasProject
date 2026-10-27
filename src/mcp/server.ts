@@ -14,7 +14,7 @@ import {
 import { closeOnSignal, nameCorrupt } from '../core/db/database.js';
 import { indexRepo } from '../core/ingest/index.js';
 import { buildGraphDot, buildGraphJson } from '../core/graph/index.js';
-import { createEmbedder, readFileFromRoot, search } from '../core/vector/index.js';
+import { createEmbedder, readIndexedSource, search } from '../core/vector/index.js';
 import {
   formatDriftReport,
   pageDriftReport,
@@ -211,8 +211,12 @@ export function handleSymbolTool(ctx: McpContext, args: { name: string; limit?: 
     .slice(0, args.limit ?? 20);
   const sources = new Map<number, string[] | null>();
   return matches.map(({ s }) => {
+    const file = files.get(s.file_id);
     if (!sources.has(s.file_id)) {
-      sources.set(s.file_id, readFileFromRoot(ctx.root, ctx.db, s.file_id)?.split('\n') ?? null);
+      sources.set(
+        s.file_id,
+        file ? (readIndexedSource(ctx.root, file).source?.split('\n') ?? null) : null,
+      );
     }
     const lines = sources.get(s.file_id);
     const end = Math.min(s.end_line, s.start_line + DEFAULT_EXCERPT_LINES - 1);
@@ -222,7 +226,7 @@ export function handleSymbolTool(ctx: McpContext, args: { name: string; limit?: 
       qualifiedName: s.qualified_name,
       kind: s.kind,
       exported: s.exported === 1,
-      file: files.get(s.file_id)?.path ?? null,
+      file: file?.path ?? null,
       startLine: s.start_line,
       endLine: s.end_line,
       signature: s.signature,
@@ -279,10 +283,10 @@ export function handleDriftTool(
 export function handleDocsTool(ctx: McpContext, args: { target?: string }) {
   if (args.target) return findDoc(ctx.db, ctx.docsDir, args.target);
   return listDocs(ctx.db, ctx.docsDir).map((d) => ({
-      kind: d.kind,
-      target: d.target,
-      source: d.source,
-      sourceHash: d.sourceHash,
+    kind: d.kind,
+    target: d.target,
+    source: d.source,
+    sourceHash: d.sourceHash,
     chars: d.content.length,
   }));
 }
@@ -379,7 +383,9 @@ export function createAtlasMcpServer(ctx: McpContext): McpServer {
         'Export the symbol graph (nodes + calls/imports/extends/implements edges), bounded: nodes ordered by id, edges among them, with `totals` and `truncated`. Scope it with `file` or `symbol`.',
       inputSchema: {
         format: z.enum(['json', 'dot']).optional().describe('json (default) or Graphviz dot.'),
-        file: graphParams.file.describe('Only symbols in files whose path contains this substring.'),
+        file: graphParams.file.describe(
+          'Only symbols in files whose path contains this substring.',
+        ),
         symbol: graphParams.symbol.describe(
           'Only the neighbourhood of symbols with this name or qualified name.',
         ),
@@ -406,7 +412,9 @@ export function createAtlasMcpServer(ctx: McpContext): McpServer {
         strict: z
           .boolean()
           .optional()
-          .describe('Undocumented exported symbols also set `failing` (like `atlas drift --strict`).'),
+          .describe(
+            'Undocumented exported symbols also set `failing` (like `atlas drift --strict`).',
+          ),
         limit: driftParams.limit.describe(
           'Max stale and max undocumented entries (default 100); `totals` counts all.',
         ),
