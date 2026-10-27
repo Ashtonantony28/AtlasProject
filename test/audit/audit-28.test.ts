@@ -97,23 +97,39 @@ describe('A28-01 (high) a WAL switch refused while another opener finishes it (S
   // Two processes open a 0-byte index (beside a stale `-wal`). One gets `SQLITE_BUSY` at once while
   // the other switches the file to WAL. If the other has written page 1 by the time this one
   // checks the size, `switchToWal` gives up, though nothing holds a lock any more.
-  it.fails(
-    'A28-01 an opener whose switch was refused retries once the other opener has switched the file',
-    () => {
-      const path = join(tmp(), 'index.db');
-      const racer = new Database(path); // a 0-byte file another process is switching to WAL
-      cleanup.push(() => racer.close());
-      racer.exec('BEGIN IMMEDIATE');
-      hook.stat = (p) => {
-        if (p !== path || !racer.inTransaction) return;
-        // The racer finishes its switch between this opener's refusal and its size check.
-        racer.exec('COMMIT');
-        racer.pragma('journal_mode = WAL');
-      };
-      const db = open(path);
-      expect(db.pragma('journal_mode', { simple: true })).toBe('wal');
-    },
-  );
+  it('A28-01 an opener whose switch was refused retries once the other opener has switched the file', () => {
+    const path = join(tmp(), 'index.db');
+    const racer = new Database(path); // a 0-byte file another process is switching to WAL
+    cleanup.push(() => racer.close());
+    racer.exec('BEGIN IMMEDIATE');
+    hook.stat = (p) => {
+      if (p !== path || !racer.inTransaction) return;
+      // The racer finishes its switch when this opener checks the size (before SG105: on refusal).
+      racer.exec('COMMIT');
+      racer.pragma('journal_mode = WAL');
+    };
+    const db = open(path);
+    expect(db.pragma('journal_mode', { simple: true })).toBe('wal');
+  });
+
+  it('A28-01 an opener whose stale-WAL delete lost the race retries once the other opener has switched the file', () => {
+    // CI's `disk I/O error`: both openers' first reads delete the stale `-wal`; this one's fails
+    // with SQLITE_IOERR_DELETE_NOENT after the other has deleted it and written page 1.
+    const path = join(tmp(), 'index.db');
+    writeFileSync(path, '');
+    let raced = false;
+    hook.wal = (p) => {
+      if (p !== path || raced) return;
+      raced = true;
+      const racer = new Database(path);
+      racer.pragma('journal_mode = WAL');
+      racer.close();
+      throw new Database.SqliteError('disk I/O error', 'SQLITE_IOERR_DELETE_NOENT');
+    };
+    const db = open(path);
+    expect(raced).toBe(true);
+    expect(db.pragma('journal_mode', { simple: true })).toBe('wal');
+  });
 });
 
 describe('SG90 switching an empty file to WAL (pinned)', () => {

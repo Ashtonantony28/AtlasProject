@@ -98,9 +98,12 @@ function createWalFile(dbPath: string): void {
  * `journal_mode = WAL`. While the file is still empty, another process switching it at the same
  * time makes SQLite refuse the switch at once (`SQLITE_BUSY`), and two first reads both try to
  * delete a stale `-wal` (`SQLITE_IOERR_DELETE_NOENT`): both are retried until the busy timeout.
+ * The size is taken before the first try: by the time of a refusal, the other process may have
+ * written page 1 already.
  */
 function switchToWal(db: DB, dbPath: string): void {
   const deadline = Date.now() + BUSY_TIMEOUT_MS;
+  const empty = statSync(dbPath, { throwIfNoEntry: false })?.size === 0;
   for (;;) {
     try {
       db.pragma('journal_mode = WAL');
@@ -108,7 +111,6 @@ function switchToWal(db: DB, dbPath: string): void {
     } catch (err) {
       const code = (err as { code?: unknown } | null)?.code;
       const transient = code === 'SQLITE_BUSY' || code === 'SQLITE_IOERR_DELETE_NOENT';
-      const empty = statSync(dbPath, { throwIfNoEntry: false })?.size === 0;
       if (!transient || !empty || Date.now() >= deadline) throw err;
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, LOCK_POLL_MS);
     }
