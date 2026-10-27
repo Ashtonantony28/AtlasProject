@@ -1,13 +1,13 @@
 ---
 kind: architecture
 target: architecture
-source_hash: f3b416c6203b5e853628d160164e5a8470fc2fc5811e74d76a47249e897cd650
+source_hash: 775f528293bf9c18cd06de48e95aa5256af4557c6d0fe0dfcd1da429ace40a6b
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 233 files, 1798 symbols, 8656 edges
+**Totals:** 234 files, 1825 symbols, 8767 edges
 
 ## Modules
 
@@ -20,7 +20,6 @@ This codebase's modules collaborate through the graph above.
 - `fixtures/graph/web/cjs/Model.js` — javascript, loc=5, 2 symbols
 - `fixtures/graph/web/cjs/app.js` — javascript, loc=10, 2 symbols
 - `fixtures/graph/web/cjs/main.js` — javascript, loc=16, 5 symbols
-- `fixtures/graph/web/consumer.js` — javascript, loc=7, 2 symbols
 - `fixtures/graph/web/geo.ts` — typescript, loc=15, 6 symbols
 - `fixtures/graph/web/handlers.js` — javascript, loc=18, 4 symbols
 - `fixtures/graph/web/routes.js` — javascript, loc=11, 3 symbols
@@ -48,7 +47,7 @@ This codebase's modules collaborate through the graph above.
 - `src/cli/commands/ciCommentCmd.ts` — typescript, loc=165, 7 symbols
 - `src/cli/commands/indexCmd.ts` — typescript, loc=106, 6 symbols
 - `src/core/config.ts` — typescript, loc=134, 14 symbols
-- `src/core/db/database.ts` — typescript, loc=663, 42 symbols
+- `src/core/db/database.ts` — typescript, loc=631, 40 symbols
 - `src/core/db/repo.ts` — typescript, loc=413, 44 symbols
 - `src/core/db/schema.ts` — typescript, loc=187, 3 symbols
 - `src/core/db/types.ts` — typescript, loc=79, 9 symbols
@@ -61,18 +60,19 @@ This codebase's modules collaborate through the graph above.
 - `src/core/ingest/lock.ts` — typescript, loc=35, 3 symbols
 - `src/core/ingest/walker.ts` — typescript, loc=202, 17 symbols
 - `src/core/params.ts` — typescript, loc=93, 22 symbols
+- `src/core/parse/parser.ts` — typescript, loc=160, 12 symbols
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=726)
+- `src/core/db/database.ts` (degree=719)
 - `src/core/db/repo.ts` (degree=455)
 - `src/mcp/server.ts` (degree=373)
 - `src/core/parse/ts.ts` (degree=296)
 - `src/core/ingest/indexer.ts` (degree=234)
 - `src/core/graph/modules.ts` (degree=184)
 - `src/core/synth/persist.ts` (degree=161)
-- `src/core/db/index.ts` (degree=140)
-- `test/cli/helpers.ts` (degree=136)
-- `test/audit/audit-31.test.ts` (degree=131)
+- `test/audit/audit-38.test.ts` (degree=147)
+- `src/core/db/index.ts` (degree=141)
+- `test/cli/helpers.ts` (degree=137)
 
 _Generated offline (mock client)._

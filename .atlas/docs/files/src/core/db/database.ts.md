@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/db/database.ts
-source_hash: de8d1729b803e23be77838aa93ed30000cb31ee8059089e7dc759a64f2cc36dd
+source_hash: fc3995787158dbab7c7af744d835425c49216da2cd6ef6e5ab48df89c91afa3e
 ---
 # module src/core/db/database.ts
 
@@ -16,18 +16,17 @@ source_hash: de8d1729b803e23be77838aa93ed30000cb31ee8059089e7dc759a64f2cc36dd
 - `OpenDbOptions` — interface (src/core/db/database.ts:43)
 - `loadVecExtension` — function (src/core/db/database.ts:49)
 - `openDatabase` — function (src/core/db/database.ts:58)
-- `checkLeftoverWal` — function (src/core/db/database.ts:124)
-- `decideWal` — function (src/core/db/database.ts:138)
-- `walOwner` — function (src/core/db/database.ts:150)
-- `leftoverWal` — function (src/core/db/database.ts:158)
-- `Holders` — interface (src/core/db/database.ts:168)
-- `liveWal` — function (src/core/db/database.ts:174)
-- `immediate` — function (src/core/db/database.ts:533)
-- `nameBusy` — function (src/core/db/database.ts:562)
-- `nameCorrupt` — function (src/core/db/database.ts:581)
-- `closeOnSignal` — function (src/core/db/database.ts:602)
-- `runMigrations` — function (src/core/db/database.ts:638)
-- `closeDatabase` — function (src/core/db/database.ts:661)
+- `checkLeftoverWal` — function (src/core/db/database.ts:117)
+- `decideWal` — function (src/core/db/database.ts:131)
+- `walOwner` — function (src/core/db/database.ts:143)
+- `leftoverWal` — function (src/core/db/database.ts:151)
+- `Holders` — interface (src/core/db/database.ts:161)
+- `immediate` — function (src/core/db/database.ts:501)
+- `nameBusy` — function (src/core/db/database.ts:530)
+- `nameCorrupt` — function (src/core/db/database.ts:549)
+- `closeOnSignal` — function (src/core/db/database.ts:570)
+- `runMigrations` — function (src/core/db/database.ts:606)
+- `closeDatabase` — function (src/core/db/database.ts:629)
 
 References: `src/core/db/database.ts:23`, `src/core/db/database.ts:26`, `src/core/db/database.ts:28`, `src/core/db/database.ts:30`, `src/core/db/database.ts:32`.
 
