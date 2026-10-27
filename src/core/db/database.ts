@@ -9,13 +9,14 @@ import {
   openSync,
   readFileSync,
   readSync,
+  readdirSync,
   realpathSync,
   renameSync,
   rmSync,
   statSync,
 } from 'node:fs';
 import { endianness } from 'node:os';
-import { dirname } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { MIGRATIONS } from './schema.js';
 
 export type DB = Database.Database;
@@ -105,12 +106,16 @@ export function openDatabase(dbPath: string, opts: OpenDbOptions = {}): DB {
  * - with the WAL replayed, the file passes `PRAGMA integrity_check`: kept (its own WAL, copied or
  *   moved with it);
  * - it fails, and the `-shm` says no checkpoint of the WAL ever started (so the file was never
- *   written from it): the WAL is renamed aside, never deleted, and reported on stderr;
+ *   written from it): the WAL is renamed aside, never deleted, and reported on stderr, then on
+ *   every later open while the renamed file is there;
+ * - the check cannot run (a full disk, `EDQUOT`, `EFBIG`, `sqlite-vec` not loading): refused with
+ *   the cause, the WAL left in place (A34-01);
  * - anything else (no `-shm`, a checkpoint started, not movable) fails with `nameCorrupt`'s message.
  * Timestamps play no part. Returns the lock's release.
  */
 function checkLeftoverWal(dbPath: string): () => void {
   const path = walOwner(dbPath);
+  reportAside(path);
   if (!leftoverWal(path) || liveWal(holders(path))) return () => undefined;
   const release = lockOpens(path);
   try {
@@ -127,7 +132,7 @@ function decideWal(dbPath: string, path: string): void {
   if (liveWal(before)) return;
   // A live connection to a file renamed over by this one: its WAL is still in use (A33-05).
   if (before.shm) throw corrupt(dbPath, 'another process still has the replaced index open');
-  if (integrityOk(path)) return;
+  if (integrityOk(dbPath, path)) return;
   const after = holders(path) ?? probe(path);
   if (!after.db && !after.shm && neverCheckpointed(path) && setAside(path)) return;
   throw corrupt(dbPath, 'database disk image is malformed');
@@ -164,7 +169,9 @@ function liveWal(h: Holders | undefined): boolean {
 
 /**
  * Who holds locks on `path` and its `-shm`, read from the kernel's lock table: passive, so unlike a
- * probe it takes no lock another opener could mistake for a holder. Undefined where there is none.
+ * probe it takes no lock another opener could mistake for a holder. Entries are matched by device
+ * and inode (A34-02). Undefined where there is none, or where a lock is on the inode number on
+ * another device (another filesystem, or one whose locks name another device, as overlayfs may).
  */
 function holders(path: string): Holders | undefined {
   let table: string;
@@ -173,12 +180,24 @@ function holders(path: string): Holders | undefined {
   } catch {
     return undefined;
   }
-  const locked = new Set(Array.from(table.matchAll(/ [0-9a-f]+:[0-9a-f]+:(\d+) /g), (m) => m[1]));
+  const locks = Array.from(table.matchAll(/ ([0-9a-f]+):([0-9a-f]+):(\d+) /g), (m) => ({
+    dev: `${parseInt(m[1]!, 16)}:${parseInt(m[2]!, 16)}`,
+    ino: m[3],
+  }));
+  let unsure = false;
   const held = (f: string): boolean => {
-    const ino = statSync(f, { bigint: true, throwIfNoEntry: false })?.ino;
-    return ino !== undefined && locked.has(String(ino));
+    const st = statSync(f, { bigint: true, throwIfNoEntry: false });
+    if (!st) return false;
+    // glibc's encoding of `st_dev`; /proc/locks prints the major and minor numbers.
+    const major = ((st.dev >> 8n) & 0xfffn) | ((st.dev >> 32n) & ~0xfffn);
+    const minor = (st.dev & 0xffn) | ((st.dev >> 12n) & ~0xffn);
+    const same = locks.filter((l) => l.ino === String(st.ino));
+    if (same.some((l) => l.dev === `${major}:${minor}`)) return true;
+    unsure ||= same.length > 0;
+    return false;
   };
-  return { db: held(path), shm: held(`${path}-shm`) };
+  const h = { db: held(path), shm: held(`${path}-shm`) };
+  return unsure ? undefined : h;
 }
 
 /** `holders` by a probe (under the open lock). When it cannot tell, the WAL is never set aside. */
@@ -217,9 +236,10 @@ function lockOpens(path: string): () => void {
 /**
  * `PRAGMA integrity_check` of `path` with its WAL replayed, on a read-only connection (so a mix is
  * never checkpointed into the file) through hard links, so the check is not taken for a live
- * connection to `path` and its `-shm`. Without hard links it runs on `path` itself.
+ * connection to `path` and its `-shm`. Without hard links it runs on `path` itself. False only when
+ * SQLite reports corruption; an error that stops the check from running is thrown, named.
  */
-function integrityOk(path: string): boolean {
+function integrityOk(dbPath: string, path: string): boolean {
   const link = `${path}.${process.pid}.${Date.now()}.check`;
   const made: string[] = [];
   try {
@@ -244,8 +264,14 @@ function integrityOk(path: string): boolean {
     }
   } catch (err) {
     const code = (err as { code?: unknown } | null)?.code;
-    if (typeof code !== 'string' || !code.startsWith('SQLITE_BUSY')) return false;
+    if (typeof code === 'string' && /^SQLITE_(CORRUPT|NOTADB)/.test(code)) return false;
     nameBusy(err, 'integrity check');
+    if (err instanceof Error && !(typeof code === 'string' && code.startsWith('SQLITE_BUSY'))) {
+      err.message =
+        `index ${dbPath}: cannot check ${path}-wal, left by a process that stopped ` +
+        `(${typeof code === 'string' ? `${code}: ` : ''}${err.message}); it is kept: free disk ` +
+        'space (or fix the cause) and retry';
+    }
     throw err;
   } finally {
     for (const f of made) rmSync(f, { force: true });
@@ -263,6 +289,23 @@ function setAside(path: string): boolean {
   }
   process.stderr.write(`atlas: ${wal} does not belong to ${path}; moved it to ${aside}\n`);
   return true;
+}
+
+/** Says on stderr which WALs `setAside` renamed beside `path`, on every open until they are gone. */
+function reportAside(path: string): void {
+  const prefix = `${basename(path)}-wal.foreign-`;
+  let names: string[];
+  try {
+    names = readdirSync(dirname(path)).filter((f) => f.startsWith(prefix));
+  } catch {
+    return;
+  }
+  for (const f of names) {
+    process.stderr.write(
+      `atlas: ${join(dirname(path), f)} was set aside from ${path}; if its writes belong there, ` +
+        `move it back to ${path}-wal before anything writes the index, otherwise delete it\n`,
+    );
+  }
 }
 
 function corrupt(dbPath: string, cause: string): Error {
