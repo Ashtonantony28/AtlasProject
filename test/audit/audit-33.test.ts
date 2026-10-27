@@ -2,6 +2,7 @@
 // and currently fails, reproducing one finding in AUDIT-33.md (IDs A33-xx); when it is fixed it
 // turns red and should become a plain `it`. Plain `it` blocks pin what was attacked and held: SG120
 // (the stale/foreign-WAL check in `openDatabase`, `nameCorrupt`, `closeOnSignal`) and SG105.
+// A33-01..05 are fixed by SG130/SG135 (plain `it`); their "Today:" notes describe SG120.
 //
 // Processes run as `node --import tsx` (not the `tsx` binary, which hides signal behaviour; see
 // AUDIT-31). A "killed writer" is a process that commits and is SIGKILLed before it checkpoints,
@@ -122,7 +123,7 @@ function expectReplacementOrRefusal(root: string): void {
 }
 
 describe('A33-01 (high) an index moved or copied with its own WAL loses the WAL’s commits', () => {
-  it.fails(
+  it(
     'A33-01 `cp -a` of a project (timestamps preserved) keeps the commits in its index.db-wal',
     () => {
       const src = indexed();
@@ -136,7 +137,7 @@ describe('A33-01 (high) an index moved or copied with its own WAL loses the WAL�
     60_000,
   );
 
-  it.fails(
+  it(
     'A33-01 renaming index.db, -shm and -wal (mv, in place or to another directory) keeps the WAL’s commits',
     () => {
       const root = indexed();
@@ -158,7 +159,7 @@ describe('A33-01 (high) an index moved or copied with its own WAL loses the WAL�
 });
 
 describe('A33-02 (high) two openers racing on a replaced index: one replays the foreign WAL', () => {
-  it.fails(
+  it(
     'A33-02 an opener whose probe meets another opener’s probe does not replay the foreign WAL',
     async () => {
       const root = indexed();
@@ -194,7 +195,7 @@ describe('A33-02 (high) two openers racing on a replaced index: one replays the 
 });
 
 describe('A33-03 (medium) the foreign-WAL check is skipped and SQLite replays the WAL', () => {
-  it.fails(
+  it(
     'A33-03 a symlinked index.db replaced beside its target’s stale WAL is not mixed with it',
     () => {
       const root = indexed();
@@ -212,7 +213,7 @@ describe('A33-03 (medium) the foreign-WAL check is skipped and SQLite replays th
     60_000,
   );
 
-  it.fails(
+  it(
     'A33-03 an index replaced beside a stale WAL with no -shm is not mixed with it',
     () => {
       const root = indexed();
@@ -240,7 +241,7 @@ describe('A33-03 (medium) the foreign-WAL check is skipped and SQLite replays th
 });
 
 describe('A33-04 (low) a replacement within one timestamp tick of the WAL is not detected', () => {
-  it.fails(
+  it(
     'A33-04 an index replaced when its ctime does not exceed the WAL’s mtime (1 s/2 s filesystems, clock skew) is not mixed with the WAL',
     () => {
       const root = indexed();
@@ -259,7 +260,7 @@ describe('A33-04 (low) a replacement within one timestamp tick of the WAL is not
 });
 
 describe('A33-05 (low) a live `atlas mcp` whose index is renamed over loses its WAL', () => {
-  it.fails(
+  it(
     'A33-05 the WAL of a live holder is never unlinked, and the CLI never fails with a bare disk I/O error',
     async () => {
       const root = indexed();
