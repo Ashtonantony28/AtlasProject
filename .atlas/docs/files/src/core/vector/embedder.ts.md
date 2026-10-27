@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/vector/embedder.ts
-source_hash: c0a66e7633105f1eb4466c18423263228ed8665a5a546c5ee2f12866ed459c7a
+source_hash: 61eee241c2f55985afd8161ee0c2f831a941e49fb55462c34eae1a16a3569748
 ---
 # module src/core/vector/embedder.ts
 
