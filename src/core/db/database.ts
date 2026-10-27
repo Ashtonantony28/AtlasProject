@@ -91,6 +91,13 @@ export function openDatabase(dbPath: string, opts: OpenDbOptions = {}): DB {
         nameBusy(err, op);
         throw err;
       }
+    } else {
+      // Read once, so the connection holds the index (and `holders` sees it) from the open on.
+      try {
+        db.pragma('schema_version');
+      } catch {
+        // The first query reports it.
+      }
     }
 
     return db;
@@ -257,8 +264,8 @@ function integrityOk(dbPath: string, path: string): boolean {
   try {
     const first = integrityResult(file);
     if (first === 'ok') return true;
-    readAll(file);
-    readAll(`${file}-wal`);
+    readAll(file, path);
+    readAll(`${file}-wal`, `${path}-wal`);
     const second = integrityResult(file);
     if (second === 'ok') return true;
     const code = /error code=(\d+)/.exec(first)?.[1];
@@ -276,13 +283,19 @@ function integrityOk(dbPath: string, path: string): boolean {
           : err.message;
       err.message =
         `index ${dbPath}: cannot check ${path}-wal, left by a process that stopped ` +
-        `(${cause}); it is kept: free disk space (or fix the cause) and retry`;
+        `(${cause}); it is kept: ` +
+        (typeof code === 'string' && SPACE.test(code)
+          ? 'free disk space (or fix the cause) and retry'
+          : 'fix the cause and retry');
     }
     throw err;
   } finally {
     for (const f of made) rmSync(f, { force: true });
   }
 }
+
+/** Codes for a check stopped by a full disk, a quota or a file size limit. */
+const SPACE = /^(SQLITE_FULL|SQLITE_IOERR_(SHMSIZE|WRITE|TRUNCATE)|ENOSPC|EDQUOT|EFBIG)$/;
 
 /** `PRAGMA integrity_check(1)` of `file`, or the corruption SQLite throws instead (named). */
 function integrityResult(file: string): string {
@@ -307,15 +320,15 @@ function integrityResult(file: string): string {
   }
 }
 
-/** Reads every byte of `file`; throws the read error, or on a short read. */
-function readAll(file: string): void {
+/** Reads every byte of `file`; throws the read error, or on a short read of `name`. */
+function readAll(file: string, name: string): void {
   const fd = openSync(file, 'r');
   try {
     const size = fstatSync(fd).size;
     const buf = Buffer.alloc(1 << 20);
     for (let at = 0; at < size; ) {
       const n = readSync(fd, buf, 0, Math.min(buf.length, size - at), at);
-      if (n === 0) throw new Error(`short read of ${file} at byte ${at} of ${size}`);
+      if (n === 0) throw new Error(`short read of ${name} at byte ${at} of ${size}`);
       at += n;
     }
   } finally {
@@ -352,7 +365,8 @@ function fileState(path: string): string {
 /**
  * Says on stderr which WALs `setAside` renamed beside `path`, on every open until they are gone.
  * The move-back is offered only while `path` is as it was then and has no WAL of its own: after a
- * write, the set-aside WAL no longer fits it (A36-02).
+ * write, the set-aside WAL no longer fits it (A36-02). While a live connection holds `path`, a
+ * moved-back WAL would be mixed into what it reads, so it says to stop every Atlas process (A41-01).
  */
 function reportAside(path: string): void {
   const prefix = `${basename(path)}-wal.foreign-`;
@@ -369,15 +383,33 @@ function reportAside(path: string): void {
   } catch {
     state = '';
   }
+  const held = state !== '' && names.some((f) => f.endsWith(`-${state}`)) && inUse(path);
   for (const f of names) {
     const file = join(dirname(path), f);
     process.stderr.write(
-      state !== '' && f.endsWith(`-${state}`)
-        ? `atlas: ${file} was set aside from ${path}; if its writes belong there, ` +
-            `move it back to ${path}-wal before anything writes the index, otherwise delete it\n`
-        : `atlas: ${file} was set aside from ${path}, which may have been written since: ` +
-            'moving it back would corrupt the index; delete it\n',
+      state === '' || !f.endsWith(`-${state}`)
+        ? `atlas: ${file} was set aside from ${path}, which may have been written since: ` +
+            'moving it back would corrupt the index; delete it\n'
+        : held
+          ? `atlas: ${file} was set aside from ${path}, which a running Atlas process has open: ` +
+            'stop every Atlas process on the project (`atlas serve`, `atlas mcp`) first, then ' +
+            'run any `atlas` command to see what to do with it\n'
+          : `atlas: ${file} was set aside from ${path}; if its writes belong there, stop every ` +
+            `Atlas process on the project, then move it back to ${path}-wal before anything ` +
+            'writes the index, otherwise delete it\n',
     );
+  }
+}
+
+/** Whether a live connection may hold `path`, as `decideWal` reads it (probing under the open lock). */
+function inUse(path: string): boolean {
+  const h = holders(path);
+  if (h) return liveWal(h);
+  const release = lockOpens(path);
+  try {
+    return probe(path).db;
+  } finally {
+    release();
   }
 }
 
