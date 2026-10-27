@@ -3,6 +3,7 @@ import * as sqliteVec from 'sqlite-vec';
 import {
   closeSync,
   existsSync,
+  fstatSync,
   linkSync,
   lstatSync,
   mkdirSync,
@@ -237,7 +238,9 @@ function lockOpens(path: string): () => void {
  * `PRAGMA integrity_check` of `path` with its WAL replayed, on a read-only connection (so a mix is
  * never checkpointed into the file) through hard links, so the check is not taken for a live
  * connection to `path` and its `-shm`. Without hard links it runs on `path` itself. False only when
- * SQLite reports corruption; an error that stops the check from running is thrown, named.
+ * SQLite reports corruption twice, the same both times, and every byte of the file and WAL reads
+ * back: an I/O error during the check also shows as corruption (A36-01). An error that stops the
+ * check from running, or a page it could not read, is thrown, named.
  */
 function integrityOk(dbPath: string, path: string): boolean {
   const link = `${path}.${process.pid}.${Date.now()}.check`;
@@ -250,27 +253,30 @@ function integrityOk(dbPath: string, path: string): boolean {
   } catch {
     // No hard links here.
   }
+  const file = made.length === 3 ? link : path;
   try {
-    const db = new Database(made.length === 3 ? link : path, {
-      readonly: true,
-      fileMustExist: true,
-      timeout: BUSY_TIMEOUT_MS,
-    });
-    try {
-      loadVecExtension(db);
-      return db.pragma('integrity_check(1)', { simple: true }) === 'ok';
-    } finally {
-      db.close();
+    const first = integrityResult(file);
+    if (first === 'ok') return true;
+    readAll(file);
+    readAll(`${file}-wal`);
+    const second = integrityResult(file);
+    if (second === 'ok') return true;
+    const code = /error code=(\d+)/.exec(first)?.[1];
+    if (first !== second || (code !== undefined && (Number(code) & 0xff) !== 11)) {
+      throw new Error(`a page could not be read: ${first}`);
     }
+    return false;
   } catch (err) {
     const code = (err as { code?: unknown } | null)?.code;
-    if (typeof code === 'string' && /^SQLITE_(CORRUPT|NOTADB)/.test(code)) return false;
     nameBusy(err, 'integrity check');
     if (err instanceof Error && !(typeof code === 'string' && code.startsWith('SQLITE_BUSY'))) {
+      const cause =
+        typeof code === 'string' && !err.message.startsWith(code)
+          ? `${code}: ${err.message}`
+          : err.message;
       err.message =
         `index ${dbPath}: cannot check ${path}-wal, left by a process that stopped ` +
-        `(${typeof code === 'string' ? `${code}: ` : ''}${err.message}); it is kept: free disk ` +
-        'space (or fix the cause) and retry';
+        `(${cause}); it is kept: free disk space (or fix the cause) and retry`;
     }
     throw err;
   } finally {
@@ -278,10 +284,52 @@ function integrityOk(dbPath: string, path: string): boolean {
   }
 }
 
-/** Renames the WAL to `<db>-wal.foreign-<ms>` and says so on stderr. False if it cannot. */
+/** `PRAGMA integrity_check(1)` of `file`, or the corruption SQLite throws instead (named). */
+function integrityResult(file: string): string {
+  try {
+    const db = new Database(file, {
+      readonly: true,
+      fileMustExist: true,
+      timeout: BUSY_TIMEOUT_MS,
+    });
+    try {
+      loadVecExtension(db);
+      return String(db.pragma('integrity_check(1)', { simple: true }));
+    } finally {
+      db.close();
+    }
+  } catch (err) {
+    const code = (err as { code?: unknown } | null)?.code;
+    if (typeof code === 'string' && /^SQLITE_(CORRUPT|NOTADB)/.test(code)) {
+      return `${code}: ${(err as Error).message}`;
+    }
+    throw err;
+  }
+}
+
+/** Reads every byte of `file`; throws the read error, or on a short read. */
+function readAll(file: string): void {
+  const fd = openSync(file, 'r');
+  try {
+    const size = fstatSync(fd).size;
+    const buf = Buffer.alloc(1 << 20);
+    for (let at = 0; at < size; ) {
+      const n = readSync(fd, buf, 0, Math.min(buf.length, size - at), at);
+      if (n === 0) throw new Error(`short read of ${file} at byte ${at} of ${size}`);
+      at += n;
+    }
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/**
+ * Renames the WAL to `<db>-wal.foreign-<ms>-<state>` and says so on stderr. False if it cannot.
+ * `<state>` is the file's size and mtime then, so `reportAside` can tell once it has been written.
+ */
 function setAside(path: string): boolean {
   const wal = `${path}-wal`;
-  const aside = `${wal}.foreign-${Date.now()}`;
+  const aside = `${wal}.foreign-${Date.now()}-${fileState(path)}`;
   try {
     renameSync(wal, aside);
   } catch {
@@ -291,7 +339,21 @@ function setAside(path: string): boolean {
   return true;
 }
 
-/** Says on stderr which WALs `setAside` renamed beside `path`, on every open until they are gone. */
+/** `path`'s size and mtime, or '' when unknown. */
+function fileState(path: string): string {
+  try {
+    const st = statSync(path, { bigint: true, throwIfNoEntry: false });
+    return st ? `${st.size}-${st.mtimeNs}` : '';
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Says on stderr which WALs `setAside` renamed beside `path`, on every open until they are gone.
+ * The move-back is offered only while `path` is as it was then and has no WAL of its own: after a
+ * write, the set-aside WAL no longer fits it (A36-02).
+ */
 function reportAside(path: string): void {
   const prefix = `${basename(path)}-wal.foreign-`;
   let names: string[];
@@ -300,10 +362,21 @@ function reportAside(path: string): void {
   } catch {
     return;
   }
+  if (names.length === 0) return;
+  let state = fileState(path);
+  try {
+    if ((statSync(`${path}-wal`, { throwIfNoEntry: false })?.size ?? 0) > 0) state = '';
+  } catch {
+    state = '';
+  }
   for (const f of names) {
+    const file = join(dirname(path), f);
     process.stderr.write(
-      `atlas: ${join(dirname(path), f)} was set aside from ${path}; if its writes belong there, ` +
-        `move it back to ${path}-wal before anything writes the index, otherwise delete it\n`,
+      state !== '' && f.endsWith(`-${state}`)
+        ? `atlas: ${file} was set aside from ${path}; if its writes belong there, ` +
+            `move it back to ${path}-wal before anything writes the index, otherwise delete it\n`
+        : `atlas: ${file} was set aside from ${path}, which may have been written since: ` +
+            'moving it back would corrupt the index; delete it\n',
     );
   }
 }
