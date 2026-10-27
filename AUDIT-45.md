@@ -245,3 +245,5 @@ On `6ee8710` plus `AUDIT-45.md`, `test/audit/audit-45.test.ts` and the PLAN line
 | `npx vitest run --coverage --exclude 'test/audit/**'` | 65 files, 597 passed; thresholds pass | 100 s |
 | `npx vitest run --coverage --exclude 'test/audit/!(audit-45).test.ts'` | 66 files, 606 passed; thresholds pass | 61 s |
 | `npm run typecheck && npm run lint && npx vitest run test/audit/audit-45.test.ts` | pass; 9 tests; `src/` unchanged | 21 s |
+
+SG230 moved the `audit-45.test.ts` tests to the product suite (`test/db/leftoverWal.test.ts`) and deleted the audit file.

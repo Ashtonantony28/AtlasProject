@@ -250,7 +250,7 @@ const checkSays =
 const ioError = (msg: string, code: string): Error => Object.assign(new Error(msg), { code });
 
 /** An own WAL is kept and refused with the cause: nothing set aside, and its rows come back. */
-function expectKeptAndRefused(root: string, cause: RegExp): void {
+function expectKeptAndRefused(root: string, cause: RegExp | string): void {
   expect(() => open(root)).toThrow(cause);
   expect(aside(root)).toEqual([]);
   expect(statSync(`${dbOf(root)}-wal`).size).toBeGreaterThan(32);
@@ -353,19 +353,83 @@ describe('a foreign WAL', () => {
   });
 });
 
+/** A foreign WAL set aside by an open that is closed again: the move-back is on offer. */
+function setAside(): string {
+  const root = foreignWal();
+  closeDatabase(open(root));
+  expect(aside(root)).toHaveLength(1);
+  return root;
+}
+
+const HAS_OPEN =
+  /which a running Atlas process has open: stop every Atlas process on the project \(`atlas serve`, `atlas mcp`\) first, then run any `atlas` command to see what to do with it/;
+
+describe('a set-aside WAL while an Atlas process has the index open (SG190)', () => {
+  it('held by a writable connection (`atlas mcp`) is never offered back', () => {
+    const root = setAside();
+    open(root);
+    open(root, true);
+    expect(stderr.join('')).toMatch(HAS_OPEN);
+    expect(stderr.join('')).not.toMatch(/move it back/);
+  });
+
+  it('held by a read-only connection that has not queried yet (`atlas serve`)', () => {
+    const root = setAside();
+    open(root, true);
+    open(root, true);
+    expect(stderr.join('')).toMatch(HAS_OPEN);
+    expect(stderr.join('')).not.toMatch(/move it back/);
+  });
+
+  it('held by a connection found only by the probe (no /proc/locks)', () => {
+    const root = setAside();
+    open(root);
+    hook.locks = () => {
+      throw ioError('ENOENT: no such file or directory', 'ENOENT');
+    };
+    open(root, true);
+    expect(stderr.join('')).toMatch(HAS_OPEN);
+    expect(stderr.join('')).not.toMatch(/move it back/);
+  });
+
+  it('once every holder is closed, is offered back after stopping every Atlas process', () => {
+    const root = setAside();
+    closeDatabase(open(root));
+    open(root, true);
+    expect(stderr.join('')).toContain(
+      `; if its writes belong there, stop every Atlas process on the project, then move it back to ${dbOf(root)}-wal before anything writes the index, otherwise delete it\n`,
+    );
+    expect(stderr.join('')).not.toMatch(/has open/);
+  });
+
+  it("an error from the read-only open's read is not lost: the first query names it", () => {
+    const root = copyOf(sample);
+    writeFileSync(dbOf(root), Buffer.alloc(statSync(dbOf(root)).size, 7));
+    const db = open(root, true);
+    expect(() => db.prepare('SELECT count(*) FROM files').get()).toThrow(/file is not a database/);
+  });
+});
+
 describe('a WAL the check cannot decide is kept and the open refused', () => {
   it('when the check cannot run (full disk, I/O error)', () => {
-    for (const [code, msg] of [
-      ['SQLITE_FULL', 'database or disk is full'],
-      ['SQLITE_IOERR_READ', 'disk I/O error'],
+    const FREE = 'free disk space (or fix the cause) and retry';
+    const FIX = 'fix the cause and retry';
+    for (const [code, msg, remedy] of [
+      ['SQLITE_FULL', 'database or disk is full', FREE],
+      ['SQLITE_IOERR_SHMSIZE', 'disk I/O error', FREE],
+      ['SQLITE_IOERR_WRITE', 'disk I/O error', FREE],
+      ['SQLITE_IOERR_READ', 'disk I/O error', FIX],
+      ['SQLITE_IOERR_SHORT_READ', 'disk I/O error', FIX],
+      ['SQLITE_IOERR', 'disk I/O error', FIX],
     ] as const) {
       const root = ownWal();
       hook.open = (name) => {
         if (name.endsWith('.check')) throw new Database.SqliteError(msg, code);
       };
+      const db = dbOf(root);
       expectKeptAndRefused(
         root,
-        new RegExp(`cannot check .*index\\.db-wal.*\\(${code}: ${msg}\\); it is kept`),
+        `index ${db}: cannot check ${db}-wal, left by a process that stopped (${code}: ${msg}); it is kept: ${remedy}`,
       );
     }
   });
@@ -395,15 +459,22 @@ describe('a WAL the check cannot decide is kept and the open refused', () => {
     expectKeptAndRefused(root, CANNOT_CHECK);
   });
 
-  it('on a short read between the checks', () => {
-    const root = ownWal();
-    hook.integrity = checkSays(UNUSED_ROW, UNUSED_ROW);
-    hook.read = (p) => (p.endsWith('.check') ? 0 : undefined);
-    expectKeptAndRefused(
-      root,
-      /cannot check .*\(short read of .*index\.db at byte 0 of \d+\); it is kept/,
-    );
-  });
+  for (const [suffix, name] of [
+    ['.check', 'index.db'],
+    ['.check-wal', 'index.db-wal'],
+  ] as const) {
+    it(`on a short read of ${name} between the checks`, () => {
+      const root = ownWal();
+      hook.integrity = checkSays(UNUSED_ROW, UNUSED_ROW);
+      hook.read = (p) => (p.endsWith(suffix) ? 0 : undefined);
+      expectKeptAndRefused(
+        root,
+        new RegExp(
+          `cannot check [^ ]*-wal, left by a process that stopped \\(short read of ${root}/\\.atlas/${name.replace('.', '\\.')} at byte 0 of \\d+\\); it is kept`,
+        ),
+      );
+    });
+  }
 
   it('when the two checks disagree', () => {
     // An intermittent error (a soft NFS mount, a flaky USB link) fails a different page each time.
