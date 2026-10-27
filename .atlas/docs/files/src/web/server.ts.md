@@ -1,22 +1,22 @@
 ---
 kind: file
 target: src/web/server.ts
-source_hash: fc369aafd89418f078d3d9e9499ddfd26d9587b41dd7323505cc818d3e9e736a
+source_hash: 4fba71987281c3d68f7365f4c83976e2c0034e5c520b75aa12e756063913d499
 ---
 # module src/web/server.ts
 
 `module src/web/server.ts` exposes the following public surface:
 
-- `__filename` — variable (src/web/server.ts:22)
-- `__dirname` — variable (src/web/server.ts:23)
-- `findStaticRoot` — function (src/web/server.ts:27)
-- `ServeOptions` — interface (src/web/server.ts:38)
-- `ServeHandle` — interface (src/web/server.ts:43)
-- `ServeHandle.close` — method (src/web/server.ts:45)
-- `MIME` — variable (src/web/server.ts:48)
-- `jsonResponse` — function (src/web/server.ts:59)
-- `startServer` — function (src/web/server.ts:69)
+- `__filename` — variable (src/web/server.ts:23)
+- `__dirname` — variable (src/web/server.ts:24)
+- `findStaticRoot` — function (src/web/server.ts:28)
+- `ServeOptions` — interface (src/web/server.ts:39)
+- `ServeHandle` — interface (src/web/server.ts:44)
+- `ServeHandle.close` — method (src/web/server.ts:46)
+- `MIME` — variable (src/web/server.ts:49)
+- `jsonResponse` — function (src/web/server.ts:60)
+- `startServer` — function (src/web/server.ts:70)
 
-References: `src/web/server.ts:22`, `src/web/server.ts:23`, `src/web/server.ts:27`, `src/web/server.ts:38`, `src/web/server.ts:43`.
+References: `src/web/server.ts:23`, `src/web/server.ts:24`, `src/web/server.ts:28`, `src/web/server.ts:39`, `src/web/server.ts:44`.
 
 _Generated offline (mock client)._

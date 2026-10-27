@@ -1,29 +1,30 @@
 ---
 kind: file
 target: src/mcp/server.ts
-source_hash: 185152577b1baa0123c657888138ebe2a919cd633598594c652b234e6a692c8a
+source_hash: ed724f8e24d1fbce9919b301b4f2c7652d9fa4f0fbeffc87a200281ce81efb11
 ---
 # module src/mcp/server.ts
 
 `module src/mcp/server.ts` exposes the following public surface:
 
-- `McpContext` — interface (src/mcp/server.ts:52)
-- `McpContext.llm` — method (src/mcp/server.ts:58)
-- `McpContextOptions` — interface (src/mcp/server.ts:61)
-- `createMcpContext` — function (src/mcp/server.ts:69)
-- `reloadConfig` — function (src/mcp/server.ts:135)
-- `requireIndex` — function (src/mcp/server.ts:151)
-- `handleIndexTool` — function (src/mcp/server.ts:158)
-- `handleSearchTool` — function (src/mcp/server.ts:170)
-- `handleSymbolTool` — function (src/mcp/server.ts:193)
-- `handleGraphTool` — function (src/mcp/server.ts:235)
-- `handleDriftTool` — function (src/mcp/server.ts:253)
-- `handleDocsTool` — function (src/mcp/server.ts:278)
-- `handleAskTool` — function (src/mcp/server.ts:289)
-- `asText` — function (src/mcp/server.ts:314)
-- `createAtlasMcpServer` — function (src/mcp/server.ts:320)
-- `startMcpServer` — function (src/mcp/server.ts:439)
+- `McpContext` — interface (src/mcp/server.ts:53)
+- `McpContext.llm` — method (src/mcp/server.ts:59)
+- `McpContextOptions` — interface (src/mcp/server.ts:62)
+- `createMcpContext` — function (src/mcp/server.ts:70)
+- `reloadConfig` — function (src/mcp/server.ts:136)
+- `requireIndex` — function (src/mcp/server.ts:152)
+- `handleIndexTool` — function (src/mcp/server.ts:159)
+- `handleSearchTool` — function (src/mcp/server.ts:171)
+- `handleSymbolTool` — function (src/mcp/server.ts:194)
+- `handleGraphTool` — function (src/mcp/server.ts:236)
+- `handleDriftTool` — function (src/mcp/server.ts:254)
+- `handleDocsTool` — function (src/mcp/server.ts:279)
+- `handleAskTool` — function (src/mcp/server.ts:290)
+- `asText` — function (src/mcp/server.ts:315)
+- `answer` — function (src/mcp/server.ts:322)
+- `createAtlasMcpServer` — function (src/mcp/server.ts:334)
+- `startMcpServer` — function (src/mcp/server.ts:453)
 
-References: `src/mcp/server.ts:52`, `src/mcp/server.ts:58`, `src/mcp/server.ts:61`, `src/mcp/server.ts:69`, `src/mcp/server.ts:135`.
+References: `src/mcp/server.ts:53`, `src/mcp/server.ts:59`, `src/mcp/server.ts:62`, `src/mcp/server.ts:70`, `src/mcp/server.ts:136`.
 
 _Generated offline (mock client)._

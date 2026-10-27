@@ -1,6 +1,7 @@
 import type { Command } from 'commander';
 import { relative } from 'node:path';
 import { closeDatabase, nameBusy } from '../../core/db/index.js';
+import { closeOnSignal } from '../../core/db/database.js';
 import {
   BudgetExhaustedError,
   createAnthropicClient,
@@ -41,6 +42,7 @@ export function registerDocsCommand(program: Command): void {
       const budget =
         opts.budget === undefined ? undefined : parseParams(budgetSchema, numberArg(opts.budget));
       const { db, root, config, docsDir } = openProjectIndex(opts.cwd ?? '.');
+      const unhook = closeOnSignal(db);
       try {
         // Inspect mode: --show / --list (no synthesis). The index first, then `.atlas/docs`.
         if (opts.list) {
@@ -103,6 +105,7 @@ export function registerDocsCommand(program: Command): void {
           process.exitCode = 1;
         }
       } finally {
+        unhook();
         closeDatabase(db);
       }
     });

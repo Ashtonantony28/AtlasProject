@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/project.ts
-source_hash: aefb9cdd3727518d87a0bf953f95684de8fb18680861f7813ce3d48bd3a34eb6
+source_hash: 3c3e16e52ce9de3ac0e51a30d5aa114c8818c7fb54b7cd30a6b6fb5f20e37aab
 ---
 # module src/core/project.ts
 

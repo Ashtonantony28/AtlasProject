@@ -1,5 +1,6 @@
 import type { Command } from 'commander';
 import { closeDatabase } from '../../core/db/index.js';
+import { nameCorrupt } from '../../core/db/database.js';
 import { formatDriftReport, pageDriftReport, runDrift } from '../../core/drift/index.js';
 import { DriftParamsSchema, numberArg, parseParams } from '../../core/params.js';
 import { openProjectIndex } from '../../core/project.js';
@@ -43,6 +44,7 @@ export function registerDriftCommand(program: Command): void {
             ...(opts.docsDir !== undefined ? { docsDir: opts.docsDir } : {}),
           });
         } catch (err) {
+          nameCorrupt(err, db.name);
           process.stderr.write(`atlas drift: ${(err as Error).message}\n`);
           process.exitCode = 1;
           return;

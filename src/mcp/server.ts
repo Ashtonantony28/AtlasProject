@@ -11,6 +11,7 @@ import {
   openDatabase,
   type DB,
 } from '../core/db/index.js';
+import { closeOnSignal, nameCorrupt } from '../core/db/database.js';
 import { indexRepo } from '../core/ingest/index.js';
 import { buildGraphDot, buildGraphJson } from '../core/graph/index.js';
 import { createEmbedder, readFileFromRoot, search } from '../core/vector/index.js';
@@ -317,6 +318,19 @@ function asText(value: unknown): { content: Array<{ type: 'text'; text: string }
   return { content: [{ type: 'text', text }] };
 }
 
+/** `asText` of `run()`; a corrupt index's error names the file, its WAL and the remedy (A31-01). */
+async function answer(
+  ctx: McpContext,
+  run: () => unknown,
+): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
+  try {
+    return asText(await run());
+  } catch (err) {
+    nameCorrupt(err, ctx.db.name);
+    throw err;
+  }
+}
+
 export function createAtlasMcpServer(ctx: McpContext): McpServer {
   const server = new McpServer({ name: 'atlas', version: '0.1.0' });
 
@@ -327,7 +341,7 @@ export function createAtlasMcpServer(ctx: McpContext): McpServer {
         'Index the project: walk files, extract symbols, build the graph and embeddings. Unchanged files are skipped. Run before other tools.',
       inputSchema: { force: z.boolean().optional().describe('Re-parse unchanged files too.') },
     },
-    async (args) => asText(await handleIndexTool(ctx, args)),
+    async (args) => answer(ctx, () => handleIndexTool(ctx, args)),
   );
 
   server.registerTool(
@@ -342,7 +356,7 @@ export function createAtlasMcpServer(ctx: McpContext): McpServer {
         limit: searchParams.limit.describe('Max hits (default 10).'),
       },
     },
-    async (args) => asText(await handleSearchTool(ctx, args)),
+    async (args) => answer(ctx, () => handleSearchTool(ctx, args)),
   );
 
   server.registerTool(
@@ -355,7 +369,7 @@ export function createAtlasMcpServer(ctx: McpContext): McpServer {
         limit: z.number().int().min(1).max(100).optional().describe('Max matches (default 20).'),
       },
     },
-    async (args) => asText(handleSymbolTool(ctx, args)),
+    async (args) => answer(ctx, () => handleSymbolTool(ctx, args)),
   );
 
   server.registerTool(
@@ -375,7 +389,7 @@ export function createAtlasMcpServer(ctx: McpContext): McpServer {
         offset: graphParams.offset.describe('Skip this many nodes (paging).'),
       },
     },
-    async (args) => asText(handleGraphTool(ctx, args)),
+    async (args) => answer(ctx, () => handleGraphTool(ctx, args)),
   );
 
   server.registerTool(
@@ -400,7 +414,7 @@ export function createAtlasMcpServer(ctx: McpContext): McpServer {
         formatted: z.boolean().optional().describe('Also return the text report (`atlas drift`).'),
       },
     },
-    async (args) => asText(handleDriftTool(ctx, args)),
+    async (args) => answer(ctx, () => handleDriftTool(ctx, args)),
   );
 
   server.registerTool(
@@ -412,7 +426,7 @@ export function createAtlasMcpServer(ctx: McpContext): McpServer {
         target: z.string().min(1).optional().describe('File path or "architecture".'),
       },
     },
-    async (args) => asText(handleDocsTool(ctx, args)),
+    async (args) => answer(ctx, () => handleDocsTool(ctx, args)),
   );
 
   server.registerTool(
@@ -426,7 +440,7 @@ export function createAtlasMcpServer(ctx: McpContext): McpServer {
         expand: askParams.expand.describe('Graph-expanded snippets (default 5).'),
       },
     },
-    async (args) => asText(await handleAskTool(ctx, args)),
+    async (args) => answer(ctx, () => handleAskTool(ctx, args)),
   );
 
   return server;
@@ -434,10 +448,11 @@ export function createAtlasMcpServer(ctx: McpContext): McpServer {
 
 /**
  * Serve over stdio. Stdout carries only protocol messages. When stdin ends the
- * process exits once in-flight calls finish; the DB is closed on exit.
+ * process exits once in-flight calls finish; the DB is closed on exit, SIGINT or SIGTERM.
  */
 export async function startMcpServer(opts: McpContextOptions): Promise<void> {
   const ctx = createMcpContext(opts);
-  process.once('exit', () => closeDatabase(ctx.db));
+  process.once('exit', () => ctx.db.open && closeDatabase(ctx.db));
+  closeOnSignal(ctx.db);
   await createAtlasMcpServer(ctx).connect(new StdioServerTransport());
 }

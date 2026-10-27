@@ -6,6 +6,7 @@ import { readFileSync, existsSync, statSync } from 'node:fs';
 import { dirname, extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
 import { counts, type DB, getAllFiles } from '../core/db/index.js';
+import { nameCorrupt } from '../core/db/database.js';
 import { createEmbedder, search } from '../core/vector/index.js';
 import { loadConfig, resolvePaths } from '../core/config.js';
 import { buildGraphJson } from '../core/graph/index.js';
@@ -209,6 +210,7 @@ export async function startServer(db: DB, root: string, opts: ServeOptions = {})
       res.writeHead(404);
       res.end('not found');
     } catch (err) {
+      nameCorrupt(err, db.name);
       const msg = err instanceof Error ? err.message : String(err);
       jsonResponse(res, err instanceof ParamError ? 400 : 500, { error: msg });
     }

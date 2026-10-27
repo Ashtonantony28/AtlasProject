@@ -313,7 +313,7 @@ describe('AUDIT-27 findings', () => {
     30_000,
   );
 
-  it.fails('A27-05: the README says what to do after a crash and how to reset the index safely', () => {
+  it('A27-05: the README says what to do after a crash and how to reset the index safely', () => {
     const readme = readFileSync(join(ROOT, 'README.md'), 'utf8');
     expect(readme).toMatch(/interrupted|crash|killed/i);
     expect(readme).toMatch(/index\.db-wal|stop `?atlas (mcp|serve)/);

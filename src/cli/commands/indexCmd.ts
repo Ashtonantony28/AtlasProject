@@ -4,6 +4,7 @@ import {
   openDatabase,
   counts,
 } from '../../core/db/index.js';
+import { closeOnSignal } from '../../core/db/database.js';
 import { DEFAULT_MAX_BYTES, indexRepo, type IndexStats } from '../../core/ingest/index.js';
 import { loadConfig, resolvePaths, writeDefaultConfig } from '../../core/config.js';
 import { requireRoot } from '../../core/project.js';
@@ -28,6 +29,7 @@ export function registerIndexCommand(program: Command): void {
       const config = loadConfig(root);
       const paths = resolvePaths(root, config);
       const db = openDatabase(paths.dbPath);
+      const unhook = closeOnSignal(db);
       try {
         const stats = await indexRepo(db, root, {
           force: opts.force ?? false,
@@ -70,6 +72,7 @@ export function registerIndexCommand(program: Command): void {
           ].join('\n') + '\n',
         );
       } finally {
+        unhook();
         closeDatabase(db);
       }
     });
