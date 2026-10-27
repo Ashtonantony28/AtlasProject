@@ -1,7 +1,7 @@
 ---
 kind: file
 target: test/db/leftoverWal.test.ts
-source_hash: 44dfbc3d6289e9b2c1a935cfa2c029efc4cf3f24f6c1f65d1ad363228af7adf0
+source_hash: 8f56058746cbb5fc0d11585a7cff07e261cf813bff1b4ed154936f356e7d442d
 ---
 # module test/db/leftoverWal.test.ts
 
@@ -38,7 +38,9 @@ source_hash: 44dfbc3d6289e9b2c1a935cfa2c029efc4cf3f24f6c1f65d1ad363228af7adf0
 - `IOERR_ROW` — variable (test/db/leftoverWal.test.ts:264)
 - `UNUSED_ROW` — variable (test/db/leftoverWal.test.ts:265)
 - `CANNOT_CHECK` — variable (test/db/leftoverWal.test.ts:266)
-- `lockFree` — function (test/db/leftoverWal.test.ts:512)
+- `setAside` — function (test/db/leftoverWal.test.ts:357)
+- `HAS_OPEN` — variable (test/db/leftoverWal.test.ts:364)
+- `lockFree` — function (test/db/leftoverWal.test.ts:583)
 
 References: `test/db/leftoverWal.test.ts:28`, `test/db/leftoverWal.test.ts:101`, `test/db/leftoverWal.test.ts:102`, `test/db/leftoverWal.test.ts:103`, `test/db/leftoverWal.test.ts:104`.
 
