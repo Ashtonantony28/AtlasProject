@@ -1,13 +1,13 @@
 ---
 kind: architecture
 target: architecture
-source_hash: 8714861e20bad28c8bda623ef0ccc120d67adb700af0903d90204a6e8b7158d0
+source_hash: d36e8c5b1d7043394b23ece941440e275707cb38aee30cc4bf78ba9a4771abfe
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 225 files, 1652 symbols, 7986 edges
+**Totals:** 225 files, 1663 symbols, 8010 edges
 
 ## Modules
 
@@ -56,7 +56,7 @@ This codebase's modules collaborate through the graph above.
 - `src/cli/commands/docsCmd.ts` — typescript, loc=112, 2 symbols
 - `src/cli/commands/indexCmd.ts` — typescript, loc=106, 6 symbols
 - `src/core/config.ts` — typescript, loc=134, 14 symbols
-- `src/core/db/database.ts` — typescript, loc=374, 25 symbols
+- `src/core/db/database.ts` — typescript, loc=515, 36 symbols
 - `src/core/db/repo.ts` — typescript, loc=413, 44 symbols
 - `src/core/db/schema.ts` — typescript, loc=187, 3 symbols
 - `src/core/db/types.ts` — typescript, loc=79, 9 symbols
@@ -64,7 +64,7 @@ This codebase's modules collaborate through the graph above.
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=614)
+- `src/core/db/database.ts` (degree=653)
 - `src/core/db/repo.ts` (degree=455)
 - `src/mcp/server.ts` (degree=366)
 - `src/core/parse/ts.ts` (degree=296)
