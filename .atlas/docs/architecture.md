@@ -1,13 +1,13 @@
 ---
 kind: architecture
 target: architecture
-source_hash: 5b34a45a1002704162316937728b88bec3bc35bf1a79251d5d21f8793a34bea4
+source_hash: 0e88680d11fea0cd7c81e1fe7a6e667e964ca8ff3320c7fa257f6569a40fecb0
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 235 files, 1850 symbols, 8885 edges
+**Totals:** 237 files, 1884 symbols, 9022 edges
 
 ## Modules
 
@@ -15,9 +15,7 @@ This codebase's modules collaborate through the graph above.
 - `fixtures/graph/py/pkg/models.py` — python, loc=14, 5 symbols
 - `fixtures/graph/py/pkg/repo.py` — python, loc=23, 6 symbols
 - `fixtures/graph/py/pkg/sub/service.py` — python, loc=20, 2 symbols
-- `fixtures/graph/py/pkg/util.py` — python, loc=6, 2 symbols
 - `fixtures/graph/web/app.tsx` — typescript, loc=18, 4 symbols
-- `fixtures/graph/web/cjs/Model.js` — javascript, loc=5, 2 symbols
 - `fixtures/graph/web/cjs/main.js` — javascript, loc=16, 5 symbols
 - `fixtures/graph/web/geo.ts` — typescript, loc=15, 6 symbols
 - `fixtures/graph/web/handlers.js` — javascript, loc=18, 4 symbols
@@ -61,18 +59,20 @@ This codebase's modules collaborate through the graph above.
 - `src/core/params.ts` — typescript, loc=93, 22 symbols
 - `src/core/parse/parser.ts` — typescript, loc=160, 12 symbols
 - `src/core/parse/py.ts` — typescript, loc=385, 24 symbols
+- `src/core/parse/refs.ts` — typescript, loc=195, 14 symbols
+- `src/core/parse/ts.ts` — typescript, loc=1281, 80 symbols
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=738)
+- `src/core/db/database.ts` (degree=748)
 - `src/core/db/repo.ts` (degree=455)
-- `src/mcp/server.ts` (degree=373)
+- `src/mcp/server.ts` (degree=375)
 - `src/core/parse/ts.ts` (degree=296)
 - `src/core/ingest/indexer.ts` (degree=234)
 - `src/core/graph/modules.ts` (degree=184)
 - `test/db/leftoverWal.test.ts` (degree=165)
 - `src/core/synth/persist.ts` (degree=161)
-- `src/core/db/index.ts` (degree=142)
-- `test/cli/helpers.ts` (degree=138)
+- `src/core/db/index.ts` (degree=144)
+- `test/cli/helpers.ts` (degree=139)
 
 _Generated offline (mock client)._
