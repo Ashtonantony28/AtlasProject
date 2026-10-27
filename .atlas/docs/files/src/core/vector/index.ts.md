@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/vector/index.ts
-source_hash: d0c64b0f3bcde843debd5edc33c799fd2fbe3e5b54879cadb2035454690a4020
+source_hash: 7abdf4ebb029e38bed7bd74cf074c8477ddb9617acd724639a8404ecfec3df65
 ---
 # module src/core/vector/index.ts
 

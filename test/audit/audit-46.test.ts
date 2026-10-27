@@ -59,7 +59,9 @@ function tmp(): string {
 }
 
 /** A copy of the sample fixture with an index (no embeddings) and, optionally, docs. */
-async function sample(docs = true): Promise<{ dir: string; root: string; db: DB; docsDir: string }> {
+async function sample(
+  docs = true,
+): Promise<{ dir: string; root: string; db: DB; docsDir: string }> {
   const dir = tmp();
   const root = join(dir, 'repo');
   cpSync(SAMPLE, root, { recursive: true });
@@ -95,7 +97,10 @@ function tree(files: Record<string, string>): string {
   return root;
 }
 
-const walked = (root: string): string[] => walkRepo(root).map((f) => f.relativePath).sort();
+const walked = (root: string): string[] =>
+  walkRepo(root)
+    .map((f) => f.relativePath)
+    .sort();
 const SRC = 'export function kept(): number { return 1; }\n';
 
 describe('A46-01 (medium) .gitignore and `exclude` patterns match case-insensitively', () => {
@@ -136,7 +141,12 @@ describe('A46-01 (medium) .gitignore and `exclude` patterns match case-insensiti
       'pkg/impl.py': 'def impl():\n    pass\n',
     });
     expect(walked(root)).toEqual(gitVisible(root));
-    expect(walked(root)).toEqual(['pkg/api.py', 'src/keep.gen.ts', 'src/main.ts', 'src/root-only.ts']);
+    expect(walked(root)).toEqual([
+      'pkg/api.py',
+      'src/keep.gen.ts',
+      'src/main.ts',
+      'src/root-only.ts',
+    ]);
   });
 });
 
@@ -212,40 +222,34 @@ describe('A46-04 (high) excerpts are read from disk at the indexed line numbers 
     return ctx;
   }
 
-  it.fails(
-    'A46-04 atlas_symbol does not return other lines as `add`’s source after an edit that was not re-indexed',
-    async () => {
-      const ctx = await edited();
-      const [add] = handleSymbolTool(ctx, { name: 'add' });
-      expect(add?.file).toBe('src/math.ts');
-      const excerpt = add?.excerpt ?? null;
-      expect(
-        excerpt === null || excerpt.includes('return a + b'),
-        `excerpt ${JSON.stringify(excerpt)}`,
-      ).toBe(true);
-    },
-  );
+  it('A46-04 atlas_symbol does not return other lines as `add`’s source after an edit that was not re-indexed', async () => {
+    const ctx = await edited();
+    const [add] = handleSymbolTool(ctx, { name: 'add' });
+    expect(add?.file).toBe('src/math.ts');
+    const excerpt = add?.excerpt ?? null;
+    expect(
+      excerpt === null || excerpt.includes('return a + b'),
+      `excerpt ${JSON.stringify(excerpt)}`,
+    ).toBe(true);
+  });
 
-  it.fails(
-    'A46-04 atlas_ask does not ground the model on other lines labelled as `add` (or says the file changed)',
-    async () => {
-      const prompts: string[] = [];
-      const capture: LLMClient = {
-        model: 'capture',
-        async complete(params: LLMCallParams) {
-          prompts.push(params.messages.map((m) => m.content).join('\n'));
-          return { content: 'ok [1]', inputTokens: 1, outputTokens: 1, stopReason: 'end_turn' };
-        },
-      };
-      const ctx = await edited(capture);
-      await handleAskTool(ctx, { question: 'What does add do?' });
-      const prompt = prompts.join('\n');
-      expect(prompt).toMatch(/add/);
-      expect(prompt, 'the snippet labelled add holds the inserted header').not.toMatch(
-        /header added after indexing/,
-      );
-    },
-  );
+  it('A46-04 atlas_ask does not ground the model on other lines labelled as `add` (or says the file changed)', async () => {
+    const prompts: string[] = [];
+    const capture: LLMClient = {
+      model: 'capture',
+      async complete(params: LLMCallParams) {
+        prompts.push(params.messages.map((m) => m.content).join('\n'));
+        return { content: 'ok [1]', inputTokens: 1, outputTokens: 1, stopReason: 'end_turn' };
+      },
+    };
+    const ctx = await edited(capture);
+    await handleAskTool(ctx, { question: 'What does add do?' });
+    const prompt = prompts.join('\n');
+    expect(prompt).toMatch(/add/);
+    expect(prompt, 'the snippet labelled add holds the inserted header').not.toMatch(
+      /header added after indexing/,
+    );
+  });
 
   it('held: before the edit the excerpt is `add`’s source, and after it drift marks the doc unindexed', async () => {
     const root = join(tmp(), 'repo');
@@ -271,7 +275,11 @@ describe('held (pinned): incremental indexing and drift on renames, moves and de
     expect(again).toMatchObject({ filesIndexed: 0, filesSkipped: 4, filesRemoved: 0 });
     writeFileSync(join(root, 'src/math.ts'), readFileSync(join(root, 'src/math.ts'), 'utf8') + SRC);
     const edit = await indexRepo(db, root, { skipEmbeddings: true });
-    expect(edit).toMatchObject({ filesIndexed: 1, filesSkipped: 3, resolveReason: 'files changed' });
+    expect(edit).toMatchObject({
+      filesIndexed: 1,
+      filesSkipped: 3,
+      resolveReason: 'files changed',
+    });
     expect(db.prepare("SELECT COUNT(*) FROM symbols WHERE name = 'kept'").pluck().get()).toBe(1);
   });
 
@@ -296,7 +304,9 @@ describe('held (pinned): incremental indexing and drift on renames, moves and de
     unlinkSync(join(root, 'src/util.py'));
     await indexRepo(db, root, { skipEmbeddings: true });
     for (const report of [runDrift(db, { root }), runDrift(db, { root, docsDir })]) {
-      const missing = report.stale.filter((s) => s.currentHash === 'missing').map((s) => s.targetPath);
+      const missing = report.stale
+        .filter((s) => s.currentHash === 'missing')
+        .map((s) => s.targetPath);
       expect(missing.sort()).toEqual(['src/shapes.ts', 'src/util.py']);
     }
   });
@@ -359,7 +369,11 @@ describe('held (pinned): search filters and MCP results against the core calls t
       });
       const mcp = await handleSearchTool(ctx, args);
       expect(mcp.map((h) => [h.name, h.file, h.startLine])).toEqual(
-        core.map((h) => [h.symbol.qualified_name ?? h.symbol.name, h.filePath, h.symbol.start_line]),
+        core.map((h) => [
+          h.symbol.qualified_name ?? h.symbol.name,
+          h.filePath,
+          h.symbol.start_line,
+        ]),
       );
     }
     const full = runDrift(ctx.db, { root: ctx.root });

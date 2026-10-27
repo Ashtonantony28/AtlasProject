@@ -16,7 +16,7 @@ import {
 } from '../db/index.js';
 import { createEmbedder, search } from '../vector/index.js';
 import { loadConfig } from '../config.js';
-import { readFileFromRoot } from '../vector/index.js';
+import { readIndexedSource } from '../vector/index.js';
 
 export interface RetrievedSnippet {
   symbol: SymbolRow;
@@ -53,6 +53,16 @@ export async function retrieveForQuery(
   query: string,
   opts: RetrieveOptions = {},
 ): Promise<RetrievedSnippet[]> {
+  return (await retrieve(db, root, query, opts)).snippets;
+}
+
+/** `retrieveForQuery`, plus the paths whose snippets were left out because the file changed since indexing. */
+export async function retrieve(
+  db: DB,
+  root: string,
+  query: string,
+  opts: RetrieveOptions = {},
+): Promise<{ snippets: RetrievedSnippet[]; changed: string[] }> {
   const seedLimit = opts.seedLimit ?? DEFAULT_SEED_LIMIT;
   const expansionLimit = opts.expansionLimit ?? DEFAULT_EXPANSION;
   const excerptLines = opts.excerptLines ?? DEFAULT_EXCERPT_LINES;
@@ -67,18 +77,20 @@ export async function retrieveForQuery(
   const out: RetrievedSnippet[] = [];
 
   const fileSourceCache = new Map<number, string | null>();
-  const sourceFor = (fileId: number): string | null => {
-    if (fileSourceCache.has(fileId)) return fileSourceCache.get(fileId) ?? null;
-    const src = readFileFromRoot(root, db, fileId);
-    fileSourceCache.set(fileId, src);
-    return src;
+  const changed: string[] = [];
+  const sourceFor = (file: FileRow): string | null => {
+    if (fileSourceCache.has(file.id)) return fileSourceCache.get(file.id) ?? null;
+    const read = readIndexedSource(root, file);
+    if (read.changed) changed.push(file.path);
+    fileSourceCache.set(file.id, read.source);
+    return read.source;
   };
 
   const add = (sym: SymbolRow, score: number, reason: 'search' | 'graph') => {
     if (seen.has(sym.id)) return;
     const file = fileById.get(sym.file_id);
     if (!file) return;
-    const source = sourceFor(file.id);
+    const source = sourceFor(file);
     if (!source) return;
     const lines = source.split('\n');
     const start = Math.min(lines.length, Math.max(1, sym.start_line));
@@ -131,7 +143,7 @@ export async function retrieveForQuery(
     if (out.length > before) added++;
   }
 
-  return out;
+  return { snippets: out, changed };
 }
 
 function compareExpansion(

@@ -1,13 +1,13 @@
 ---
 kind: architecture
 target: architecture
-source_hash: e8fcb9526ed8b5065b930daf077ad469b56435dde2812cf283b64d57c700eb4f
+source_hash: 39e5c7594f15cde7bcfb00d6c075d1ab4a939e554632d9a68e8575b94ae3768e
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 238 files, 1894 symbols, 9129 edges
+**Totals:** 238 files, 1896 symbols, 9139 edges
 
 ## Modules
 
@@ -47,7 +47,7 @@ This codebase's modules collaborate through the graph above.
 - `src/core/db/repo.ts` — typescript, loc=413, 44 symbols
 - `src/core/db/schema.ts` — typescript, loc=187, 3 symbols
 - `src/core/db/types.ts` — typescript, loc=79, 9 symbols
-- `src/core/drift/detect.ts` — typescript, loc=245, 10 symbols
+- `src/core/drift/detect.ts` — typescript, loc=238, 9 symbols
 - `src/core/graph/export.ts` — typescript, loc=212, 18 symbols
 - `src/core/graph/modules.ts` — typescript, loc=704, 47 symbols
 - `src/core/graph/resolver.ts` — typescript, loc=416, 12 symbols

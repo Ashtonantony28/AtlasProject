@@ -1,7 +1,7 @@
 import type { DB } from '../db/index.js';
 import { ASK_MAX_TOKENS, incompleteReason, type LLMClient } from '../synth/index.js';
 import { checkCitations, type CitationCheck } from './citations.js';
-import { retrieveForQuery, type RetrievedSnippet } from './retrieve.js';
+import { retrieve, type RetrievedSnippet } from './retrieve.js';
 
 const SYSTEM = `You are a careful, code-aware assistant answering questions about a specific codebase.
 
@@ -51,7 +51,7 @@ export async function ask(
   question: string,
   opts: AskOptions = {},
 ): Promise<AskResult> {
-  const snippets = await retrieveForQuery(db, root, question, {
+  const { snippets, changed } = await retrieve(db, root, question, {
     ...(opts.seedLimit !== undefined ? { seedLimit: opts.seedLimit } : {}),
     ...(opts.expansionLimit !== undefined ? { expansionLimit: opts.expansionLimit } : {}),
     ...(opts.excerptLines !== undefined ? { excerptLines: opts.excerptLines } : {}),
@@ -76,7 +76,7 @@ export async function ask(
 
   const checks = checkCitations(res.content, citations);
   return {
-    answer: res.content,
+    answer: changed.length > 0 ? `${res.content}\n\n${changedNote(changed)}` : res.content,
     citations,
     checks,
     flagged: checks.filter((c) => !c.valid),
@@ -84,6 +84,11 @@ export async function ask(
     outputTokens: res.outputTokens,
     snippets,
   };
+}
+
+function changedNote(paths: string[]): string {
+  const its = paths.length === 1 ? 'its' : 'their';
+  return `Note: ${paths.join(', ')} changed since indexing, so ${its} snippets were left out; run \`atlas index\`.`;
 }
 
 function buildPrompt(question: string, snippets: RetrievedSnippet[]): string {

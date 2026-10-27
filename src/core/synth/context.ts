@@ -8,7 +8,7 @@ import {
   type FileRow,
 } from '../db/index.js';
 import type { Statement } from 'better-sqlite3';
-import { readFileFromRoot } from '../vector/index.js';
+import { readIndexedSource } from '../vector/index.js';
 import { sha256 } from '../ingest/index.js';
 
 export interface ModuleContext {
@@ -143,13 +143,17 @@ export function buildModuleContext(db: DB, root: string, file: FileRow): ModuleC
     symbol: r.symbol,
   }));
 
-  const source = readFileFromRoot(root, db, file.id);
+  const { source } = readIndexedSource(root, file);
   const lines = source ? source.split('\n') : [];
   const snippets: ModuleContext['sourceSnippets'] = [];
   if (lines.length > 0) {
     for (const sym of pickSymbols(publicSymbols, MAX_SNIPPETS)) {
       const start = Math.max(0, sym.start_line - 1);
-      const end = Math.min(lines.length, Math.max(sym.end_line, sym.start_line), start + SNIPPET_LINES);
+      const end = Math.min(
+        lines.length,
+        Math.max(sym.end_line, sym.start_line),
+        start + SNIPPET_LINES,
+      );
       snippets.push({
         symbol: sym.qualified_name ?? sym.name,
         file: file.path,
@@ -304,7 +308,8 @@ export function architectureContextToPrompt(ctx: ArchitectureContext): string {
   let n = ctx.files.length;
   for (;;) {
     const prompt = renderArchitecture(ctx, n);
-    if (prompt.length <= MAX_ARCH_PROMPT_CHARS || n === 0) return prompt.slice(0, MAX_ARCH_PROMPT_CHARS);
+    if (prompt.length <= MAX_ARCH_PROMPT_CHARS || n === 0)
+      return prompt.slice(0, MAX_ARCH_PROMPT_CHARS);
     n = Math.floor(n / 2);
   }
 }
@@ -312,7 +317,9 @@ export function architectureContextToPrompt(ctx: ArchitectureContext): string {
 function renderArchitecture(ctx: ArchitectureContext, fileCount: number): string {
   const lines: string[] = [];
   lines.push(`Target: architecture overview`);
-  lines.push(`Totals: files=${ctx.totals.files} symbols=${ctx.totals.symbols} edges=${ctx.totals.edges}`);
+  lines.push(
+    `Totals: files=${ctx.totals.files} symbols=${ctx.totals.symbols} edges=${ctx.totals.edges}`,
+  );
   lines.push(`Files hash: ${ctx.filesHash}`);
   lines.push('');
   lines.push('Files:');
@@ -320,7 +327,8 @@ function renderArchitecture(ctx: ArchitectureContext, fileCount: number): string
     [...ctx.files].sort((a, b) => b.symbolCount - a.symbolCount).slice(0, fileCount),
   );
   for (const f of ctx.files) {
-    if (keep.has(f)) lines.push(`  - ${f.path} [${f.language}] loc=${f.loc} symbols=${f.symbolCount}`);
+    if (keep.has(f))
+      lines.push(`  - ${f.path} [${f.language}] loc=${f.loc} symbols=${f.symbolCount}`);
   }
   const omitted = ctx.omittedFiles + ctx.files.length - keep.size;
   if (omitted > 0) lines.push(`  … ${omitted} more files omitted`);

@@ -233,6 +233,16 @@ describe('MCP tool handlers', () => {
       expect(circle?.truncated).toBe(false);
     });
 
+    it('atlas_symbol withholds the excerpt of a file edited since indexing until it is re-indexed', async () => {
+      const p = join(root, 'src/math.ts');
+      writeFileSync(p, '// added after indexing\n'.repeat(12) + readFileSync(p, 'utf8'));
+      const [add] = handleSymbolTool(ctx, { name: 'add' });
+      expect(add).toMatchObject({ name: 'add', file: 'src/math.ts', excerpt: null });
+      expect(handleSymbolTool(ctx, { name: 'circle' })[0]?.excerpt).toMatch(/class Circle/);
+      await handleIndexTool(ctx, {});
+      expect(handleSymbolTool(ctx, { name: 'add' })[0]?.excerpt).toMatch(/return a \+ b/);
+    });
+
     it('atlas_symbol matches partial names and honours limit', () => {
       const adds = handleSymbolTool(ctx, { name: 'ad' });
       expect(adds.some((s) => s.name === 'add')).toBe(true);
@@ -415,11 +425,16 @@ describe('MCP tool handlers', () => {
       try {
         closeDatabase(ctx.db);
         ctx = createMcpContext({ root });
-        expect((await handleAskTool(ctx, { question: 'circle area' })).model).toBe(ctx.config.synthModel);
+        expect((await handleAskTool(ctx, { question: 'circle area' })).model).toBe(
+          ctx.config.synthModel,
+        );
         editConfig({ tokenBudget: 99_000, synthModel: 'claude-test-model' });
         const res = await handleAskTool(ctx, { question: 'circle area' });
         expect(res.model).toBe('claude-test-model');
-        expect(fake.bodies.map((b) => b['model'])).toEqual([DEFAULT_CONFIG.synthModel, 'claude-test-model']);
+        expect(fake.bodies.map((b) => b['model'])).toEqual([
+          DEFAULT_CONFIG.synthModel,
+          'claude-test-model',
+        ]);
         expect(ctx.budget.total()).toMatchObject({ cap: 99_000, spent: 640 });
         expect(res.budgetRemaining).toBe(99_000 - 640);
       } finally {
@@ -429,7 +444,8 @@ describe('MCP tool handlers', () => {
 
     it('a changed indexPath fails atlas_ask and atlas_index until the server restarts', async () => {
       editConfig({ indexPath: '.atlas/other.db' });
-      const restart = /indexPath changed to '\.atlas\/other\.db' after atlas mcp started; restart the server/;
+      const restart =
+        /indexPath changed to '\.atlas\/other\.db' after atlas mcp started; restart the server/;
       await expect(handleAskTool(ctx, { question: 'circle area' })).rejects.toThrow(restart);
       await expect(handleIndexTool(ctx, {})).rejects.toThrow(restart);
       expect(existsSync(join(root, '.atlas', 'other.db'))).toBe(false);

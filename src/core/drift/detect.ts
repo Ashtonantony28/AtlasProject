@@ -17,10 +17,9 @@
 // (stale docs, or undocumented symbols under `strict`) and is exactly when
 // `atlas drift` exits 2.
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { type DB, type FileRow, getAllFiles, getSymbolsForFile } from '../db/index.js';
+import { type DB, getAllFiles, getSymbolsForFile } from '../db/index.js';
 import { sha256 } from '../ingest/index.js';
+import { readIndexedSource } from '../vector/index.js';
 import {
   architecturePrompt,
   deletedDocsFromDb,
@@ -96,7 +95,7 @@ export function detectDrift(db: DB, opts: DetectOptions): DriftReport {
     seen.add(file.path);
     const doc = fileDocs.get(file.path);
     if (doc) {
-      const current = indexedContentChanged(opts.root, file)
+      const current = readIndexedSource(opts.root, file).changed
         ? 'unindexed'
         : sha256(modulePrompt(db, opts.root, file));
       if (doc.sourceHash !== current) {
@@ -120,7 +119,12 @@ export function detectDrift(db: DB, opts: DetectOptions): DriftReport {
     for (const sym of exported) {
       const ref = sym.qualified_name ?? sym.name;
       if (doc && (mentions(doc.content, ref) || mentions(doc.content, sym.name))) continue;
-      undocumented.push({ file: file.path, symbol: ref, kind: sym.kind, startLine: sym.start_line });
+      undocumented.push({
+        file: file.path,
+        symbol: ref,
+        kind: sym.kind,
+        startLine: sym.start_line,
+      });
     }
   }
 
@@ -181,17 +185,6 @@ export function pageDriftReport(
       end < report.totals.stale ||
       end < report.totals.undocumented,
   };
-}
-
-/** The index is behind the file (edited since, or its re-index failed and kept the old rows). */
-function indexedContentChanged(root: string, file: FileRow): boolean {
-  let content: string;
-  try {
-    content = readFileSync(join(root, file.path), 'utf8');
-  } catch {
-    return false; // unreadable or deleted: the prompt check and pruning cover it
-  }
-  return sha256(content) !== file.content_hash;
 }
 
 /** Whole-identifier, case-sensitive match (`get` does not match inside `target`). */

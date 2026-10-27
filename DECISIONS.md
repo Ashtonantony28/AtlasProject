@@ -675,3 +675,12 @@ WAL. Residual: a foreign WAL whose replay is structurally valid (`integrity_chec
 FTS or `vec0` contents) is kept, as is a WAL replayed onto a byte-identical backup.
 SG150 (A36-02): the reminder stops offering the move-back once the index has changed (its size and mtime are in the set-aside name), rather than refusing writers, which would block `atlas index`/`atlas mcp` beside any set-aside WAL and need a guard on every write path. SG190 (A41-01): the move-back is offered only when no live connection holds the index (`holders`/probe, and a read-only open reads once so it is seen), not done by Atlas under the open lock, which would need a new command.
 
+
+## 2026-10-27 — SG240: excerpts are served only from a file that still has its indexed content
+`atlas_symbol`, `ask`/`atlas_ask` and module-doc prompts slice files at the indexed line numbers, so
+they read through `readIndexedSource`, which hashes the file and compares it with
+`files.content_hash` (as drift already did; drift now shares it). On a mismatch nothing is sliced:
+`atlas_symbol` returns `excerpt: null`, `retrieve` leaves the snippet out and `ask` appends a note
+naming the file and `atlas index` to the answer (no new field in any result). Re-slicing at shifted
+lines or re-parsing on read was rejected: the index, not the read path, owns symbol spans. Telling
+the user through `atlas_symbol` needs a new optional `stale` field, pending the user's decision.
