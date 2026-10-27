@@ -147,7 +147,7 @@ describe('AUDIT-30 performance under load', () => {
   // database is locked` instead of retrying. Measured: 2 of 320 opens failed in a 16-process
   // lockstep race (waitload.mjs switch 500 16), size 4096 at the failure. The racer is simulated
   // here: on our first try, another connection switches the file and our try reports SQLITE_BUSY.
-  it.fails('A30-01: an opener that loses the race to switch an empty file to WAL retries', () => {
+  it('A30-01: an opener that loses the race to switch an empty file to WAL retries', () => {
     const path = fresh();
     writeFileSync(path, ''); // what SQLite leaves when it discards a stale WAL beside a deleted index
     const racer = new Database(path);

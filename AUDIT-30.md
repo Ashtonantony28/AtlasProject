@@ -125,6 +125,8 @@ Counts: **Critical 0, High 0, Medium 0, Low 1** (new). Still open and re-measure
 ### Low
 
 #### A30-01: `switchToWal` checks the file size after the failed try, so a process that loses the race to switch an empty index to WAL fails with `journal mode: database is locked` instead of retrying
+
+**Fixed by SG105 (PR #69):** `switchToWal` now checks the size once before its first try, so the loser retries. The test is flipped to `it`.
 - **Evidence:**
   - `waitload.mjs switch 500 16`, 20 rounds (load 8.4–9.5): 16 processes wait on another process's hold of a 0-byte file, and all retry on the same 10 ms ticks. **2 of 320 opens failed** with `SQLITE_BUSY` after 43 and 184 ms (4 and 13 tries), and `statSync(index.db).size` was **4096** at the failure. With 8 processes and a 1 s hold, 1 of 8 failed (load 16.6) and 0 of 200 in 25 later rounds (load 8.9).
   - The winner's switch of an empty file writes page 1 at once (pinned: 0 → 4,096 bytes). The loser's try fails at once with SQLITE_BUSY, because SQLite refuses the read-to-write upgrade without a busy wait. `switchToWal` then stats the file, sees 4,096 bytes and treats the error as a foreign rollback-mode file (`!empty` → throw). Its next try would have succeeded, because the file is now in WAL mode.
