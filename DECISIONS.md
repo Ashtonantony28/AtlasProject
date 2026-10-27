@@ -622,3 +622,24 @@ that 0-byte file (two processes switching it to WAL get `SQLITE_BUSY` at once, a
 both deleting the WAL get `SQLITE_IOERR_DELETE_NOENT`), so the switch retries those two errors every
 10 ms up to the 5 s busy timeout while the file is still empty. A non-empty rollback-mode file held
 by another program still fails at once naming `journal mode`.
+
+
+## 2026-10-27 — SG120: a stale WAL beside a replaced index is dropped only when provably foreign
+
+SQLite replays any `-wal` beside the file it opens, and a WAL does not name its database (A31-01).
+`openDatabase` looks at a non-empty WAL only when the file's ctime is newer than the WAL's mtime:
+a WAL-mode file changes only by a checkpoint of that WAL, or by being replaced (`cp`/`mv`). It then
+probes whether any connection holds the file (an exclusive-mode open of a hard link to it: WAL
+connections hold a shared lock on the inode, and the probe never reads or checkpoints the real
+WAL); a held file is left alone. If the `-shm` left with the WAL has the same salts and says no
+checkpoint was ever attempted (`nBackfill` and `nBackfillAttempted` are 0), the WAL's writer never
+touched the file, so the WAL is foreign and is deleted. Otherwise it may be the rest of an
+interrupted checkpoint and is kept, and `PRAGMA integrity_check` runs on a read-only connection
+first (read-only, so a mix is never checkpointed into the file); a failure gives the corrupt-index
+message on every surface. This narrows SG90's "Atlas never unlinks the WAL": a live WAL is never
+deleted, because a live holder fails the probe. A ctime bump with no replacement (`chmod`, `touch`)
+beside a killed writer's never-checkpointed WAL drops that writer's last commits; the index stays
+consistent and the next `atlas index` redoes them. `SQLITE_CORRUPT*`/`SQLITE_NOTADB` errors are
+renamed by `nameCorrupt` (not on the `@atlas/core` surface) in the CLI's top-level handler and
+`drift`, the MCP tool wrapper and the HTTP error handler. `index`, `docs` and `mcp` close the DB on
+SIGINT/SIGTERM and then re-raise the signal, so they still die by it as before.
