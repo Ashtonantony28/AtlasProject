@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/qa/ask.ts
-source_hash: 6d84c73f075c521753e7927a65b05081605237e12bab3eff1e5b66942265c374
+source_hash: b585c7d3ea763822b3c5ab97a084dea1438166d8cc885a729cebd15c1c27c557
 ---
 # module src/core/qa/ask.ts
 
