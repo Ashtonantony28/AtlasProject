@@ -642,4 +642,29 @@ beside a killed writer's never-checkpointed WAL drops that writer's last commits
 consistent and the next `atlas index` redoes them. `SQLITE_CORRUPT*`/`SQLITE_NOTADB` errors are
 renamed by `nameCorrupt` (not on the `@atlas/core` surface) in the CLI's top-level handler and
 `drift`, the MCP tool wrapper and the HTTP error handler. `index`, `docs` and `mcp` close the DB on
-SIGINT/SIGTERM and then re-raise the signal, so they still die by it as before.
+SIGINT/SIGTERM and then re-raise the signal, so they still die by it as before. The WAL check is
+superseded by SG130/SG135 below.
+
+
+## 2026-10-27 — SG130/SG135: a leftover WAL is judged by consistency, under a lock, and never deleted
+
+SG120's `ctime(index.db) > mtime(-wal)` read every `cp -a`/`tar`/`mv` of an index with its own WAL as
+a replacement and deleted the WAL (A33-01), and its probe took another opener's probe for a holder
+(A33-02). Timestamps are no longer used and Atlas never unlinks a WAL. A WAL does not name its
+database, and no identity survives without a sidecar: the database's own header is replaced with it,
+page 1 is not in every WAL generation, and a sidecar beside the index goes stale when a killed or
+non-Atlas writer starts a WAL generation (and the index directory is pinned to `index.db` and its WAL
+files). So a leftover WAL is judged by whether it fits the file: `openDatabase` resolves a symlinked
+index to the file SQLite uses, and when a non-empty `-wal` is there that no live connection holds
+(read passively from `/proc/locks`: a WAL connection locks the file and its `-shm` for its life; a
+probe under the lock elsewhere), it takes `<db>.open.lock` (an exclusive SQLite lock, created only
+then) and keeps it until it has opened the file, so racing openers decide one at a time and the next
+sees the first as a holder. Under it: a `-shm` locked without the file (a live process on an inode
+renamed over) is refused; a read-only `PRAGMA integrity_check` with the WAL replayed, through hard
+links so it does not look like a holder, keeps the WAL when it passes; when it fails and the `-shm`
+says no checkpoint of the WAL ever started, the WAL is renamed to `-wal.foreign-<ms>` and reported
+on stderr; anything else is refused with `nameCorrupt`'s message, which names the symlink target's
+`-wal`. The cost is a full integrity check on the first open after a crash, a copy or a move with a
+WAL. Residual: a foreign WAL whose replay is structurally valid (`integrity_check` does not compare
+FTS or `vec0` contents) is kept, as is a WAL replayed onto a byte-identical backup.
+
