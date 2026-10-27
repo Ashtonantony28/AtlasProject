@@ -325,3 +325,5 @@ On `52f5c25` plus `AUDIT-38.md`, `test/audit/audit-38.test.ts` and the PLAN line
 | `npx vitest run --coverage --exclude 'test/audit/**'` (base) | 64 files, 572 passed; functions threshold fails (94.79% < 96%) | 65 s |
 | `npm run test:coverage` (with `audit-38`) | 101 files, 989 passed, 1 todo; thresholds pass | 178 s |
 | `npm run typecheck && npm run lint && npx vitest run test/audit/audit-38.test.ts && git diff --exit-code src` | pass; 19 tests; `src/` unchanged | 24 s |
+
+SG160 moved the `audit-38.test.ts` tests to the product suite (`test/db/leftoverWal.test.ts`) and deleted the audit file.
