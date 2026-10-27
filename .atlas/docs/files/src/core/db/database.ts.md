@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/db/database.ts
-source_hash: 4002539b23e8a6f61e43eddf0094a759953d6455ab150ea7edb236f42b60de52
+source_hash: 8483ea7581ccb3e3ddc59eb552c79c1f434fa522702381afaff1c0d1bf15df29
 ---
 # module src/core/db/database.ts
 
@@ -16,14 +16,14 @@ source_hash: 4002539b23e8a6f61e43eddf0094a759953d6455ab150ea7edb236f42b60de52
 - `loadVecExtension` — function (src/core/db/database.ts:31)
 - `openDatabase` — function (src/core/db/database.ts:40)
 - `createWalFile` — function (src/core/db/database.ts:80)
-- `switchToWal` — function (src/core/db/database.ts:102)
-- `immediate` — function (src/core/db/database.ts:125)
-- `BUSY_REMEDY` — variable (src/core/db/database.ts:148)
-- `nameBusy` — function (src/core/db/database.ts:154)
-- `ensureMigrationsTable` — function (src/core/db/database.ts:166)
-- `appliedVersion` — function (src/core/db/database.ts:176)
-- `runMigrations` — function (src/core/db/database.ts:187)
-- `closeDatabase` — function (src/core/db/database.ts:210)
+- `switchToWal` — function (src/core/db/database.ts:104)
+- `immediate` — function (src/core/db/database.ts:127)
+- `BUSY_REMEDY` — variable (src/core/db/database.ts:150)
+- `nameBusy` — function (src/core/db/database.ts:156)
+- `ensureMigrationsTable` — function (src/core/db/database.ts:168)
+- `appliedVersion` — function (src/core/db/database.ts:178)
+- `runMigrations` — function (src/core/db/database.ts:189)
+- `closeDatabase` — function (src/core/db/database.ts:212)
 
 References: `src/core/db/database.ts:7`, `src/core/db/database.ts:10`, `src/core/db/database.ts:12`, `src/core/db/database.ts:14`, `src/core/db/database.ts:17`.
 
