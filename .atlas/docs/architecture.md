@@ -1,13 +1,13 @@
 ---
 kind: architecture
 target: architecture
-source_hash: b37546f530343506f574c11d3121509293585cf5bf58b3a3e986cd1956be660c
+source_hash: 51aa2ee5bdae8003264b24aeadcc9fef133137384ae0a7e0fd0f0b21e5b6f56a
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 234 files, 1827 symbols, 8776 edges
+**Totals:** 236 files, 1871 symbols, 8971 edges
 
 ## Modules
 
@@ -17,8 +17,6 @@ This codebase's modules collaborate through the graph above.
 - `fixtures/graph/py/pkg/sub/service.py` — python, loc=20, 2 symbols
 - `fixtures/graph/py/pkg/util.py` — python, loc=6, 2 symbols
 - `fixtures/graph/web/app.tsx` — typescript, loc=18, 4 symbols
-- `fixtures/graph/web/cjs/Model.js` — javascript, loc=5, 2 symbols
-- `fixtures/graph/web/cjs/app.js` — javascript, loc=10, 2 symbols
 - `fixtures/graph/web/cjs/main.js` — javascript, loc=16, 5 symbols
 - `fixtures/graph/web/geo.ts` — typescript, loc=15, 6 symbols
 - `fixtures/graph/web/handlers.js` — javascript, loc=18, 4 symbols
@@ -61,18 +59,20 @@ This codebase's modules collaborate through the graph above.
 - `src/core/ingest/walker.ts` — typescript, loc=202, 17 symbols
 - `src/core/params.ts` — typescript, loc=93, 22 symbols
 - `src/core/parse/parser.ts` — typescript, loc=160, 12 symbols
+- `src/core/parse/py.ts` — typescript, loc=385, 24 symbols
+- `src/core/parse/refs.ts` — typescript, loc=195, 14 symbols
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=732)
+- `src/core/db/database.ts` (degree=740)
 - `src/core/db/repo.ts` (degree=455)
-- `src/mcp/server.ts` (degree=373)
+- `src/mcp/server.ts` (degree=375)
 - `src/core/parse/ts.ts` (degree=296)
 - `src/core/ingest/indexer.ts` (degree=234)
 - `src/core/graph/modules.ts` (degree=184)
+- `test/db/leftoverWal.test.ts` (degree=165)
 - `src/core/synth/persist.ts` (degree=161)
-- `test/audit/audit-38.test.ts` (degree=147)
-- `src/core/db/index.ts` (degree=141)
-- `test/cli/helpers.ts` (degree=137)
+- `src/core/db/index.ts` (degree=143)
+- `test/cli/helpers.ts` (degree=139)
 
 _Generated offline (mock client)._
