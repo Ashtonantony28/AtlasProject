@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/web/server.ts
-source_hash: 290d2730444ab7b926a1a1bacf02af0819a43002e1b202f180db379524f603ca
+source_hash: 6781c03d9167beed39d098b59c51cec14ac9868a2f2985ec223bc64fc693d5ab
 ---
 # module src/web/server.ts
 
