@@ -5,6 +5,7 @@
 import type { DB, SymbolRow } from '../db/index.js';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { sha256 } from '../ingest/hash.js';
 
 const SLICE_MAX_LINES = 30;
 
@@ -12,18 +13,18 @@ interface FileLike {
   path: string;
 }
 
-export function buildSymbolText(
-  sym: SymbolRow,
-  file: FileLike,
-  source: string | null,
-): string {
+export function buildSymbolText(sym: SymbolRow, file: FileLike, source: string | null): string {
   const parts: string[] = [];
   parts.push(`${sym.kind}: ${sym.qualified_name ?? sym.name}`);
   if (sym.signature) parts.push(sym.signature);
   if (sym.docstring) parts.push(stripDocComment(sym.docstring));
   parts.push(`file: ${file.path}`);
   if (source) {
-    const slice = sliceLines(source, sym.start_line, Math.min(sym.end_line, sym.start_line + SLICE_MAX_LINES));
+    const slice = sliceLines(
+      source,
+      sym.start_line,
+      Math.min(sym.end_line, sym.start_line + SLICE_MAX_LINES),
+    );
     parts.push(slice);
   }
   return parts.join('\n');
@@ -77,4 +78,23 @@ export function readFileFromRoot(root: string, db: DB, fileId: number): string |
   } catch {
     return null;
   }
+}
+
+/**
+ * Read a file for an excerpt: `source` is null when it is unreadable or `changed` since it was
+ * indexed (its hash is not `files.content_hash`), so indexed line numbers never slice other lines.
+ */
+export function readIndexedSource(
+  root: string,
+  file: { path: string; content_hash: string },
+): { source: string | null; changed: boolean } {
+  let source: string;
+  try {
+    source = readFileSync(join(root, file.path), 'utf8');
+  } catch {
+    return { source: null, changed: false };
+  }
+  return sha256(source) === file.content_hash
+    ? { source, changed: false }
+    : { source: null, changed: true };
 }

@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/synth/context.ts
-source_hash: 731b6c42184d71091ab40a4f3f0132667ebfe459c60d256a0894cdfe1e13f591
+source_hash: af97e963a6982586265140869d90928b277603186e4059450e22bdb77f6f4d37
 ---
 # module src/core/synth/context.ts
 
@@ -28,15 +28,15 @@ source_hash: 731b6c42184d71091ab40a4f3f0132667ebfe459c60d256a0894cdfe1e13f591
 - `cmp` — function (src/core/synth/context.ts:114)
 - `pickSymbols` — function (src/core/synth/context.ts:119)
 - `buildModuleContext` — function (src/core/synth/context.ts:130)
-- `moduleContextToPrompt` — function (src/core/synth/context.ts:183)
-- `renderModule` — function (src/core/synth/context.ts:196)
-- `oneLine` — function (src/core/synth/context.ts:252)
-- `ArchitectureContext` — interface (src/core/synth/context.ts:257)
-- `buildArchitectureContext` — function (src/core/synth/context.ts:266)
-- `architectureContextToPrompt` — function (src/core/synth/context.ts:303)
-- `renderArchitecture` — function (src/core/synth/context.ts:312)
-- `modulePrompt` — function (src/core/synth/context.ts:338)
-- `architecturePrompt` — function (src/core/synth/context.ts:342)
+- `moduleContextToPrompt` — function (src/core/synth/context.ts:187)
+- `renderModule` — function (src/core/synth/context.ts:200)
+- `oneLine` — function (src/core/synth/context.ts:256)
+- `ArchitectureContext` — interface (src/core/synth/context.ts:261)
+- `buildArchitectureContext` — function (src/core/synth/context.ts:270)
+- `architectureContextToPrompt` — function (src/core/synth/context.ts:307)
+- `renderArchitecture` — function (src/core/synth/context.ts:317)
+- `modulePrompt` — function (src/core/synth/context.ts:346)
+- `architecturePrompt` — function (src/core/synth/context.ts:350)
 
 References: `src/core/synth/context.ts:14`, `src/core/synth/context.ts:31`, `src/core/synth/context.ts:32`, `src/core/synth/context.ts:33`, `src/core/synth/context.ts:34`.
 
