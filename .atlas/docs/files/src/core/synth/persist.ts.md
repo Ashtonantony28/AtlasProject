@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/synth/persist.ts
-source_hash: 52755a96a8eefdde82557b45a7443af61a27802490843ca07d28f93e3e2db4a1
+source_hash: 09416000d41a6f5c1ec915974393efd8c2783d45963bd84cf952f0b1913d04e6
 ---
 # module src/core/synth/persist.ts
 

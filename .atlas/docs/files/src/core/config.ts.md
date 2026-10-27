@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/config.ts
-source_hash: dbce8e412fba41edb0624fdbada30a09a87a489cf4c28ea7f1a17556de5a3495
+source_hash: 6a79329222ae23ec7bfec60a06e6be9ca6630f40044d3aac7aeebaa7bf8a676d
 ---
 # module src/core/config.ts
 
