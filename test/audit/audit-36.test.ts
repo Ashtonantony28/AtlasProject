@@ -201,7 +201,7 @@ async function liveWriter(dbPath: string): Promise<ChildProcess> {
 }
 
 describe('A36-01 (high) an I/O error during the integrity check is read as corruption', () => {
-  (CC ? it.fails : it.skip)(
+  (CC ? it : it.skip)(
     'A36-01 an EIO while the check reads index.db keeps a killed writer’s own WAL: its rows and docs are not lost',
     () => {
       const so = eioShim();
@@ -228,32 +228,28 @@ describe('A36-01 (high) an I/O error during the integrity check is read as corru
 });
 
 describe('A36-02 (medium) the set-aside reminder does not stop the write that overtakes it', () => {
-  it.fails(
-    'A36-02 following the reminder after `atlas index` has run keeps the set-aside WAL’s rows and docs',
-    () => {
-      const root = indexed();
-      killedWriter(dbOf(root));
-      const wal = `${dbOf(root)}-wal`;
-      // What `setAside` does to the index's own WAL (A36-01 on an EIO): renamed, -shm left.
-      const foreign = `${wal}.foreign-1793000000000`;
-      renameSync(wal, foreign);
-      appendFileSync(join(root, 'src', 'app.ts'), '\n// edited\n');
-      // `atlas index` prints "move it back ... before anything writes the index", then writes
-      // (exit 0). `atlas mcp` does the same on its first atlas_index, with stderr hidden.
-      cli(['index', root]);
-      const later = cli(['search', 'add', '--cwd', root, '--limit', '1']);
-      // The next command still gives the same advice; the user follows it.
-      if (/move it back/.test(later.err)) {
-        renameSync(foreign, wal);
-        const after = cli(['search', 'add', '--cwd', root, '--limit', '1']);
-        // Today: exit 1, "unreadable (database disk image is malformed) ... delete index.db with
-        // its -wal and -shm", which deletes the docs too.
-        expect(after.code, after.err).toBe(0);
-        expect(seen(root)).toMatchObject({ stale: 24, docs: 4 });
-      }
-    },
-    60_000,
-  );
+  it('A36-02 following the reminder after `atlas index` has run keeps the set-aside WAL’s rows and docs', () => {
+    const root = indexed();
+    killedWriter(dbOf(root));
+    const wal = `${dbOf(root)}-wal`;
+    // What `setAside` does to the index's own WAL (A36-01 on an EIO): renamed, -shm left.
+    const foreign = `${wal}.foreign-1793000000000`;
+    renameSync(wal, foreign);
+    appendFileSync(join(root, 'src', 'app.ts'), '\n// edited\n');
+    // `atlas index` prints "move it back ... before anything writes the index", then writes
+    // (exit 0). `atlas mcp` does the same on its first atlas_index, with stderr hidden.
+    cli(['index', root]);
+    const later = cli(['search', 'add', '--cwd', root, '--limit', '1']);
+    // The next command still gives the same advice; the user follows it.
+    if (/move it back/.test(later.err)) {
+      renameSync(foreign, wal);
+      const after = cli(['search', 'add', '--cwd', root, '--limit', '1']);
+      // Today: exit 1, "unreadable (database disk image is malformed) ... delete index.db with
+      // its -wal and -shm", which deletes the docs too.
+      expect(after.code, after.err).toBe(0);
+      expect(seen(root)).toMatchObject({ stale: 24, docs: 4 });
+    }
+  }, 60_000);
 });
 
 describe('A36-03 (low) one unrelated lock on the same inode number on another filesystem disables the passive check', () => {
@@ -331,6 +327,45 @@ describe('SG140 held (pinned)', () => {
     expect(search.err).not.toMatch(/cannot check/);
     expect(search.code, search.err).toBe(0);
     expect(search.out).toMatch(/replacementOnlyFn/);
+    expect(aside(root)).toHaveLength(1);
+  }, 60_000);
+});
+
+describe('SG150 (pinned)', () => {
+  (CC ? it : it.skip)(
+    'an EIO at any point of the check refuses with the cause and keeps the WAL: thrown or as a result row',
+    () => {
+      const so = eioShim();
+      const root = indexed();
+      killedWriter(dbOf(root));
+      for (const after of ['2', '5', '100']) {
+        const r = cli(['search', 'add', '--cwd', root, '--limit', '1'], [], {
+          LD_PRELOAD: so,
+          EIO_SUFFIX: '.check',
+          EIO_AFTER: after,
+        });
+        expect(r.code, r.err).toBe(1);
+        expect(r.err).toMatch(/cannot check .*index\.db-wal.*; it is kept/);
+        expect(aside(root)).toEqual([]);
+      }
+      expect(seen(root)).toMatchObject({ stale: 24, docs: 4 });
+    },
+    60_000,
+  );
+
+  it('a set-aside WAL is offered back until the index is written, then only its deletion', () => {
+    const root = indexed();
+    const other = indexed(REPLACEMENT_FN);
+    killedWriter(dbOf(root));
+    cpSync(dbOf(other), dbOf(root));
+    expect(cli(['search', 'add', '--cwd', root]).err).toMatch(/does not belong to/);
+    const read = cli(['search', 'add', '--cwd', root]);
+    expect(read.err).toMatch(/move it back to .*index\.db-wal before anything writes the index/);
+    expect(cli(['index', root]).code).toBe(0);
+    const written = cli(['search', 'add', '--cwd', root]);
+    expect(written.code, written.err).toBe(0);
+    expect(written.err).not.toMatch(/move it back/);
+    expect(written.err).toMatch(/may have been written since: moving it back would corrupt/);
     expect(aside(root)).toHaveLength(1);
   }, 60_000);
 });

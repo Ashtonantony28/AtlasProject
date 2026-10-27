@@ -231,13 +231,15 @@ Copying or moving the project or its `.atlas/` (`cp -r`, `cp -a`, `rsync -a`,
 write. Before opening an index beside a `-wal` that no running process holds,
 Atlas checks it under `.atlas/index.db.open.lock`, which every Atlas process
 opening the index takes: the `-wal` is kept when the index with it replayed
-passes SQLite's integrity check. If the check cannot run (a full disk, a quota,
-a file size limit), the open is refused with the cause and the `-wal` is left in
-place: free the space and retry. If the check finds the index corrupt and no
-checkpoint of the `-wal` ever started, it is renamed to
-`index.db-wal.foreign-<ms>` (never deleted) and Atlas says so on stderr, on
-every open until the file is moved or deleted; move it back beside the index it
-came from, before anything writes that index, to recover its writes. In any
+passes SQLite's integrity check. If the check cannot run or cannot read the
+files (a full disk, a quota, a file size limit, an I/O error), the open is
+refused with the cause and the `-wal` is left in place: fix the cause and
+retry. If the check finds the index corrupt and no checkpoint of the `-wal`
+ever started, it is renamed to `index.db-wal.foreign-<ms>-<state>` (never
+deleted) and Atlas says so on stderr, on every open until the file is moved or
+deleted. While nothing has written the index since, the message says to move it
+back beside the index it came from to recover its writes; once the index has
+been written, it says to delete it instead. In any
 other case, or when SQLite finds the index corrupt, every surface fails with
 one message naming the file, the `-wal` (a symlinked index's target) and the
 remedy above (CLI exit 1, MCP `isError`, HTTP 500).
