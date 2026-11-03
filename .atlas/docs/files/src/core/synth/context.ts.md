@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/synth/context.ts
-source_hash: 757392d12cac72e0429593e646e6bc7983604d4278db18c24810f5309d396754
+source_hash: b28d9fbe8e9ed779ecee4aaf6ebb3630b8a4008a6e93111a1a2767890916153b
 ---
 # module src/core/synth/context.ts
 
