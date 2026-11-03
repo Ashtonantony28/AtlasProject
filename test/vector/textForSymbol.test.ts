@@ -6,13 +6,23 @@ import {
   closeDatabase,
   getAllFiles,
   getAllSymbols,
+  getFileByPath,
   openDatabase,
   type DB,
   type SymbolRow,
 } from '../../src/core/db/index.js';
 import { DEFAULT_CONFIG } from '../../src/core/config.js';
 import { indexRepo } from '../../src/core/ingest/index.js';
-import { buildSymbolText, createEmbedder, getAllEmbeddings } from '../../src/core/vector/index.js';
+import {
+  buildSymbolText,
+  createEmbedder,
+  getAllEmbeddings,
+  readIndexedSource,
+} from '../../src/core/vector/index.js';
+import { createOfflineClient, synthesizeDocs, type LLMClient } from '../../src/core/synth/index.js';
+import { runDrift } from '../../src/core/drift/index.js';
+import { ask } from '../../src/core/qa/ask.js';
+import { createMcpContext, handleSymbolTool, type McpContext } from '../../src/mcp/server.js';
 import { SAMPLE } from '../cli/helpers.js';
 
 // The text before SG55: the whole source split once per symbol.
@@ -98,5 +108,70 @@ describe('embedding text (SG55)', () => {
     symbols.forEach((s, k) =>
       expect(Buffer.from(stored.get(s.id)!.buffer)).toEqual(Buffer.from(vecs[k]!.buffer)),
     );
+  });
+});
+
+describe('readIndexedSource hashes the text the indexer hashed (SG310)', () => {
+  let dir: string;
+  let root: string;
+  let ctx: McpContext;
+  const FILES = [
+    ['src/latin.ts', 'latinTotal', 'return 41 + 1;'],
+    ['src/bom.ts', 'bomTotal', 'return 40 + 2;'],
+  ] as const;
+
+  beforeAll(async () => {
+    dir = mkdtempSync(join(tmpdir(), 'atlas-hash-'));
+    root = join(dir, 'repo');
+    cpSync(SAMPLE, root, { recursive: true });
+    writeFileSync(
+      join(root, 'src/latin.ts'),
+      Buffer.concat([
+        Buffer.from('// caf'),
+        Buffer.from([0xe9]),
+        Buffer.from(' au lait\nexport function latinTotal(): number {\n  return 41 + 1;\n}\n'),
+      ]),
+    );
+    writeFileSync(
+      join(root, 'src/bom.ts'),
+      '\uFEFFexport function bomTotal(): number {\r\n  return 40 + 2;\r\n}\r\n',
+    );
+    ctx = createMcpContext({ root, offline: true });
+    await indexRepo(ctx.db, root);
+  });
+  afterAll(() => {
+    if (ctx.db.open) closeDatabase(ctx.db);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('reads a non-UTF-8 file and a BOM/CRLF file as unchanged, and atlas_symbol serves them', () => {
+    for (const [path, name, body] of FILES) {
+      const read = readIndexedSource(root, getFileByPath(ctx.db, path)!);
+      expect(read.changed, path).toBe(false);
+      expect(read.source, path).toContain(body);
+      expect(handleSymbolTool(ctx, { name })[0]?.excerpt, path).toContain(body);
+    }
+  });
+
+  it('ask sends both bodies with no "changed since indexing" note', async () => {
+    const prompts: string[] = [];
+    const capture: LLMClient = {
+      model: 'capture',
+      complete: async (params) => {
+        prompts.push(params.messages.map((m) => m.content).join('\n'));
+        return { content: 'see [1]', inputTokens: 1, outputTokens: 1 };
+      },
+    };
+    const res = await ask(ctx.db, capture, root, 'latinTotal bomTotal', { seedLimit: 20 });
+    expect(res.answer).not.toMatch(/changed since indexing/);
+    for (const [, , body] of FILES) expect(prompts.join('\n')).toContain(body);
+  });
+
+  it('drift reports nothing stale after synthesis and a re-index skips every file', async () => {
+    await synthesizeDocs(ctx.db, createOfflineClient(), { root, tokenBudget: 1_000_000 });
+    const report = runDrift(ctx.db, { root });
+    expect(report.stale.map((s) => `${s.targetPath}:${s.currentHash}`)).toEqual([]);
+    const stats = await indexRepo(ctx.db, root);
+    expect(stats.filesSkipped).toBe(stats.filesScanned);
   });
 });

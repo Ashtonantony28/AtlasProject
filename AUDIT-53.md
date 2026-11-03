@@ -245,3 +245,5 @@ On `960d277` plus `AUDIT-53.md`, `test/audit/audit-53.test.ts` and the PLAN line
 | `npx vitest run --coverage --exclude 'test/audit/**'` | 65 files, 608 passed; thresholds pass | 77 s |
 | `npx vitest run --coverage --exclude 'test/audit/!(audit-53).test.ts'` | 66 files, 611 passed; thresholds pass | 50 s |
 | `npx vitest run test/audit/audit-53.test.ts && npm run typecheck && npm run lint && git diff --exit-code src/` | pass; 3 tests; `src/` unchanged | 13 s |
+
+SG310 moved the `audit-53.test.ts` tests to the product suite (`test/vector/textForSymbol.test.ts`) and deleted the audit file.
