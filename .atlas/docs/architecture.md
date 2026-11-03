@@ -1,13 +1,13 @@
 ---
 kind: architecture
 target: architecture
-source_hash: 33342dd658ca2957ca34aa9397c92c08b782822629c2424e1e4b018ff3794369
+source_hash: b4356c68c84dfa3bcfd8fb7414c31baa6584edeab13c95215dad0fd02f2ae663
 ---
 # Architecture
 
 This codebase's modules collaborate through the graph above.
 
-**Totals:** 241 files, 1922 symbols, 9338 edges
+**Totals:** 241 files, 1925 symbols, 9378 edges
 
 ## Modules
 
@@ -64,11 +64,11 @@ This codebase's modules collaborate through the graph above.
 
 ## Key collaborations
 
-- `src/core/db/database.ts` (degree=772)
-- `src/core/db/repo.ts` (degree=459)
-- `src/mcp/server.ts` (degree=404)
+- `src/core/db/database.ts` (degree=773)
+- `src/core/db/repo.ts` (degree=461)
+- `src/mcp/server.ts` (degree=409)
 - `src/core/parse/ts.ts` (degree=296)
-- `src/core/ingest/indexer.ts` (degree=241)
+- `src/core/ingest/indexer.ts` (degree=242)
 - `src/core/graph/modules.ts` (degree=184)
 - `test/db/leftoverWal.test.ts` (degree=175)
 - `src/core/synth/persist.ts` (degree=163)

@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/qa/citations.ts
-source_hash: db1e96bfdb1eb9e8d09c58f9f9f1926e2e6d9d6178cce690b0aadd7470ddd434
+source_hash: ac2397719534d0bd456a8ff1d2443fd568ce1865640d723299e9faf9364f26e6
 ---
 # module src/core/qa/citations.ts
 

@@ -242,3 +242,5 @@ On `9f3b7fc` plus `AUDIT-49.md`, `test/audit/audit-49.test.ts` and the PLAN line
 | `npx vitest run --coverage --exclude 'test/audit/**'` | 65 files, 605 passed; thresholds pass | 82 s |
 | `npx vitest run --coverage --exclude 'test/audit/!(audit-49).test.ts'` | 66 files, 608 passed; thresholds pass | 58 s |
 | `npm run typecheck && npm run lint && npx vitest run test/audit/audit-49.test.ts` | pass; 3 tests; `src/` unchanged | 18 s |
+
+SG270 moved the `audit-49.test.ts` tests to the product suite (`test/synth/synthesize.test.ts` and `test/qa/ask.test.ts`) and deleted the audit file.

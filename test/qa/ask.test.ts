@@ -112,4 +112,35 @@ describe('ask end-to-end (offline)', () => {
     );
     closeDatabase(db);
   });
+
+  it('names every changed file in the note', async () => {
+    const root = join(dir, 'repo');
+    cpSync(FIXTURE, root, { recursive: true });
+    const db = openDatabase(join(dir, 'index.db'));
+    await indexRepo(db, root);
+    const capture: LLMClient = {
+      model: 'capture',
+      complete: async () => ({ content: 'ok', inputTokens: 1, outputTokens: 1 }),
+    };
+    const q = 'What do add, multiply and the Circle area do?';
+    const before = await ask(db, capture, root, q, { seedLimit: 20 });
+    expect(before.citations.map((c) => c.file)).toEqual(
+      expect.arrayContaining(['src/math.ts', 'src/shapes.ts']),
+    );
+
+    for (const rel of ['src/math.ts', 'src/shapes.ts']) {
+      const p = join(root, rel);
+      writeFileSync(p, '// added after indexing\n'.repeat(12) + readFileSync(p, 'utf8'));
+    }
+    const after = await ask(db, capture, root, q, { seedLimit: 20 });
+    const note =
+      /\n\nNote: (.+) changed since indexing, so their snippets were left out; run `atlas index`\.$/.exec(
+        after.answer,
+      );
+    expect(note, after.answer).not.toBeNull();
+    expect(note?.[1]?.split(', ').sort()).toEqual(['src/math.ts', 'src/shapes.ts']);
+    expect(after.citations.map((c) => c.file)).not.toContain('src/math.ts');
+    expect(after.citations.map((c) => c.file)).not.toContain('src/shapes.ts');
+    closeDatabase(db);
+  });
 });

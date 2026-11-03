@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,9 +9,16 @@ import {
   getAllDocs,
   getAllFiles,
   getDoc,
+  getFileByPath,
 } from '../../src/core/db/index.js';
 import { indexRepo } from '../../src/core/ingest/index.js';
-import { createOfflineClient, synthesizeDocs, TokenBudget } from '../../src/core/synth/index.js';
+import {
+  buildModuleContext,
+  createOfflineClient,
+  synthesizeDocs,
+  TokenBudget,
+  type LLMClient,
+} from '../../src/core/synth/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURE = join(__dirname, '..', '..', 'fixtures', 'sample');
@@ -138,6 +145,56 @@ describe('synthesizeDocs (offline)', () => {
     await synthesizeDocs(db, llm, { root: FIXTURE, tokenBudget: 200_000, force: true });
     const d2 = getDoc(db, 'file', file.id);
     expect(d2?.content).toBe(d1?.content);
+    closeDatabase(db);
+  });
+});
+
+describe('module context after an edit that was not re-indexed', () => {
+  let dir: string;
+  let root: string;
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'atlas-synth-edit-'));
+    root = join(dir, 'repo');
+    cpSync(FIXTURE, root, { recursive: true });
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  const prepend = (rel: string) => {
+    const p = join(root, rel);
+    writeFileSync(p, '// header added after indexing\n'.repeat(12) + readFileSync(p, 'utf8'));
+  };
+
+  it('buildModuleContext has `add`’s source before the edit and no snippet after it', async () => {
+    const db = openDatabase(join(dir, 'index.db'));
+    await indexRepo(db, root);
+    const file = getFileByPath(db, 'src/math.ts')!;
+    const before = buildModuleContext(db, root, file).sourceSnippets;
+    expect(before.find((s) => s.symbol === 'add')?.code).toMatch(/return a \+ b/);
+    prepend('src/math.ts');
+    const after = buildModuleContext(db, root, file).sourceSnippets;
+    expect(after.map((s) => s.code).join('\n')).not.toMatch(/header added after indexing/);
+    expect(after).toEqual([]);
+    closeDatabase(db);
+  });
+
+  it('synthesizeDocs sends no inserted line in the module prompt', async () => {
+    const db = openDatabase(join(dir, 'index.db'));
+    await indexRepo(db, root);
+    prepend('src/math.ts');
+    const prompts: string[] = [];
+    const capture: LLMClient = {
+      model: 'capture',
+      complete: async (params) => {
+        prompts.push(params.messages.map((m) => m.content).join('\n'));
+        return { content: '# doc\nadd multiply PI', inputTokens: 1, outputTokens: 1 };
+      },
+    };
+    await synthesizeDocs(db, capture, { root, tokenBudget: 1_000_000 });
+    const math = prompts.filter((p) => p.startsWith('Target: module src/math.ts'));
+    expect(math.length).toBeGreaterThan(0);
+    expect(math.join('\n')).not.toMatch(/header added after indexing/);
     closeDatabase(db);
   });
 });
