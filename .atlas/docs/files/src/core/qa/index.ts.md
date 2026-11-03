@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/qa/index.ts
-source_hash: 719058aa36cd1eb831e660002eb9a62914e8a83245e05ceb3215f89c9a306585
+source_hash: 3861a8ab0b695633d96358b4e26346077fc32204333c3bf10be0ebddb6653558
 ---
 # module src/core/qa/index.ts
 
