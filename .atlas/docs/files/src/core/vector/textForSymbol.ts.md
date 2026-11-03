@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/core/vector/textForSymbol.ts
-source_hash: 56278058c8531b5069573a461fb684fbfd2e7ca0840ef1236a53e055e20c771f
+source_hash: 0047ad2f131fbb29cd02f6c0e16fdc6d1312f447f039e5975066943bccf5520e
 ---
 # module src/core/vector/textForSymbol.ts
 
