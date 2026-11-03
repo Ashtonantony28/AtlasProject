@@ -1,7 +1,7 @@
 ---
 kind: file
 target: src/mcp/server.ts
-source_hash: 38637be1c67a3e98ecf1de47bf4ebf6dd88f83e93fab81f168f3bdddd5b4081e
+source_hash: 0f7e4e5721dd430cb796bc302a60e7e18020ca3fa100ac5c3e5a141bf23e9e85
 ---
 # module src/mcp/server.ts
 
